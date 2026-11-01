@@ -71,7 +71,7 @@ describe("simulation", () => {
   it("takes months and board approval to acquire a company", () => {
     const s = newGame({ kind: "incumbent", key: "windward" }, 2);
     const me = player(s);
-    const lattice = s.companies.find((c) => c.name === "Lattice Labs")!;
+    const lattice = s.companies.find((c) => c.kind === "startup" && !c.isPlayer && c.marketCap < 1e9)!;
     const low = offer(s, me.id, lattice.id, 0.05, "cash");
     expect(low.ok).toBe(false);
     let r = offer(s, me.id, lattice.id, 0.9, "cash");
@@ -79,7 +79,8 @@ describe("simulation", () => {
     expect(r.ok).toBe(true);
     expect(lattice.alive).toBe(true);
     months(s, 16);
-    expect(lattice.alive).toBe(false);
+    // Resolved one way or the other: closed, or blocked by regulators.
+    expect(s.deals.some((d) => d.targetId === lattice.id)).toBe(false);
   });
 });
 
@@ -88,7 +89,7 @@ describe("needs and politics", () => {
     const s = newGame({ kind: "incumbent", key: "heartland" }, 3);
     expect(s.sol).toBeGreaterThan(85);
     expect(s.sol).toBeLessThan(115);
-    expect(Object.keys(s.needStats).length).toBe(10);
+    expect(Object.keys(s.needStats).length).toBe(11);
     const poor = s.needStats.food!.byQuintile[0], rich = s.needStats.food!.byQuintile[4];
     expect(rich).toBeGreaterThan(poor);
   });

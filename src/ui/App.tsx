@@ -23,12 +23,13 @@ import { Consumers } from "./tabs/Consumers";
 import { Headquarters } from "./tabs/Headquarters";
 import { Elections } from "./tabs/Elections";
 import { World } from "./tabs/World";
+import { Leadership } from "./tabs/Leadership";
 
 /** Milliseconds per game day, and days simulated per step, for speeds 1–5. */
 const SPEEDS: [number, number][] = [[0, 0], [600, 1], [250, 1], [90, 1], [30, 1], [16, 4]];
 const TABS = [
   ["overview", "Overview"], ["production", "Production"], ["workforce", "Workforce"], ["markets", "Markets"],
-  ["headquarters", "Headquarters"], ["research", "Research"], ["finance", "Finance"], ["rivals", "Rivals & M&A"], ["consumers", "Consumers"],
+  ["headquarters", "Headquarters"], ["leadership", "Leadership"], ["research", "Research"], ["finance", "Finance"], ["rivals", "Rivals & M&A"], ["consumers", "Consumers"],
   ["politics", "Politics"], ["elections", "Elections"], ["pops", "Pops & Map"], ["world", "World"], ["events", "Events"],
 ] as const;
 type TabId = (typeof TABS)[number][0];
@@ -198,6 +199,7 @@ function Game({ initial, onQuit }: { initial: GameState; onQuit: () => void }) {
           {tab === "headquarters" && <Headquarters />}
           {tab === "elections" && <Elections />}
           {tab === "world" && <World />}
+          {tab === "leadership" && <Leadership />}
         </main>
       </div>
       {toast && <div className={`toast ${toast.err ? "err" : ""}`}>{toast.m}</div>}

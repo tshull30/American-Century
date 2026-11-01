@@ -30,6 +30,7 @@ export function Rivals() {
               { key: "rev", label: "Revenue TTM", num: true, render: (c) => fmtMoney(ttm(c, "revenue")), sort: (c) => ttm(c, "revenue") },
               { key: "ni", label: "Net income", num: true, render: (c) => <Signed value={ttm(c, "netIncome")} fmt={(x) => fmtMoney(x)} />, sort: (c) => ttm(c, "netIncome") },
               { key: "g", label: "Growth", num: true, render: (c) => <Signed value={revenueGrowth(c)} fmt={(x) => fmtPct(x, 0)} />, sort: (c) => revenueGrowth(c) },
+              { key: "ceo", label: "CEO", render: (c) => { const e = c.leadership?.execs.find((x) => x.role === "ceo"); return e ? <span title={`Skill ${e.skill} of 5`}>{e.name}</span> : <span className="muted">Vacant</span>; } },
               { key: "p", label: "Products", render: (c) => (Object.keys(c.prices) as GoodId[]).map((g) => GOOD_BY_ID[g].name).join(", ") },
             ]}
           />

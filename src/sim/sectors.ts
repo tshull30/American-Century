@@ -1,7 +1,7 @@
 // Industry know-how, economies of scale and the cost of running too many businesses at once.
 import { BUILDING_BY_ID, SECTORS, type BuildingTypeId, type SectorId } from "./data/buildings";
 import { COUNTRY_BY_ID } from "./data/countries";
-import { resourceMult, SUN } from "./data/resources";
+import { resourceMult, SUN, WIND } from "./data/resources";
 import type { Building, Company, WorldEvent } from "./types";
 import { clamp } from "./util";
 
@@ -99,6 +99,7 @@ export function siteMultFor(type: BuildingTypeId, method: string, state: string)
   let m = 1;
   if (def.resource) m = resourceMult(def.resource, state);
   else if (type === "power" && method === "solar") m = SUN[state] ?? 1;
+  else if (type === "power" && method === "wind") m = WIND[state] ?? 0.85;
   const c = COUNTRY_BY_ID[state];
   if (c && !def.resource) m *= c.productivity * (def.industry === "office" && type !== "datacenter" ? 0.75 : 1);
   return m;

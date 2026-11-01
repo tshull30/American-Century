@@ -181,6 +181,8 @@ export interface Company {
   /** The month in progress. */
   current: MonthReport;
   distressMonths: number;
+  /** Executives and board. */
+  leadership?: import("./leadership").Leadership;
   /** Player setting: add HQ levels automatically when the HQ runs out of capacity. */
   autoHq?: boolean;
   /** Industry know-how, 0–1 (see sectors.ts). */
@@ -336,7 +338,7 @@ export interface MarketSnapshot {
   priceHistory: number[];
 }
 
-export type EventTag = "election" | "law" | "deal" | "finance" | "tier" | "city" | "build" | "macro";
+export type EventTag = "election" | "law" | "deal" | "finance" | "tier" | "city" | "build" | "macro" | "leadership";
 
 export interface GameEvent {
   day: number;

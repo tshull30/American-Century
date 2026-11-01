@@ -55,6 +55,14 @@ export function computeAlerts(s: GameState, me: Company): Alert[] {
     if (d.targetId === me.id) out.push({ tone: "warn", tab: "rivals", text: `${s.companies.find((c) => c.id === d.buyerId)?.name} is buying you` });
   }
 
+  const L = me.leadership;
+  if (L) {
+    const vacant = ["ceo", "cfo", "coo", "cto", "cmo"].filter((r) => !L.execs.some((e) => e.role === r));
+    if (vacant.length) out.push({ tone: "warn", tab: "leadership", text: `No ${vacant.map((r) => r.toUpperCase()).join(", ")}: hire someone` });
+    if (L.poach) out.push({ tone: "warn", tab: "leadership", text: `${L.poach.rival} is trying to poach one of your executives` });
+    if (L.board.activist) out.push({ tone: "warn", tab: "leadership", text: `${L.board.activist.fund} wants changes before the annual meeting` });
+    if (L.board.confidence < 0.3) out.push({ tone: "bad", tab: "leadership", text: `The board is losing faith (${Math.round(L.board.confidence * 100)}% confidence)` });
+  }
   const bill = s.politics.bill;
   if (bill && me.lobbying.some((l) => l.law === bill.law)) out.push({ tone: "info", tab: "politics", text: `The ${LAW_BY_ID[bill.law].name.toLowerCase()} bill you're lobbying on is in Congress` });
   const days = s.politics.nextElectionDay - s.day;

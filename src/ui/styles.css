@@ -211,3 +211,6 @@ table.keys td { padding: 3px 12px 3px 0; }
 kbd { font: inherit; font-size: 12px; border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 3px; padding: 0 5px; background: var(--paper-2); }
 table.t.wrap td { white-space: normal; }
 table.t.wrap td:first-child { white-space: nowrap; vertical-align: top; }
+.stars { color: var(--engrave); letter-spacing: 1px; white-space: nowrap; }
+.trait { display: inline-block; font-size: 12px; border: 1px solid var(--rule); border-radius: 2px; padding: 0 5px; margin: 0 4px 2px 0; background: var(--paper); color: var(--ink-2); }
+.trait.bad { border-color: #d7a8a4; color: var(--seal); }

@@ -2,6 +2,7 @@
 // into better-paid jobs, and what each kind of worker thinks of each company.
 import { BLUE_COLLAR, JOBS, JOB_BY_ID, LOW_WAGE, type JobId } from "./data/jobs";
 import { offshoreShare } from "./intl";
+import { leadEffects } from "./leadership";
 import { NEED_OF_GOOD } from "./data/needs";
 import { STATES, STATE_BY_CODE } from "./data/states";
 import { citiesInState, cityWorkforce, stateWage } from "./geo";
@@ -117,6 +118,7 @@ export function updateJobOpinion(s: GameState, c: Company) {
     let target = 0.5 + (c.image - 0.6) * 0.6 - gougeHit * priceSensitive;
     if (emp > 0) target += 0.4 * (c.wagePolicy - 1) + 0.04 - Math.min(0.4, (laid / emp) * 4);
     if (BLUE_COLLAR.includes(j.id)) target -= 0.3 * offshore;
+    target += leadEffects.workers(c);
     const cur = c.jobOpinion[j.id] ?? 0.5;
     c.jobOpinion[j.id] = clamp(cur + (clamp(target, 0.02, 0.98) - cur) * 0.12, 0, 1);
   }

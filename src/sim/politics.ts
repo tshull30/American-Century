@@ -1,3 +1,4 @@
+import { leadEffects } from "./leadership";
 // Basic federal politics: two parties, elections every two years, laws with
 // economic effects, one bill at a time moving through Congress, and lobbying.
 import { BUILDING_BY_ID, type BuildingTypeId } from "./data/buildings";
@@ -85,7 +86,8 @@ export function climatePrefMult(s: GameState, g: GoodId): number {
 
 /** Extra monthly running cost per level from a carbon tax. */
 export function carbonCost(s: GameState, type: BuildingTypeId, method: string): number {
-  return lv(s, "climate") === 2 && type === "power" && method === "gas" ? 2e6 : 0;
+  if (lv(s, "climate") !== 2 || type !== "power") return 0;
+  return method === "gas" ? 2e6 : method === "coal" ? 4e6 : 0;
 }
 
 // ---------------------------------------------------------------- setup
@@ -121,7 +123,7 @@ export function isPresidentialYear(year: number) {
 /** Total monthly lobbying spend pushing a law in a direction, across all companies. */
 export function lobbyPressure(s: GameState, law: LawId, dir: 1 | -1): number {
   let sum = 0;
-  for (const c of s.companies) if (c.alive) for (const l of c.lobbying) if (l.law === law && l.dir === dir) sum += l.monthly;
+  for (const c of s.companies) if (c.alive) for (const l of c.lobbying) if (l.law === law && l.dir === dir) sum += l.monthly * leadEffects.lobbying(c);
   return sum;
 }
 

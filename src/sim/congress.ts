@@ -1,3 +1,4 @@
+import { leadEffects } from "./leadership";
 // Congress: real members at game start, faction-driven votes, the filibuster and veto,
 // seat-by-seat elections, state legislatures and PACs.
 import { MEMBERS_2026, STATE_LEAN, STATE_LEGS, VACANCIES_2026 } from "./data/congress";
@@ -54,7 +55,7 @@ function pull(s: GameState, m: Politician, law: LawId, dir: 1 | -1): number {
     for (const l of c.lobbying) if (l.law === law) p += (l.dir === dir ? 1 : -1) * (friend / unit);
   }
   let forD = 0, against = 0;
-  for (const c of s.companies) if (c.alive) for (const l of c.lobbying) if (l.law === law) (l.dir === dir ? (forD += l.monthly) : (against += l.monthly));
+  for (const c of s.companies) if (c.alive) for (const l of c.lobbying) if (l.law === law) (l.dir === dir ? (forD += l.monthly * leadEffects.lobbying(c)) : (against += l.monthly * leadEffects.lobbying(c)));
   p += ((influence(forD) - influence(against)) / 3) * factionDef(m.faction, m.party).swayable;
   return p;
 }

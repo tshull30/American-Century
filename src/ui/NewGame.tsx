@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { COMPANY_SEEDS } from "../sim/data/companies";
+import { rollRoster } from "../sim/roster";
+import { BUILDING_BY_ID, producerOf } from "../sim/data/buildings";
+import { GOODS } from "../sim/data/goods";
 import { GOOD_BY_ID, type GoodId } from "../sim/data/goods";
 import { STATES } from "../sim/data/states";
 import { CITY_SEEDS } from "../sim/data/cities";
@@ -36,8 +38,16 @@ const STARTUP_GOODS: { good: GoodId; blurb: string }[] = [
   { good: "household_goods", blurb: "Detergent, diapers and paper towels. Take on Hearth & Home's brands." },
 ];
 
+/** Every market good can be a startup's product; hand-written blurbs where we have them, the plant's description otherwise. */
+const ALL_STARTUP_GOODS: { good: GoodId; blurb: string }[] = [
+  ...STARTUP_GOODS,
+  ...GOODS.filter((g) => g.marketUS + g.marketWorld > 0 && g.id !== "components" && producerOf(g.id) && !STARTUP_GOODS.some((x) => x.good === g.id))
+    .map((g) => ({ good: g.id, blurb: BUILDING_BY_ID[producerOf(g.id)!.type].description })),
+].sort((a, b) => GOOD_BY_ID[a.good].name.localeCompare(GOOD_BY_ID[b.good].name));
+
 export function NewGame({ onStart }: { onStart: (s: GameState) => void }) {
   const [sel, setSel] = useState<string>("startup");
+  const [roster, setRoster] = useState(() => rollRoster());
   const [name, setName] = useState("Prairie Dynamics");
   const [ticker, setTicker] = useState("PRDY");
   const [good, setGood] = useState<GoodId>("software");
@@ -52,7 +62,7 @@ export function NewGame({ onStart }: { onStart: (s: GameState) => void }) {
       ? { kind: "startup", name: name.trim() || "Startup", ticker: (ticker.trim() || "NEW").toUpperCase().slice(0, 5), good, hq, city }
       : { kind: "incumbent", key: sel };
     // Let the "Building the economy" message paint before the warm-up year runs.
-    window.setTimeout(() => onStart(newGame(choice)), 30);
+    window.setTimeout(() => onStart(newGame(choice, roster.seed, roster.companies)), 30);
   };
 
   return (
@@ -60,8 +70,8 @@ export function NewGame({ onStart }: { onStart: (s: GameState) => void }) {
       <div className="hero">
         <h1>American Century</h1>
         <p className="lede">
-          Run a company in the American economy from January 2026. Hire from 5,000 census-based pops, build plants in fifty states,
-          pick cities by their labor, taxes, permits and power grids, lobby a Congress of 535 real members, fight real House races, and climb from startup to trillion-dollar titan.
+          Run a company in the American economy from January 2026. Hire from 11,000 census-based pops at home and abroad, mine, farm, refine and build in fifty states and
+          twelve countries, pick cities by their labor, politics and power grids, answer to a board, lobby a Congress of 535 real members, and climb from startup to trillion-dollar titan.
         </p>
       </div>
 
@@ -79,7 +89,7 @@ export function NewGame({ onStart }: { onStart: (s: GameState) => void }) {
           <label>Name <input value={name} onChange={(e) => setName(e.target.value)} onFocus={() => setSel("startup")} style={{ width: 200 }} /></label>
           <label>Ticker <input value={ticker} onChange={(e) => setTicker(e.target.value.toUpperCase())} onFocus={() => setSel("startup")} style={{ width: 70 }} maxLength={5} /></label>
           <label>Product <select value={good} onChange={(e) => { setGood(e.target.value as GoodId); setSel("startup"); }}>
-            {STARTUP_GOODS.map((g) => <option key={g.good} value={g.good}>{GOOD_BY_ID[g.good].name}</option>)}
+            {ALL_STARTUP_GOODS.map((g) => <option key={g.good} value={g.good}>{GOOD_BY_ID[g.good].name}</option>)}
           </select></label>
           <label>Headquarters <select value={city} onChange={(e) => { const c = CITY_SEEDS.find((x) => x.id === e.target.value)!; setCity(c.id); setHq(c.state); setSel("startup"); }}>
             {STATES.map((st) => (
@@ -89,14 +99,18 @@ export function NewGame({ onStart }: { onStart: (s: GameState) => void }) {
             ))}
           </select></label>
         </div>
-        <div className="hint">{STARTUP_GOODS.find((g) => g.good === good)?.blurb}</div>
+        <div className="hint">{ALL_STARTUP_GOODS.find((g) => g.good === good)?.blurb}</div>
       </div>
 
+      <div className="row" style={{ marginTop: 18 }}>
+        <span className="hint" style={{ margin: 0 }}>This economy has {roster.companies.length} companies. Every game gets a different cast.</span>
+        <button onClick={() => { setRoster(rollRoster()); if (sel !== "startup") setSel("startup"); }}>Shuffle the companies</button>
+      </div>
       {([["incumbent", "Or take over an established giant"], ["challenger", "…a challenger"], ["startup", "…or a young startup"]] as const).map(([tier, title]) => (
         <div key={tier}>
           <div className="section-title">{title}</div>
           <div className="cards">
-            {COMPANY_SEEDS.filter((c) => c.tier === tier).map((c) => (
+            {roster.companies.filter((c) => c.tier === tier).sort((a, b) => b.marketCap - a.marketCap).map((c) => (
               <button key={c.key} className={`card ${sel === c.key ? "sel" : ""}`} onClick={() => setSel(c.key)}>
                 <div className="name"><span className="swatch" style={{ background: c.color }} />{c.name} <span className="muted" style={{ fontWeight: 400 }}>{c.ticker}</span></div>
                 <div className="tag">{c.tagline}</div>

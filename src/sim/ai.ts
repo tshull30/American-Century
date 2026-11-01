@@ -35,7 +35,7 @@ export function autoPrice(s: GameState, c: Company, g: GoodId) {
   // Buyers pay a premium only for better products or a trusted name; an unknown seller can't charge more than the market.
   const others = s.markets[g]?.othersPrice ?? def.refPrice;
   const brandStrength = Math.min(1, (c.brand[g] ?? 0) / 0.02);
-  const premium = Math.min(2, Math.pow(Math.max(1, quality(s, c, g) ** 2 * (c.reputation[g] ?? 1)), 1 / def.priceSensitivity) * (1 + 0.6 * brandStrength));
+  const premium = Math.min(1.7, Math.pow(Math.max(1, quality(s, c, g) ** 2 * (c.reputation[g] ?? 1)), 1 / def.priceSensitivity) * (1 + 0.4 * brandStrength));
   const ceiling = Math.max(floor, Math.min(def.refPrice * 3, others * premium));
   next = clamp(next, floor, (globalThis as { NOCEIL?: boolean }).NOCEIL ? def.refPrice * 3 : ceiling);
   if (def.importPrice && def.intermediate) next = Math.min(next, def.importPrice * 0.99);

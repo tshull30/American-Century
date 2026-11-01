@@ -1,3 +1,4 @@
+import { boardVote, needsVote, recordBuyback } from "./leadership";
 // Things a company can do. The player's UI and the AI rivals both go through these.
 import { BUILDING_BY_ID, methodOf, type BuildingTypeId } from "./data/buildings";
 import { GOOD_BY_ID, type GoodId, type TechId } from "./data/goods";
@@ -49,6 +50,10 @@ export function build(s: GameState, cid: number, type: BuildingTypeId, city: str
   const m = method ?? BUILDING_BY_ID[type].methods[0].id;
   const q = buildQuote(s, type, city, levels, m, c);
   if (q.total > liquidity(c)) return fail(`Not enough cash or credit: needs ${fmtMoney(q.total)}.`);
+  if (needsVote(c, "megaproject", q.total)) {
+    const v = boardVote(s, c, "megaproject", `${levels} levels of ${BUILDING_BY_ID[type].name} (${fmtMoney(q.total)})`);
+    if (!v.ok) return fail(v.message);
+  }
   let b = c.buildings.find((x) => x.type === type && x.city === city && x.method === m);
   if (!b) b = addBuilding(s, c, type, city, 0, m);
   queueConstruction(s, c, b, levels);
@@ -155,6 +160,10 @@ export function repay(s: GameState, cid: number, amount: number): Result {
 export function issueShares(s: GameState, cid: number, fraction: number): Result {
   const c = company(s, cid);
   const f = Math.min(0.3, Math.max(0.01, fraction));
+  if (needsVote(c, "issuance", f)) {
+    const v = boardVote(s, c, "issuance", `${(f * 100).toFixed(0)}% new shares`);
+    if (!v.ok) return fail(v.message);
+  }
   const price = (c.marketCap / c.shares) * 0.92;
   const newShares = c.shares * f;
   const raised = newShares * price;
@@ -175,6 +184,7 @@ export function buyback(s: GameState, cid: number, amount: number): Result {
   c.shares -= retired;
   c.cash -= retired * price;
   c.marketCap -= retired * price;
+  recordBuyback(c, retired * price);
   return ok(`Bought back ${fmtMoney(retired * price)} of stock.`);
 }
 
@@ -200,6 +210,11 @@ export function offer(s: GameState, buyerId: number, targetId: number, premium: 
   const target = company(s, targetId);
   if (!target.alive || buyer === target) return fail("Invalid target.");
   if (target.isPlayer) return fail("You can't buy the player.");
+  const est = target.marketCap * (1 + premium);
+  if (needsVote(buyer, "acquisition", est)) {
+    const v = boardVote(s, buyer, "acquisition", `${target.name} for ${fmtMoney(est)}`);
+    if (!v.ok) return fail(v.message);
+  }
   const r = makeOffer(s, buyer, target, premium, payment, liquidity(buyer));
   if (r.ok && (buyer.isPlayer || target.marketCap > 5e9)) log(s, r.message.replace(`${target.name}'s board`, `${target.name}'s board`).replace(/^/, `${buyer.name} → ${target.name}: `), "deal", buyer.id, target.isPlayer ? "deal" : undefined);
   return { ok: r.ok, message: r.message };
@@ -374,6 +389,10 @@ export function relocateHq(s: GameState, cid: number, city: string): Result {
   const lv = hqLevels(c);
   const cost = buildCostPerLevel(s, "hq", city, undefined, false, c) * lv * 0.5;
   if (cost > liquidity(c)) return fail(`Moving costs ${fmtMoney(cost)}.`);
+  if (needsVote(c, "relocation", cost)) {
+    const v = boardVote(s, c, "relocation", `to ${dest.name}`);
+    if (!v.ok) return fail(v.message);
+  }
   const old = s.cities[c.hqSite.city];
   c.cash -= cost;
   c.ppe += cost * 0.5;

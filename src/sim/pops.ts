@@ -53,8 +53,9 @@ export function jobShares(s: StateDef): Record<JobId, number> {
   let total = 0;
   for (const j of JOBS) {
     let v = j.nationalShare * Math.pow(s.techIndex, j.techWeight) * Math.pow(s.mfgIndex, j.mfgWeight);
-    if (j.resource === "farm") v *= (0.1 + resourceIdx("farm", s.code)) / 0.8;
-    if (j.resource === "oilgas") v *= (0.04 + resourceIdx("oil", s.code) + resourceIdx("gas", s.code)) / 0.45;
+    const r = (id: Parameters<typeof resourceIdx>[0]) => resourceIdx(id, s.code);
+    if (j.resource === "farm") v *= (0.1 + r("farm") + 0.4 * (r("ranch") + r("dairy") + r("cotton")) + 0.2 * r("timber")) / 1.3;
+    if (j.resource === "oilgas") v *= (0.04 + r("oil") + r("gas") + 0.4 * (r("coal") + r("iron") + r("copper") + r("uranium"))) / 0.7;
     raw[j.id] = v;
     total += v;
   }
