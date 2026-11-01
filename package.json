@@ -1,0 +1,44 @@
+{
+  "name": "american-century",
+  "version": "0.1.0",
+  "description": "A Victoria 3-style corporate strategy game set in the modern United States",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "calibrate": "tsx scripts/calibrate.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tshull30/american-century.git"
+  },
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/tshull30/american-century/issues"
+  },
+  "homepage": "https://github.com/tshull30/american-century#readme",
+  "dependencies": {
+    "d3-geo": "^3.1.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "topojson-client": "^3.1.0",
+    "us-atlas": "^3.0.1"
+  },
+  "devDependencies": {
+    "@types/d3-geo": "^3.1.1",
+    "@types/node": "^26.6.6",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "@types/topojson-client": "^3.1.5",
+    "@vitejs/plugin-react": "^4.7.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vite": "^5.4.21",
+    "vite-plugin-singlefile": "^2.0.3",
+    "vitest": "^2.1.9"
+  },
+  "private": true,
+  "type": "module"
+}
