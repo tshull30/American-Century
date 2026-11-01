@@ -46,7 +46,7 @@ export interface CompanySeed {
 
 export const COMPANY_SEEDS: CompanySeed[] = [
   {
-    key: "orchard", name: "Orchard Computer", ticker: "ORCH", color: "#e0e0e0", inspiredBy: "Apple",
+    key: "orchard", name: "Orchard Computer", ticker: "ORCH", color: "#5b6770", inspiredBy: "Apple",
     tagline: "Premium phones and computers wrapped in a walled garden of services.",
     hq: "CA", marketCap: 3.6e12, cash: 60e9, debt: 100e9, shares: 15e9,
     priceMult: { smartphones: 1.25, computers: 1.3, software: 1.1 },
@@ -60,7 +60,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     rndIntensity: 0.08, rndStates: { CA: 0.7, TX: 0.15, WA: 0.15 }, marketingPct: 0.03, wagePolicy: 1.15, tier: "incumbent",
   },
   {
-    key: "windward", name: "Windward Systems", ticker: "WNWD", color: "#4fc3f7", inspiredBy: "Microsoft",
+    key: "windward", name: "Windward Systems", ticker: "WNWD", color: "#2f6f9f", inspiredBy: "Microsoft",
     tagline: "The software every office runs on, and the cloud underneath it.",
     hq: "WA", marketCap: 3.7e12, cash: 80e9, debt: 45e9, shares: 7.4e9,
     priceMult: { software: 1.0, cloud: 1.0, computers: 1.0 },
@@ -74,7 +74,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     rndIntensity: 0.11, rndStates: { WA: 0.7, CA: 0.15, MA: 0.15 }, marketingPct: 0.03, wagePolicy: 1.1, tier: "incumbent",
   },
   {
-    key: "verdant", name: "Verdant Silicon", ticker: "VRDT", color: "#76ff03", inspiredBy: "Nvidia",
+    key: "verdant", name: "Verdant Silicon", ticker: "VRDT", color: "#4f7d2c", inspiredBy: "Nvidia",
     tagline: "Sells the picks and shovels of the AI gold rush.",
     hq: "CA", marketCap: 4.5e12, cash: 60e9, debt: 9e9, shares: 24e9,
     priceMult: { ai_accelerators: 1.1 },
@@ -84,7 +84,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     rndIntensity: 0.08, rndStates: { CA: 0.8, TX: 0.2 }, marketingPct: 0.01, wagePolicy: 1.2, tier: "incumbent",
   },
   {
-    key: "kestrel", name: "Kestrel Motors", ticker: "KSTL", color: "#ff5252", inspiredBy: "Tesla",
+    key: "kestrel", name: "Kestrel Motors", ticker: "KSTL", color: "#a63a2b", inspiredBy: "Tesla",
     tagline: "Electric cars, giant battery plants and a founder who never stops posting.",
     hq: "TX", marketCap: 1.3e12, cash: 35e9, debt: 8e9, shares: 3.2e9,
     priceMult: { evs: 0.95, batteries: 1.0 },
@@ -97,7 +97,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     rndIntensity: 0.05, rndStates: { TX: 0.5, CA: 0.5 }, marketingPct: 0.003, wagePolicy: 1.0, tier: "incumbent",
   },
   {
-    key: "seerstone", name: "Seerstone Analytics", ticker: "SEER", color: "#b388ff", inspiredBy: "Palantir",
+    key: "seerstone", name: "Seerstone Analytics", ticker: "SEER", color: "#6d4c8e", inspiredBy: "Palantir",
     tagline: "Data platforms for spies, soldiers and Fortune 500 boardrooms.",
     hq: "CO", marketCap: 420e9, cash: 6e9, debt: 0, shares: 2.4e9,
     priceMult: { data_platforms: 1.3 },
@@ -107,7 +107,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     rndIntensity: 0.1, rndStates: { CO: 0.5, CA: 0.5 }, marketingPct: 0.04, wagePolicy: 1.15, tier: "incumbent",
   },
   {
-    key: "foundry", name: "Foundry Corp", ticker: "FNDY", color: "#448aff", inspiredBy: "Intel",
+    key: "foundry", name: "Foundry Corp", ticker: "FNDY", color: "#2c4f7c", inspiredBy: "Intel",
     tagline: "America's chipmaker, trying to win back the lead it lost.",
     hq: "CA", marketCap: 160e9, cash: 22e9, debt: 50e9, shares: 4.4e9,
     priceMult: { chips: 1.0 },
@@ -117,7 +117,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     rndIntensity: 0.25, rndStates: { OR: 0.6, CA: 0.4 }, marketingPct: 0.02, wagePolicy: 1.0, tier: "incumbent",
   },
   {
-    key: "cumulus", name: "Cumulus Compute", ticker: "CMLS", color: "#80deea", inspiredBy: "CoreWeave",
+    key: "cumulus", name: "Cumulus Compute", ticker: "CMLS", color: "#3b8d8c", inspiredBy: "CoreWeave",
     tagline: "A debt-fueled neocloud renting out AI accelerators by the hour.",
     hq: "NJ", marketCap: 45e9, cash: 3e9, debt: 8e9, shares: 500e6,
     priceMult: { cloud: 0.9 },
@@ -127,7 +127,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     rndIntensity: 0.02, rndStates: { NJ: 1 }, marketingPct: 0.01, wagePolicy: 1.05, tier: "challenger",
   },
   {
-    key: "rivet", name: "Rivet Automotive", ticker: "RIVT", color: "#ffd740", inspiredBy: "Rivian",
+    key: "rivet", name: "Rivet Automotive", ticker: "RIVT", color: "#b5872c", inspiredBy: "Rivian",
     tagline: "Adventure trucks for people who own kayaks. Still burning cash.",
     hq: "CA", marketCap: 15e9, cash: 7e9, debt: 5e9, shares: 1.2e9,
     priceMult: { evs: 1.4 },
@@ -137,7 +137,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     rndIntensity: 0.25, rndStates: { CA: 0.6, MI: 0.4 }, marketingPct: 0.04, wagePolicy: 1.05, tier: "challenger",
   },
   {
-    key: "bluegrass", name: "Bluegrass Battery Co.", ticker: "BGBC", color: "#a5d6a7", inspiredBy: "a Southern battery-belt supplier",
+    key: "bluegrass", name: "Bluegrass Battery Co.", ticker: "BGBC", color: "#6f8f3a", inspiredBy: "a Southern battery-belt supplier",
     tagline: "Battery cells from the heart of the new Battery Belt.",
     hq: "KY", marketCap: 5e9, cash: 1.2e9, debt: 1.5e9, shares: 300e6,
     priceMult: { batteries: 0.98 },
@@ -147,7 +147,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     rndIntensity: 0.05, rndStates: { KY: 1 }, marketingPct: 0.01, wagePolicy: 0.95, tier: "challenger",
   },
   {
-    key: "copperline", name: "Copperline Semiconductor", ticker: "CPLN", color: "#ff8a65", inspiredBy: "a specialty chipmaker",
+    key: "copperline", name: "Copperline Semiconductor", ticker: "CPLN", color: "#8a5a3c", inspiredBy: "a specialty chipmaker",
     tagline: "A scrappy Texas fab betting on the onshoring boom.",
     hq: "TX", marketCap: 2e9, cash: 400e6, debt: 200e6, shares: 150e6,
     priceMult: { chips: 0.97 },
@@ -157,7 +157,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     rndIntensity: 0.15, rndStates: { TX: 1 }, marketingPct: 0.02, wagePolicy: 1.0, tier: "startup",
   },
   {
-    key: "lattice", name: "Lattice Labs", ticker: "LTCE", color: "#90caf9", inspiredBy: "a hot SaaS startup",
+    key: "lattice", name: "Lattice Labs", ticker: "LTCE", color: "#4a6fa5", inspiredBy: "a hot SaaS startup",
     tagline: "AI-native workflow software that VCs can't stop funding.",
     hq: "CA", marketCap: 800e6, cash: 250e6, debt: 0, shares: 100e6,
     priceMult: { software: 1.0 },
@@ -167,7 +167,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     rndIntensity: 0, rndLevels: 6, rndStates: { CA: 1 }, marketingPct: 0.15, wagePolicy: 1.1, tier: "startup",
   },
   {
-    key: "mosaic", name: "Mosaic Data", ticker: "MSDT", color: "#ce93d8", inspiredBy: "a government-tech startup",
+    key: "mosaic", name: "Mosaic Data", ticker: "MSDT", color: "#9a4f6a", inspiredBy: "a government-tech startup",
     tagline: "Northern Virginia contractors with a slick data platform.",
     hq: "VA", marketCap: 500e6, cash: 120e6, debt: 0, shares: 80e6,
     priceMult: { data_platforms: 1.0 },
@@ -177,7 +177,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     rndIntensity: 0, rndLevels: 3, rndStates: { VA: 1 }, marketingPct: 0.08, wagePolicy: 1.0, tier: "startup",
   },
   {
-    key: "driftwood", name: "Driftwood Electric", ticker: "DRFT", color: "#bcaaa4", inspiredBy: "a pre-revenue EV startup",
+    key: "driftwood", name: "Driftwood Electric", ticker: "DRFT", color: "#3f7a5a", inspiredBy: "a pre-revenue EV startup",
     tagline: "Affordable EVs from a reopened Michigan plant. No revenue yet.",
     hq: "MI", marketCap: 1.5e9, cash: 600e6, debt: 0, shares: 200e6,
     priceMult: { evs: 0.85 },
@@ -188,7 +188,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     rndIntensity: 0, rndLevels: 8, rndStates: { MI: 1 }, marketingPct: 0.05, wagePolicy: 1.0, tier: "startup",
   },
   {
-    key: "summit", name: "Summit Search", ticker: "SMMT", color: "#ffd54f", inspiredBy: "Alphabet",
+    key: "summit", name: "Summit Search", ticker: "SMMT", color: "#7c5e2a", inspiredBy: "Alphabet",
     tagline: "Organizes the world's information, then sells ads next to it.",
     hq: "CA", marketCap: 2.8e12, cash: 95e9, debt: 25e9, shares: 12e9,
     priceMult: { digital_ads: 1.05, cloud: 0.95, smartphones: 0.9 },
@@ -202,7 +202,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     rndIntensity: 0.14, rndStates: { CA: 0.7, NY: 0.15, WA: 0.15 }, marketingPct: 0.04, wagePolicy: 1.2, tier: "incumbent",
   },
   {
-    key: "lumiverse", name: "Lumiverse", ticker: "LUMV", color: "#7c8cff", inspiredBy: "Meta",
+    key: "lumiverse", name: "Lumiverse", ticker: "LUMV", color: "#5e4f8a", inspiredBy: "Meta",
     tagline: "Three billion people scrolling, and a very expensive bet on the metaverse.",
     hq: "CA", marketCap: 1.8e12, cash: 70e9, debt: 30e9, shares: 2.5e9,
     priceMult: { digital_ads: 0.95 },
@@ -212,7 +212,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     rndIntensity: 0.25, rndStates: { CA: 0.8, WA: 0.2 }, marketingPct: 0.04, wagePolicy: 1.2, tier: "incumbent",
   },
   {
-    key: "atlas", name: "Atlas Commerce", ticker: "ATLS", color: "#ff9800", inspiredBy: "Amazon",
+    key: "atlas", name: "Atlas Commerce", ticker: "ATLS", color: "#2f7d75", inspiredBy: "Amazon",
     tagline: "Started with books. Now runs the cloud, the warehouses and the grocery store.",
     hq: "WA", marketCap: 2.4e12, cash: 85e9, debt: 60e9, shares: 10.6e9,
     priceMult: { cloud: 1.0, digital_ads: 0.95, groceries: 1.05 },
@@ -226,7 +226,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     rndIntensity: 0.12, rndStates: { WA: 0.7, CA: 0.3 }, marketingPct: 0.05, wagePolicy: 1.05, tier: "incumbent",
   },
   {
-    key: "redline", name: "Redline Micro", ticker: "RDLN", color: "#ef5350", inspiredBy: "AMD",
+    key: "redline", name: "Redline Micro", ticker: "RDLN", color: "#a05a2c", inspiredBy: "AMD",
     tagline: "The perennial underdog chip designer, finally with a shot at the AI crown.",
     hq: "CA", marketCap: 350e9, cash: 6e9, debt: 2e9, shares: 1.6e9,
     priceMult: { ai_accelerators: 0.85, chips: 1.0 },
@@ -239,7 +239,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     rndIntensity: 0.22, rndStates: { CA: 0.6, TX: 0.4 }, marketingPct: 0.02, wagePolicy: 1.1, tier: "incumbent",
   },
   {
-    key: "crestline", name: "Crestline Computers", ticker: "CRST", color: "#26c6da", inspiredBy: "Dell",
+    key: "crestline", name: "Crestline Computers", ticker: "CRST", color: "#4d6b2f", inspiredBy: "Dell",
     tagline: "Laptops for every cubicle in America, shipped from Texas.",
     hq: "TX", marketCap: 90e9, cash: 4e9, debt: 25e9, shares: 700e6,
     priceMult: { computers: 0.95 },
@@ -249,7 +249,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     rndIntensity: 0.03, rndStates: { TX: 1 }, marketingPct: 0.02, wagePolicy: 1.0, tier: "incumbent",
   },
   {
-    key: "motorcity", name: "Motor City Motors", ticker: "MCM", color: "#90a4ae", inspiredBy: "General Motors",
+    key: "motorcity", name: "Motor City Motors", ticker: "MCM", color: "#8c3b3b", inspiredBy: "General Motors",
     tagline: "A century of trucks and SUVs, nervously pivoting to electric.",
     hq: "MI", marketCap: 60e9, cash: 20e9, debt: 110e9, shares: 1.0e9,
     priceMult: { gas_cars: 1.1, evs: 1.0 },
@@ -262,7 +262,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     rndIntensity: 0.06, rndStates: { MI: 1 }, marketingPct: 0.02, wagePolicy: 1.0, tier: "incumbent",
   },
   {
-    key: "bluestone", name: "Bluestone Motor Co.", ticker: "BLST", color: "#5c6bc0", inspiredBy: "Ford",
+    key: "bluestone", name: "Bluestone Motor Co.", ticker: "BLST", color: "#346b8f", inspiredBy: "Ford",
     tagline: "America's best-selling pickup, and an EV division losing billions.",
     hq: "MI", marketCap: 45e9, cash: 25e9, debt: 100e9, shares: 4.0e9,
     priceMult: { gas_cars: 1.05, evs: 1.05 },
@@ -275,7 +275,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     rndIntensity: 0.05, rndStates: { MI: 1 }, marketingPct: 0.02, wagePolicy: 1.0, tier: "incumbent",
   },
   {
-    key: "heartland", name: "Heartland Provisions", ticker: "HRTL", color: "#aed581", inspiredBy: "Tyson & Kraft",
+    key: "heartland", name: "Heartland Provisions", ticker: "HRTL", color: "#6b6b2f", inspiredBy: "Tyson & Kraft",
     tagline: "Chicken, cheese and cereal for 330 million people.",
     hq: "AR", marketCap: 35e9, cash: 2e9, debt: 15e9, shares: 360e6,
     priceMult: { groceries: 1.0 },
@@ -285,7 +285,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     rndIntensity: 0.01, rndStates: { AR: 1 }, marketingPct: 0.04, wagePolicy: 0.95, tier: "incumbent",
   },
   {
-    key: "stride", name: "Stride Athletic", ticker: "STRD", color: "#ff7043", inspiredBy: "Nike",
+    key: "stride", name: "Stride Athletic", ticker: "STRD", color: "#7a3f6b", inspiredBy: "Nike",
     tagline: "Sneakers and swagger, sold everywhere on Earth.",
     hq: "OR", marketCap: 110e9, cash: 9e9, debt: 8e9, shares: 1.5e9,
     priceMult: { apparel: 1.6 },
@@ -295,7 +295,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     rndIntensity: 0.02, rndStates: { OR: 1 }, marketingPct: 0.1, wagePolicy: 1.0, tier: "incumbent",
   },
   {
-    key: "marquee", name: "Marquee Media", ticker: "MRQE", color: "#e53935", inspiredBy: "Netflix",
+    key: "marquee", name: "Marquee Media", ticker: "MRQE", color: "#2f5d4a", inspiredBy: "Netflix",
     tagline: "Your next binge, and the reason nobody goes to movie theaters.",
     hq: "CA", marketCap: 450e9, cash: 9e9, debt: 15e9, shares: 430e6,
     priceMult: { streaming: 1.1 },
@@ -305,7 +305,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     rndIntensity: 0.07, rndStates: { CA: 1 }, marketingPct: 0.06, wagePolicy: 1.15, tier: "incumbent",
   },
   {
-    key: "halvorsen", name: "Halvorsen Pharma", ticker: "HLVR", color: "#4fc3f7", inspiredBy: "Pfizer & Merck",
+    key: "halvorsen", name: "Halvorsen Pharma", ticker: "HLVR", color: "#9b6b3a", inspiredBy: "Pfizer & Merck",
     tagline: "A century-old drugmaker facing a patent cliff.",
     hq: "NY", marketCap: 160e9, cash: 12e9, debt: 60e9, shares: 5.6e9,
     priceMult: { pharmaceuticals: 1.0 },
@@ -315,7 +315,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     rndIntensity: 0.18, rndStates: { MA: 0.5, NJ: 0.5 }, marketingPct: 0.06, wagePolicy: 1.05, tier: "incumbent",
   },
   {
-    key: "cascade", name: "Cascade Therapeutics", ticker: "CSCD", color: "#80cbc4", inspiredBy: "Eli Lilly",
+    key: "cascade", name: "Cascade Therapeutics", ticker: "CSCD", color: "#4f5f8f", inspiredBy: "Eli Lilly",
     tagline: "Its weight-loss drug made it the most valuable drugmaker on Earth.",
     hq: "IN", marketCap: 750e9, cash: 3e9, debt: 30e9, shares: 900e6,
     priceMult: { pharmaceuticals: 1.5 },
@@ -325,7 +325,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     rndIntensity: 0.22, rndStates: { IN: 0.6, MA: 0.4 }, marketingPct: 0.05, wagePolicy: 1.1, tier: "incumbent",
   },
   {
-    key: "continental", name: "Continental Power", ticker: "CPWR", color: "#fdd835", inspiredBy: "NextEra",
+    key: "continental", name: "Continental Power", ticker: "CPWR", color: "#5f8f6f", inspiredBy: "NextEra",
     tagline: "The country's largest utility, and its biggest builder of wind and solar.",
     hq: "FL", marketCap: 150e9, cash: 2e9, debt: 80e9, shares: 2.05e9,
     priceMult: { electricity: 1.0 },
@@ -338,7 +338,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     rndIntensity: 0.01, rndStates: { FL: 1 }, marketingPct: 0.005, wagePolicy: 1.0, tier: "incumbent",
   },
   {
-    key: "sprout", name: "Sprout Foods", ticker: "SPRT", color: "#c5e1a5", inspiredBy: "a plant-based food startup",
+    key: "sprout", name: "Sprout Foods", ticker: "SPRT", color: "#8f4f3f", inspiredBy: "a plant-based food startup",
     tagline: "Plant-based everything, from a Colorado test kitchen.",
     hq: "CO", marketCap: 400e6, cash: 90e6, debt: 0, shares: 60e6,
     priceMult: { groceries: 1.3 },
@@ -348,7 +348,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     rndIntensity: 0, rndLevels: 3, rndStates: { CO: 1 }, marketingPct: 0.12, wagePolicy: 1.0, tier: "startup",
   },
   {
-    key: "helio", name: "Helio Grid", ticker: "HELI", color: "#ffee58", inspiredBy: "a solar developer",
+    key: "helio", name: "Helio Grid", ticker: "HELI", color: "#3f6f8f", inspiredBy: "a solar developer",
     tagline: "Desert solar farms financed with a lot of optimism.",
     hq: "AZ", marketCap: 900e6, cash: 150e6, debt: 100e6, shares: 120e6,
     priceMult: { electricity: 0.95 },
@@ -358,7 +358,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     rndIntensity: 0, rndLevels: 2, rndStates: { AZ: 1 }, marketingPct: 0.01, wagePolicy: 1.0, tier: "startup",
   },
   {
-    key: "verve", name: "Verve Bio", ticker: "VRVB", color: "#80deea", inspiredBy: "a clinical-stage biotech",
+    key: "verve", name: "Verve Bio", ticker: "VRVB", color: "#6f4f2f", inspiredBy: "a clinical-stage biotech",
     tagline: "A gene therapy in late-stage trials. No product yet.",
     hq: "MA", marketCap: 1.2e9, cash: 400e6, debt: 0, shares: 90e6,
     priceMult: { pharmaceuticals: 2 },

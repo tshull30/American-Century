@@ -18,7 +18,7 @@ import {
 } from "./util";
 import { runAI, autoPrice } from "./ai";
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 export const BASELINE_TECH_START = 10;
 const DT = 1 / DAYS_PER_MONTH;
 const DEPRECIATION = 0.006;
@@ -53,7 +53,8 @@ export function newGame(choice: PlayerChoice, seed = Math.floor(Math.random() * 
     version: SAVE_VERSION, seed, rng: seed | 0, day: startDay, month: -WARMUP_MONTHS, playerId: -1,
     pops, labor, companies: [], demandScale: {}, needShare: {}, needPref: {}, needStats: {}, usDemand: {},
     othersWeight: {}, othersPrice: {}, othersShareStart: {}, marketGrowth: {}, baselineTech: {}, markets: {},
-    baseRate: 0.05, macro: initMacro(), worldEvents: [], politics: undefined as never, sol: 100, solNorm: 1, events: [], nextId: 1,
+    baseRate: 0.05, macro: initMacro(), worldEvents: [], politics: undefined as never, politicians: [], vacancies: [], stateLegs: {},
+    sol: 100, solNorm: 1, events: [], nextId: 1,
   };
   s.politics = initPolitics(s);
   refreshWorkforce(s);
@@ -114,6 +115,8 @@ export function newGame(choice: PlayerChoice, seed = Math.floor(Math.random() * 
     c.hypeAnchor = c.hype;
     c.marketCap = target;
     c.valuationTarget = target;
+    const last = c.history[c.history.length - 1];
+    if (last) { last.marketCap = target; last.sharePrice = target / c.shares; }
   }
   s.macro.history = [];
   s.events = [];
@@ -268,7 +271,7 @@ export function createStartup(
   c.marketCap = o.cash * 2;
   c.valuationTarget = c.marketCap;
   c.kind = "startup";
-  c.color = o.isPlayer ? "#ffca28" : `hsl(${Math.floor(rand(s) * 360)} 45% 65%)`;
+  c.color = o.isPlayer ? "#1c3329" : `hsl(${Math.floor(rand(s) * 360)} 35% 42%)`;
   c.tagline = o.isPlayer ? "Your company. Two rooms, a whiteboard and a lot of ambition." : "A venture-backed upstart.";
   c.marketingPct = 0.08;
   c.wagePolicy = 1.05;

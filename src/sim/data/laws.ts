@@ -63,7 +63,7 @@ export const LAWS: LawDef[] = [
     { name: "Strategic", effect: "30% off building chip fabs, battery plants and power plants." },
     { name: "Broad", effect: "30% off strategic plants, 15% off all other factories." },
   ] },
-  { id: "immigration", name: "High-Skill Immigration", start: 1, platform: { commonwealth: 2, frontier: 0 }, levels: [
+  { id: "immigration", name: "High-Skill Immigration", start: 0, platform: { commonwealth: 2, frontier: 0 }, levels: [
     { name: "Restricted", effect: "5% fewer engineers, software developers and scientists available." },
     { name: "Current", effect: "Today's visa caps." },
     { name: "Expanded", effect: "10% more engineers, software developers and scientists available." },
@@ -78,7 +78,7 @@ export const LAWS: LawDef[] = [
     { name: "Moderate", effect: "8% less demand for digital ads and data platforms." },
     { name: "Strict", effect: "18% less demand for digital ads and data platforms." },
   ] },
-  { id: "climate", name: "Climate Policy", start: 1, platform: { commonwealth: 2, frontier: 0 }, levels: [
+  { id: "climate", name: "Climate Policy", start: 0, platform: { commonwealth: 2, frontier: 0 }, levels: [
     { name: "None", effect: "No climate measures." },
     { name: "Clean energy credits", effect: "EVs 15% more attractive to buyers; solar plants 30% cheaper to build." },
     { name: "Carbon tax", effect: "EVs 30% more attractive, gas cars 15% less; gas power plants pay $2M per level per month." },

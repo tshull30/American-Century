@@ -3,6 +3,7 @@ import { BUILDING_BY_ID, methodOf, type BuildingTypeId } from "./data/buildings"
 import { GOOD_BY_ID, type GoodId, type TechId } from "./data/goods";
 import type { LawId, PartyId } from "./data/laws";
 import { antitrustCap, donate as donateImpl } from "./politics";
+import { foundPac as foundPacImpl, fundPac as fundPacImpl, pacSpend as pacSpendImpl } from "./congress";
 import { STATE_BY_CODE } from "./data/states";
 import {
   addBuilding, buildCostPerLevel, creditLimit, log, queueConstruction, releaseCompany,
@@ -263,4 +264,25 @@ export function donate(s: GameState, cid: number, party: PartyId, amount: number
   const c = company(s, cid);
   if (amount > c.cash) return fail("Not enough cash.");
   return ok(donateImpl(s, c, party, amount));
+}
+
+export function foundPac(s: GameState, cid: number, name: string): Result {
+  const c = company(s, cid);
+  if (c.pac) return fail("You already run a PAC.");
+  if (c.cash < 2e6) return fail("Registering a PAC costs $2M in legal and compliance fees.");
+  return ok(foundPacImpl(s, c, name.trim() || `${c.name} PAC`));
+}
+
+export function fundPac(s: GameState, cid: number, amount: number): Result {
+  const c = company(s, cid);
+  if (!c.pac) return fail("Found a PAC first.");
+  if (amount > c.cash) return fail("Not enough cash.");
+  return ok(fundPacImpl(c, amount));
+}
+
+export function pacSpend(s: GameState, cid: number, politicianId: string, amount: number, mode: "support" | "oppose"): Result {
+  const c = company(s, cid);
+  if (!c.pac) return fail("Found a PAC first.");
+  if (amount > c.pac.funds) return fail(`${c.pac.name} only has ${fmtMoney(c.pac.funds)}. Move more money into it first.`);
+  return ok(pacSpendImpl(s, c, politicianId, amount, mode));
 }

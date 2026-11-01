@@ -35,7 +35,7 @@ export function Rivals() {
       </Panel>
       <div>
         {target && target.alive ? (
-          <Panel title={target.name} right={target.inspiredBy ? `inspired by ${target.inspiredBy}` : undefined}>
+          <Panel title={target.name}>
             <p className="hint" style={{ marginTop: 0 }}>{target.tagline}</p>
             <table className="t"><tbody>
               <tr><td>Headquarters</td><td className="num">{STATE_BY_CODE[target.hq].name}</td></tr>

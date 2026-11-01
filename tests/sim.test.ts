@@ -5,6 +5,8 @@ import { newGame, player, tick, ttm } from "../src/sim/engine";
 import { generatePops, rake } from "../src/sim/pops";
 import { setLobbying } from "../src/sim/actions";
 import { electionDay } from "../src/sim/politics";
+import { seats, whip } from "../src/sim/congress";
+import { foundPac, fundPac, pacSpend } from "../src/sim/actions";
 import type { GameState } from "../src/sim/types";
 
 function months(s: GameState, n: number) {
@@ -101,5 +103,35 @@ describe("needs and politics", () => {
     setLobbying(s, me.id, "tariffs", -1, 20e6);
     months(s, 2);
     expect(me.history[me.history.length - 1].lobbying).toBeGreaterThanOrEqual(20e6);
+  });
+});
+
+describe("congress", () => {
+  it("seats the real 119th Congress as of 1 January 2026", () => {
+    const s = newGame({ kind: "incumbent", key: "orchard" }, 8);
+    expect(s.politicians.filter((m) => m.chamber === "senate").length).toBe(100);
+    expect(s.politicians.filter((m) => m.chamber === "house").length + s.vacancies.length).toBe(435);
+    expect(seats(s, "senate")).toEqual({ D: 47, R: 53 });
+    expect(s.politicians.some((m) => m.name === "Lindsey Graham")).toBe(true);
+    expect(s.politics.presidentName).toBe("Donald Trump");
+  });
+
+  it("needs 60 Senate votes for regulatory bills but 51 for taxes", () => {
+    const s = newGame({ kind: "incumbent", key: "orchard" }, 9);
+    const w1 = whip(s, "data_privacy", 1, "commonwealth");
+    const w2 = whip(s, "corporate_tax", 0, "frontier");
+    expect(w1.senate.need).toBe(60);
+    expect(w2.senate.need).toBeLessThanOrEqual(51);
+  });
+
+  it("lets a PAC back a member and build goodwill", () => {
+    const s = newGame({ kind: "incumbent", key: "lumiverse" }, 10);
+    const me = player(s);
+    expect(foundPac(s, me.id, "Test PAC").ok).toBe(true);
+    expect(fundPac(s, me.id, 20e6).ok).toBe(true);
+    const cruz = s.politicians.find((m) => m.name === "Ted Cruz")!;
+    expect(pacSpend(s, me.id, cruz.id, 5e6, "support").ok).toBe(true);
+    expect(cruz.friends[me.id]).toBe(5e6);
+    expect(me.pac!.funds).toBe(15e6);
   });
 });

@@ -28,7 +28,7 @@ export function Consumers() {
       <div>
         <Panel title="American households">
           <div className="stats">
-            <Stat label="Standard of living" value={s.sol.toFixed(1)} sub={`${solTier(s.sol)} · 100 = 2026 average`} />
+            <Stat label="Standard of living" value={s.sol.toFixed(1)} sub={`${solTier(s.sol)}; 100 is the 2026 average`} />
             <Stat label="Economy" value={s.macro.recession ? "Recession" : s.macro.gap > 0.01 ? "Boom" : "Steady"} sub={`output gap ${fmtPct(s.macro.gap, 1)}`} />
             <Stat label="Inflation" value={fmtPct(s.macro.inflation, 1)} sub={`Fed funds ${fmtPct(s.macro.fedRate, 2)}`} />
           </div>
@@ -51,7 +51,7 @@ export function Consumers() {
             rows={NEEDS}
             rowKey={(n) => n.id}
             cols={[
-              { key: "n", label: "Need", render: (n) => <>{n.name}{n.basic ? <span className="muted"> · basic</span> : null}</> },
+              { key: "n", label: "Need", render: (n) => <>{n.name}{n.basic ? <span className="muted"> (basic)</span> : null}</> },
               { key: "g", label: "Met by", render: (n) => n.goods.map((g) => {
                 const sh = s.markets[g]?.sales[me.id]?.share;
                 return <span key={g} title={sh ? `You hold ${fmtPct(sh, 2)} of this market` : undefined}>{GOOD_BY_ID[g].name}{sh ? " ★" : ""} </span>;

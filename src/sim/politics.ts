@@ -6,6 +6,7 @@ import type { JobId } from "./data/jobs";
 import { LAWS, LAW_BY_ID, PARTIES, type LawId, type PartyId } from "./data/laws";
 import type { Company, GameState, Politics } from "./types";
 import { clamp, dateOfDay, dayLabel, fmtMoney, rand, randNormal, START_YEAR } from "./util";
+import { decayFriendship, holdCongressElections, initCongress, pickPresident, recordVote, refreshMajorities, whip } from "./congress";
 
 // ---------------------------------------------------------------- law effects
 
@@ -98,10 +99,16 @@ export function electionDay(year: number): number {
 }
 
 export function initPolitics(s: GameState): Politics {
-  const president: PartyId = rand(s) < 0.5 ? "commonwealth" : "frontier";
-  const congress: PartyId = rand(s) < 0.6 ? president : president === "commonwealth" ? "frontier" : "commonwealth";
   const laws = Object.fromEntries(LAWS.map((l) => [l.id, l.start])) as Record<LawId, number>;
-  return { president, congress, laws, bill: null, approval: 0.46, poll: 0.5, nextElectionDay: electionDay(START_YEAR), solAtLastElection: 100 };
+  const p: Politics = {
+    president: "frontier", presidentName: "Donald Trump", vpName: "JD Vance", presidentTerms: 2,
+    congress: "frontier", senate: "frontier", laws, bill: null, approval: 0.42, poll: 0.51,
+    nextElectionDay: electionDay(START_YEAR), solAtLastElection: 100,
+  };
+  s.politics = p;
+  initCongress(s);
+  refreshMajorities(s);
+  return p;
 }
 
 export function isPresidentialYear(year: number) {
@@ -183,44 +190,46 @@ export function updatePolitics(s: GameState, log: (text: string, kind?: "politic
   poll += donationEdge(s);
   p.poll += (clamp(poll, 0.38, 0.62) - p.poll) * 0.3;
 
-  // Legislation
-  const unified = p.president === p.congress;
+  // Legislation: the House majority sets the agenda; committee work takes months, then both chambers vote.
+  decayFriendship(s);
+  const unified = p.president === p.congress && p.congress === p.senate;
   if (p.bill) {
     const b = p.bill;
-    const cur = p.laws[b.law];
-    const dir = (b.target > cur ? 1 : -1) as 1 | -1;
-    const forD = lobbyPressure(s, b.law, dir);
-    const against = lobbyPressure(s, b.law, (-dir) as 1 | -1);
-    b.support = clamp((influence(forD) - influence(against)) / 8, -1, 1);
-    const sponsorInPower = p.congress === b.sponsor;
-    b.progress += 0.12 * (unified ? 1 : 0.35) * (sponsorInPower ? 1 : 0.5) * (1 + 0.8 * b.support);
-    const fail = 0.025 + (unified ? 0 : 0.05) + Math.max(0, -b.support) * 0.05;
+    const w = whip(s, b.law, b.target, b.sponsor);
+    b.support = clamp((w.house.yes / w.house.need + w.senate.yes / w.senate.need) / 2 - 1, -1, 1);
+    b.progress += 0.15 * (unified ? 1 : 0.6);
     const law = LAW_BY_ID[b.law];
     if (b.progress >= 1) {
-      p.laws[b.law] = b.target;
-      log(`Congress passed the ${law.name} bill: now "${law.levels[b.target].name}". ${law.levels[b.target].effect}`, "politics");
+      const v = recordVote(s, b.law, b.target, w);
+      const tally = `House ${w.house.yes}–${w.house.no}, Senate ${w.senate.yes}–${w.senate.no}${w.senate.rule === "cloture" ? " (60 needed to end debate)" : ""}`;
+      if (v.outcome === "passed") {
+        p.laws[b.law] = b.target;
+        log(`${law.name} bill signed into law: now "${law.levels[b.target].name}" (${tally}${w.vetoed ? ", veto overridden" : ""}). ${law.levels[b.target].effect}`, "politics");
+      } else if (v.outcome === "vetoed") {
+        log(`President ${p.presidentName} vetoed the ${law.name} bill (${tally}).`, "politics");
+      } else {
+        log(`The ${law.name} bill (${law.levels[b.target].name}) failed in the ${v.outcome === "failed-house" ? "House" : "Senate"}: ${tally}.`, "politics");
+      }
       p.bill = null;
-    } else if (rand(s) < fail) {
-      log(`The ${law.name} bill (${law.levels[b.target].name}) stalled in committee and died.`, "politics");
+    } else if (rand(s) < 0.02) {
+      log(`The ${law.name} bill (${law.levels[b.target].name}) died in committee.`, "politics");
       p.bill = null;
     }
-  } else if (rand(s) < 0.3) {
-    // The president's party proposes a bill, nudged by lobbying.
-    const party = p.president;
+  } else if (rand(s) < 0.35) {
+    const party = p.congress;
     const options: { law: LawId; target: number; w: number }[] = [];
     for (const l of LAWS) {
       const cur = p.laws[l.id];
-      const want = l.platform[party];
-      if (want !== cur) {
-        const dir = (want > cur ? 1 : -1) as 1 | -1;
-        options.push({ law: l.id, target: cur + dir, w: 1 + influence(lobbyPressure(s, l.id, dir)) });
-      }
-      // Heavy lobbying can get even off-platform bills introduced.
       for (const dir of [1, -1] as const) {
         const t = cur + dir;
-        if (t < 0 || t >= l.levels.length || (want !== cur && dir === Math.sign(want - cur))) continue;
+        if (t < 0 || t >= l.levels.length) continue;
+        const onPlatform = Math.abs(t - l.platform[party]) < Math.abs(cur - l.platform[party]);
         const inf = influence(lobbyPressure(s, l.id, dir));
-        if (inf > 1) options.push({ law: l.id, target: t, w: (inf - 1) * 0.3 });
+        if (!onPlatform && inf < 1) continue;
+        const wp = whip(s, l.id, t, party);
+        if (!onPlatform && !wp.passes) continue;
+        const chance = wp.passes ? 1 : Math.min(wp.house.yes / wp.house.need, wp.senate.yes / wp.senate.need) * 0.3;
+        options.push({ law: l.id, target: t, w: (onPlatform ? 1 : 0.3) * (0.3 + chance * 2) + inf * 0.5 });
       }
     }
     const total = options.reduce((a, o) => a + o.w, 0);
@@ -229,7 +238,7 @@ export function updatePolitics(s: GameState, log: (text: string, kind?: "politic
       const pickO = options.find((o) => (r -= o.w) <= 0) ?? options[0];
       const law = LAW_BY_ID[pickO.law];
       p.bill = { law: pickO.law, target: pickO.target, sponsor: party, progress: 0, support: 0, startedDay: s.day };
-      log(`${PARTIES[party].name} introduced a bill: ${law.name} → ${law.levels[pickO.target].name}.`, "politics");
+      log(`House ${PARTIES[party].short} introduced a bill: ${law.name} → ${law.levels[pickO.target].name}.`, "politics");
     }
   }
 }
@@ -242,24 +251,34 @@ export function maybeHoldElection(s: GameState, log: (text: string, kind?: "poli
   let share = p.poll + 0.02 * randNormal(s);
   if (!presidential) share += p.president === "commonwealth" ? -0.015 : 0.015; // midterm penalty
   share = clamp(share, 0.36, 0.64);
-  const winner: PartyId = share >= 0.5 ? "commonwealth" : "frontier";
-  const oldPres = p.president, oldCong = p.congress;
-  p.congress = winner;
-  if (presidential) p.president = winner;
-  p.lastResult = { day: s.day, presidential, commonwealth: share, president: p.president, congress: p.congress };
+  const oldPres = p.president, oldCong = p.congress, oldSen = p.senate;
+  const r = holdCongressElections(s, share, year, presidential);
+  let presLine = "";
+  if (presidential && r.presidentParty) {
+    const winner = r.presidentParty;
+    const incumbentRuns = p.president === winner && p.presidentTerms < 2;
+    if (incumbentRuns) p.presidentTerms++;
+    else { const t = pickPresident(s, winner); p.presidentName = t.name; p.vpName = t.vp; p.presidentTerms = 1; }
+    p.president = winner;
+    presLine = `President-elect ${p.presidentName} (${PARTIES[winner].name.replace(" Party", "")}) wins the Electoral College ${winner === "commonwealth" ? r.ecD : r.ecR}–${winner === "commonwealth" ? r.ecR : r.ecD}${p.president !== oldPres ? ", flipping the White House" : ""}. `;
+  }
+  refreshMajorities(s);
+  p.lastResult = {
+    day: s.day, presidential, commonwealth: share, president: p.president, congress: p.congress, senate: p.senate,
+    houseD: r.houseD, houseR: r.houseR, senateD: r.senateD, senateR: r.senateR, ecD: r.ecD, ecR: r.ecR, presidentName: presidential ? p.presidentName : undefined,
+  };
   p.solAtLastElection = s.sol;
   p.nextElectionDay = electionDay(year + 2);
-  if (p.bill && (p.congress !== oldCong || p.bill.sponsor !== p.president)) {
+  if (p.bill && (p.congress !== oldCong || p.senate !== oldSen || p.president !== oldPres)) {
     log(`The new Congress dropped the pending ${LAW_BY_ID[p.bill.law].name} bill.`, "politics");
     p.bill = null;
   }
   for (const c of s.companies) c.donations = {};
   const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
-  const cw = PARTIES.commonwealth.name, fr = PARTIES.frontier.name;
   log(
-    `${presidential ? "Presidential election" : "Midterms"} (${dayLabel(s.day)}): ${cw} ${pct(share)}, ${fr} ${pct(1 - share)}. ` +
-    `${presidential ? `President: ${PARTIES[p.president].name}${p.president !== oldPres ? " (flip)" : ""}. ` : ""}` +
-    `Congress: ${PARTIES[p.congress].name}${p.congress !== oldCong ? " (flip)" : ""}.`,
+    `${presidential ? "General election" : "Midterms"} (${dayLabel(s.day)}): Democrats ${pct(share)}, Republicans ${pct(1 - share)} nationally. ${presLine}` +
+    `House ${r.houseD} D – ${r.houseR} R${p.congress !== oldCong ? " (flips)" : ""}; Senate ${r.senateD} D – ${r.senateR} R${p.senate !== oldSen ? " (flips)" : ""}.` +
+    (r.flips.length ? ` Seats changing hands include ${r.flips.slice(0, 8).join(", ")}.` : ""),
     "politics",
   );
 }

@@ -140,7 +140,7 @@ export function LineChart(p: { data: { x: string; y: number }[]; fmt: (v: number
       <svg ref={ref} viewBox={`0 0 ${W} ${H}`} onMouseMove={onMove} onMouseLeave={() => setHover(null)} role="img">
         {ticks.map((t, i) => (
           <g key={i}>
-            <line x1={padL} x2={W - padR} y1={y(t)} y2={y(t)} stroke="#2e2d2a" />
+            <line x1={padL} x2={W - padR} y1={y(t)} y2={y(t)} stroke="var(--rule-soft)" />
             <text x={padL - 6} y={y(t) + 4} fontSize="10" textAnchor="end" fill="var(--text-muted)">{p.fmt(t)}</text>
           </g>
         ))}
@@ -177,5 +177,24 @@ export function ConfirmDialog(p: { message: string; onYes: () => void; onNo: () 
         </div>
       </div>
     </div>
+  );
+}
+
+/** Engraved guilloche band, like the border of a share certificate. */
+export function Guilloche() {
+  const w = 1600, h = 9;
+  const paths: string[] = [];
+  for (let k = 0; k < 3; k++) {
+    let d = "";
+    for (let x = 0; x <= w; x += 4) {
+      const y = h / 2 + Math.sin((x / 14) + k * 2.1) * (h / 2 - 1) * Math.cos(x / 90 + k);
+      d += `${x === 0 ? "M" : "L"}${x},${y.toFixed(2)}`;
+    }
+    paths.push(d);
+  }
+  return (
+    <svg className="guilloche" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden="true">
+      {paths.map((d, i) => <path key={i} d={d} fill="none" stroke="currentColor" strokeWidth={0.6} />)}
+    </svg>
   );
 }

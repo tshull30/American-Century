@@ -3,7 +3,7 @@ import { tick, player } from "../sim/engine";
 import { tierOf, TIERS } from "../sim/tiers";
 import type { GameState } from "../sim/types";
 import { dayLabel, fmtMoney, fmtPct } from "../sim/util";
-import { ConfirmDialog, GameCtx, makeCtx } from "./components";
+import { ConfirmDialog, GameCtx, Guilloche, makeCtx } from "./components";
 import { NewGame } from "./NewGame";
 import { exportFile, importFile, saveLocal } from "./save";
 import { Overview } from "./tabs/Overview";
@@ -93,27 +93,28 @@ function Game({ initial, onQuit }: { initial: GameState; onQuit: () => void }) {
     [s.day, tier.id, s.companies.length],
   );
   const rank = peers.findIndex((c) => c.id === me.id) + 1;
-  const prev = me.history[me.history.length - 2];
+  const prev = me.history[me.history.length - 1];
   const change = prev ? me.marketCap / prev.marketCap - 1 : 0;
   const nextTier = TIERS[TIERS.findIndex((t) => t.id === tier.id) - 1];
 
   return (
     <GameCtx.Provider value={ctx}>
       <div className="app">
-        <div>
+        <div className="masthead">
+          <Guilloche />
           <div className="topbar">
             <span className="brand">American Century</span>
-            <span className="co"><span className="swatch" style={{ background: me.color }} />{me.name} <span className="muted">{me.ticker}</span></span>
+            <span className="co"><span className="swatch" style={{ background: me.color }} />{me.name} <span className="muted" style={{ fontWeight: 400 }}>{me.ticker}</span></span>
             <div className="kpi"><span className="label">Cash</span><span className="value">{fmtMoney(me.cash)}</span></div>
             <div className="kpi"><span className="label">Debt</span><span className="value">{fmtMoney(me.debt)}</span></div>
-            <div className="kpi"><span className="label">Market cap</span><span className="value">{fmtMoney(me.marketCap)} <span className={change >= 0 ? "pos" : "neg"} style={{ fontSize: 11 }}>{change >= 0 ? "▲" : "▼"}{fmtPct(Math.abs(change))}</span></span></div>
-            <div className="kpi"><span className="label">Tier</span><span className="value">{tier.name} #{rank}/{peers.length}</span></div>
+            <div className="kpi"><span className="label">Market cap</span><span className="value">{fmtMoney(me.marketCap)} <span className={change >= 0 ? "pos" : "neg"} style={{ fontSize: 12, fontWeight: 400 }}>{change >= 0 ? "+" : "−"}{fmtPct(Math.abs(change))}</span></span></div>
+            <div className="kpi"><span className="label">Tier</span><span className="value">{tier.name}, {rank} of {peers.length}</span></div>
             {nextTier && <div className="kpi"><span className="label">Next tier</span><span className="value">{fmtMoney(nextTier.min)}</span></div>}
             <div className="spacer" />
             <div className="speed">
-              <button className={speed === 0 ? "active" : ""} onClick={() => { if (speed) lastSpeed.current = speed; setSpeed(0); }} title="Pause (Space)">❚❚</button>
+              <button className={speed === 0 ? "active" : ""} onClick={() => { if (speed) lastSpeed.current = speed; setSpeed(0); }} title="Pause (Space)">Pause</button>
               {[1, 2, 3, 4, 5].map((n) => (
-                <button key={n} className={speed === n ? "active" : ""} onClick={() => setSpeed(n)} title={`Speed ${n} (key ${n})`}>{">".repeat(Math.min(n, 3))}{n > 3 ? n : ""}</button>
+                <button key={n} className={speed === n ? "active" : ""} onClick={() => setSpeed(n)} title={`Speed ${n} (key ${n})`}>{n}</button>
               ))}
               <button onClick={() => { tick(s); refresh(); }} disabled={speed > 0 || !!s.gameOver} title="Advance one day">+1 day</button>
             </div>

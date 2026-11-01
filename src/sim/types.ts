@@ -3,6 +3,7 @@ import type { GoodId, TechId } from "./data/goods";
 import type { JobId } from "./data/jobs";
 import type { LawId, PartyId } from "./data/laws";
 import type { NeedId } from "./data/needs";
+import type { Faction } from "./data/congress";
 import type { Pop } from "./pops";
 
 export type GoodMap<T = number> = Partial<Record<GoodId, T>>;
@@ -68,6 +69,56 @@ export interface Lobby {
   dir: 1 | -1;
   /** Spend per month, USD. */
   monthly: number;
+}
+
+export interface Pac {
+  name: string;
+  funds: number;
+  foundedDay: number;
+  /** Total raised and spent since founding. */
+  raised: number;
+  spent: number;
+}
+
+export interface Politician {
+  id: string;
+  name: string;
+  /** Caucus: who they vote with. */
+  party: "D" | "R";
+  /** What's printed after their name (independents show I). */
+  label: "D" | "R" | "I";
+  faction: Faction;
+  chamber: "senate" | "house";
+  state: string;
+  district?: number;
+  /** Senate class (which election year the seat is up). */
+  cls?: number;
+  /** Democratic share of the vote this seat would give in a neutral year. */
+  lean: number;
+  /** True for the real members seated at game start. */
+  real: boolean;
+  sinceYear: number;
+  /** Goodwill toward companies whose PACs backed them, in dollars (decays). */
+  friends: Record<number, number>;
+  /** PAC money spent for and against them this election cycle. */
+  pacFor: number;
+  pacAgainst: number;
+}
+
+export interface StateLegislature {
+  senateD: number;
+  senateR: number;
+  houseD: number;
+  houseR: number;
+}
+
+export interface VoteResult {
+  day: number;
+  law: LawId;
+  target: number;
+  house: { yes: number; no: number; need: number };
+  senate: { yes: number; no: number; need: number; rule: "majority" | "cloture" };
+  outcome: "passed" | "failed-house" | "failed-senate" | "vetoed";
 }
 
 export interface EarningsResult {
@@ -145,6 +196,7 @@ export interface Company {
   lastEarnings?: EarningsResult;
   /** Workers laid off this month (hurts public image). */
   layoffs: number;
+  pac?: Pac;
 }
 
 export interface LaborCell {
@@ -224,7 +276,14 @@ export interface Bill {
 
 export interface Politics {
   president: PartyId;
+  presidentName: string;
+  vpName: string;
+  /** Terms served by the sitting president (they can't run after two). */
+  presidentTerms: number;
+  /** House majority. */
   congress: PartyId;
+  senate: PartyId;
+  lastVote?: VoteResult;
   laws: Record<LawId, number>;
   bill: Bill | null;
   /** President's approval, 0–1. */
@@ -234,7 +293,10 @@ export interface Politics {
   nextElectionDay: number;
   /** National average standard of living at the last election. */
   solAtLastElection: number;
-  lastResult?: { day: number; presidential: boolean; commonwealth: number; president: PartyId; congress: PartyId };
+  lastResult?: {
+    day: number; presidential: boolean; commonwealth: number; president: PartyId; congress: PartyId; senate: PartyId;
+    houseD: number; houseR: number; senateD: number; senateR: number; ecD?: number; ecR?: number; presidentName?: string;
+  };
 }
 
 export interface GameState {
@@ -270,6 +332,9 @@ export interface GameState {
   macro: Macro;
   worldEvents: WorldEvent[];
   politics: Politics;
+  politicians: Politician[];
+  vacancies: { state: string; district: number }[];
+  stateLegs: Record<string, StateLegislature>;
   /** National average standard of living (100 = 2026 average). */
   sol: number;
   /** Normalizer that makes the 2026 national average standard of living 100. */
