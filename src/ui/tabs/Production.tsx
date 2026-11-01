@@ -3,7 +3,8 @@ import { build, buildQuote, downsize, expand, liquidity, setMethod } from "../..
 import { BUILDINGS, BUILDING_BY_ID, methodOf, type BuildingTypeId } from "../../sim/data/buildings";
 import { GOOD_BY_ID, type GoodId } from "../../sim/data/goods";
 import { JOB_BY_ID, type JobId } from "../../sim/data/jobs";
-import { STATES, STATE_BY_CODE } from "../../sim/data/states";
+import { STATES } from "../../sim/data/states";
+import { citiesInState, cityLabel, dcPowerCost, opinionOf, permitBlock } from "../../sim/geo";
 import { adminCapacity, adminLoad } from "../../sim/engine";
 import type { Building } from "../../sim/types";
 import { fmtMoney, fmtNum, fmtPct, laborKey } from "../../sim/util";
@@ -28,7 +29,7 @@ export function Production() {
             rowKey={(b) => b.id}
             cols={[
               { key: "type", label: "Building", render: (b) => BUILDING_BY_ID[b.type].name, sort: (b) => b.type },
-              { key: "st", label: "State", render: (b) => STATE_BY_CODE[b.state].name, sort: (b) => b.state },
+              { key: "st", label: "Location", render: (b) => cityLabel(s, b.city), sort: (b) => b.city },
               { key: "m", label: "Production method", render: (b) => <MethodPicker b={b} /> },
               { key: "lv", label: "Level", num: true, render: (b) => fmtNum(b.level), sort: (b) => b.level },
               { key: "con", label: "Building", num: true, render: (b) => b.construction.length ? b.construction.map((j) => `+${j.levels} (${j.daysLeft}d)`).join(", ") : "", title: "Levels under construction (days left)" },
@@ -39,8 +40,8 @@ export function Production() {
               { key: "p", label: "Profit last month", num: true, title: "Sales value of output minus inputs, wages and running costs (before depreciation). R&D and HQ show their cost.", render: (b) => <span className={b.lastProfit >= 0 ? "pos" : "neg"}>{fmtMoney(b.lastProfit)}</span>, sort: (b) => b.lastProfit },
               { key: "act", label: "", render: (b) => (
                 <span className="row" style={{ flexWrap: "nowrap" }}>
-                  <button className="small" onClick={() => act(expand(s, me.id, b.id, step))} title={`Build ${step} more level(s): ${fmtMoney(buildQuote(s, b.type, b.state, step, b.method).total)}`}>+{step}</button>
-                  <button className="small" disabled={b.level <= 0} onClick={() => ask(`Close ${Math.min(step, b.level)} level(s) of ${BUILDING_BY_ID[b.type].name} in ${STATE_BY_CODE[b.state].name}? Workers are laid off and only 20% of book value is recovered.`, () => act(downsize(s, me.id, b.id, step)))}>−{step}</button>
+                  <button className="small" onClick={() => act(expand(s, me.id, b.id, step))} title={`Build ${step} more level(s): ${fmtMoney(buildQuote(s, b.type, b.city, step, b.method, me).total)}`}>+{step}</button>
+                  <button className="small" disabled={b.level <= 0} onClick={() => ask(`Close ${Math.min(step, b.level)} level(s) of ${BUILDING_BY_ID[b.type].name} in ${cityLabel(s, b.city)}? Workers are laid off, the town will remember, and only 20% of book value is recovered.`, () => act(downsize(s, me.id, b.id, step)))}>−{step}</button>
                 </span>
               ) },
             ]}
@@ -79,34 +80,36 @@ function BuildPanel() {
   const def = BUILDING_BY_ID[type];
   const [method, setMethodId] = useState(def.methods[0].id);
   const m = methodOf(type, method);
-  const [state, setState] = useState(me.hq);
+  const [city, setCity] = useState(me.hqSite.city);
   const [levels, setLevels] = useState(1);
-  const q = buildQuote(s, type, state, levels, method);
+  const [stateFilter, setStateFilter] = useState("all");
+  const q = buildQuote(s, type, city, levels, method, me);
   const jobs = Object.entries(m.staff) as [JobId, number][];
+  const block = permitBlock(s, city, me, type);
+  const here = s.cities[city];
 
-  // Rank states for this building's staff: free workers and wages for its two biggest jobs.
+  // Rank cities for this building: hireable staff for its two biggest jobs, wages, land, permits, local mood.
   const ranking = useMemo(() => {
     const key = jobs.slice().sort((a, b) => b[1] - a[1]).slice(0, 2);
-    return STATES.map((st) => {
+    return Object.values(s.cities).filter((c) => stateFilter === "all" || c.state === stateFilter).map((c) => {
       let free = Infinity, wage = 0;
       for (const [j, n] of key) {
-        const cell = s.labor[laborKey(st.code, j)];
+        const cell = s.labor[laborKey(c.id, j)];
         const f = cell ? Math.max(0, cell.workforce - cell.gameEmployed) / n : 0;
         free = Math.min(free, f);
-        wage += cell ? cell.wage * n : 0;
       }
-      return { st, levelsHireable: free * 0.05, wage };
-    }).sort((a, b) => b.levelsHireable - a.levelsHireable);
+      for (const [j, n] of jobs) wage += (s.labor[laborKey(c.id, j)]?.wage ?? 0) * n;
+      return { c, hireable: free * 0.05, wage, cost: buildQuote(s, type, c.id, 1, method, me).total, months: buildQuote(s, type, c.id, 1, method, me).months, op: opinionOf(s, c.id, me), blocked: permitBlock(s, c.id, me, type) };
+    }).sort((a, b) => b.hireable - a.hireable);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [type, method, s.month]);
-  void m;
+  }, [type, method, s.month, stateFilter]);
 
   return (
     <Panel title="Build">
       <div className="grid2">
         <div>
           <div className="row">
-            <select value={type} onChange={(e) => { const t = e.target.value as BuildingTypeId; setType(t); setMethodId(BUILDING_BY_ID[t].methods[0].id); }}>
+            <select value={type} onChange={(e) => { const t = e.target.value as BuildingTypeId; setType(t); setMethodId(BUILDING_BY_ID[t].methods[0].id); if (t === "hq") setCity(me.hqSite.city); }}>
               {BUILDINGS.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
             {def.methods.length > 1 && (
@@ -114,41 +117,55 @@ function BuildPanel() {
                 {def.methods.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
               </select>
             )}
-            <select value={state} onChange={(e) => setState(e.target.value)}>
-              {STATES.map((st) => <option key={st.code} value={st.code}>{st.name}</option>)}
+            <select value={city} onChange={(e) => setCity(e.target.value)} aria-label="City">
+              {STATES.map((st) => (
+                <optgroup key={st.code} label={st.name}>
+                  {citiesInState(s, st.code).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </optgroup>
+              ))}
             </select>
             <input type="number" min={1} value={levels} onChange={(e) => setLevels(Math.max(1, Math.floor(Number(e.target.value) || 1)))} /> levels
           </div>
           <p className="hint" style={{ margin: "8px 0" }}>{def.description}</p>
           <table className="t">
             <tbody>
-              <tr><td>Cost</td><td className="num">{fmtMoney(q.total)} over {q.months} months{q.total < q.unsubsidized - 1 ? <span className="pos"> (federal subsidy saves {fmtMoney(q.unsubsidized - q.total)})</span> : null}</td></tr>
+              <tr><td>Cost</td><td className="num">{fmtMoney(q.total)}{q.total < q.unsubsidized - 1 ? <span className="pos"> (subsidies and local incentives save {fmtMoney(q.unsubsidized - q.total)})</span> : null}</td></tr>
+              <tr><td>Construction time</td><td className="num">{q.months.toFixed(1)} months, permitting included</td></tr>
               <tr><td>Staff per level</td><td className="num">{jobs.map(([j, n]) => `${n} ${JOB_BY_ID[j].plural.toLowerCase()}`).join(", ")}</td></tr>
-              <tr><td>Output per level / month</td><td className="num">
-                {Object.entries(m.output).map(([g, n]) => `${fmtNum(n ?? 0)} ${GOOD_BY_ID[g as GoodId].unit}`).join(", ") || (m.research ? `${m.research} research` : `+${m.admin} admin capacity`)}
+              <tr><td>Output per level each month</td><td className="num">
+                {Object.entries(m.output).map(([g, n]) => `${fmtNum(n ?? 0)} ${GOOD_BY_ID[g as GoodId].unit}`).join(", ") || (m.research ? `${m.research} research` : `${m.admin} admin capacity`)}
               </td></tr>
-              {Object.keys(m.output).map((g) => Object.entries(GOOD_BY_ID[g as GoodId].recipe).length > 0 && (
-                <tr key={g}><td>Inputs per unit</td><td className="num">{Object.entries(GOOD_BY_ID[g as GoodId].recipe).map(([ig, n]) => `${n} ${GOOD_BY_ID[ig as GoodId].name.toLowerCase()}`).join(", ")}</td></tr>
-              ))}
-              <tr><td>Your cash + credit</td><td className="num">{fmtMoney(liquidity(me))}</td></tr>
+              {type === "datacenter" && here && <tr><td>Local grid</td><td className="num">{fmtNum(here.dcLoadMW)} of {fmtNum(here.gridMW)} MW used; power bill {fmtMoney(dcPowerCost(s, city))} per level a month</td></tr>}
+              {here && <tr><td>{here.name}</td><td className="num">thinks of you: {fmtPct(opinionOf(s, city, me), 0)}; tax break {fmtPct(here.taxBreak, 0)}; data centers {here.dcStance}</td></tr>}
+              <tr><td>Your cash and credit</td><td className="num">{fmtMoney(liquidity(me))}</td></tr>
             </tbody>
           </table>
+          {block && <p className="neg">{block}</p>}
           <div className="row" style={{ marginTop: 10 }}>
-            <button className="primary" onClick={() => act(build(s, me.id, type, state, levels, method))}>Build {levels} level{levels > 1 ? "s" : ""}</button>
+            <button className="primary" disabled={!!block} onClick={() => act(build(s, me.id, type, city, levels, method))}>Build {levels} level{levels > 1 ? "s" : ""} in {here?.name}</button>
           </div>
         </div>
         <div>
-          <div className="hint" style={{ marginBottom: 6 }}>Where to build: states ranked by how many levels' worth of staff you could hire per month for the two biggest jobs.</div>
-          <div className="scroll" style={{ maxHeight: 300 }}>
+          <div className="row" style={{ marginBottom: 6 }}>
+            <span className="hint">Where to build. Hireable is how many levels' worth of the two biggest jobs you could hire a month.</span>
+            <select value={stateFilter} onChange={(e) => setStateFilter(e.target.value)} aria-label="Filter by state">
+              <option value="all">All states</option>
+              {STATES.map((st) => <option key={st.code} value={st.code}>{st.name}</option>)}
+            </select>
+          </div>
+          <div className="scroll" style={{ maxHeight: 360 }}>
             <Table
               rows={ranking}
-              rowKey={(r) => r.st.code}
-              rowClass={(r) => (r.st.code === state ? "me" : "")}
+              rowKey={(r) => r.c.id}
+              rowClass={(r) => (r.c.id === city ? "me" : "")}
               cols={[
-                { key: "st", label: "State", render: (r) => <a style={{ cursor: "pointer" }} onClick={() => setState(r.st.code)}>{r.st.name}</a> },
-                { key: "h", label: "Hireable levels / mo", num: true, render: (r) => r.levelsHireable.toFixed(1), sort: (r) => r.levelsHireable },
-                { key: "w", label: "Wage bill / level", num: true, render: (r) => fmtMoney(r.wage), sort: (r) => -r.wage },
-                { key: "c", label: "Build cost / level", num: true, render: (r) => fmtMoney(buildQuote(s, type, r.st.code, 1, method).total) },
+                { key: "c", label: "City", render: (r) => <a onClick={() => setCity(r.c.id)} style={r.blocked ? { color: "var(--seal)" } : undefined} title={r.blocked ?? undefined}>{cityLabel(s, r.c.id)}</a>, sort: (r) => r.c.name },
+                { key: "h", label: "Hireable", num: true, render: (r) => r.hireable.toFixed(1), sort: (r) => r.hireable },
+                { key: "w", label: "Wages per level", num: true, render: (r) => fmtMoney(r.wage), sort: (r) => -r.wage },
+                { key: "k", label: "Cost per level", num: true, render: (r) => fmtMoney(r.cost), sort: (r) => -r.cost },
+                { key: "t", label: "Months", num: true, render: (r) => r.months.toFixed(1), sort: (r) => -r.months },
+                { key: "o", label: "Locals", num: true, title: "How the city feels about you", render: (r) => <span className={r.op < 0.35 ? "neg" : r.op > 0.65 ? "pos" : ""}>{fmtPct(r.op, 0)}</span>, sort: (r) => r.op },
+                ...(type === "datacenter" ? [{ key: "p", label: "Power", num: true, render: (r: typeof ranking[number]) => `${r.c.powerIdx.toFixed(2)}x, ${fmtPct(r.c.dcLoadMW / r.c.gridMW, 0)} load`, sort: (r: typeof ranking[number]) => -r.c.powerIdx }] : []),
               ]}
             />
           </div>

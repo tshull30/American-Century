@@ -5,7 +5,8 @@ import { NEEDS, type NeedId } from "./data/needs";
 import { demandMult, eventDemandMult, eventPrefMult } from "./macro";
 import { climatePrefMult, lawDemandMult } from "./politics";
 import type { GameState, NeedStats } from "./types";
-import { clamp, laborKey } from "./util";
+import { clamp } from "./util";
+import { stateWage } from "./geo";
 
 const BUSINESS_GOODS = GOODS.filter((g) => g.buyerJobs && g.marketUS > 0);
 const AVG_WAGE = 5200;
@@ -13,7 +14,7 @@ const AVG_WAGE = 5200;
 /** Monthly income per person (workers' wages shared with dependents). */
 function incomePerCapita(s: GameState, i: number): number {
   const p = s.pops[i];
-  const wage = s.labor[laborKey(p.state, p.job)].wage;
+  const wage = stateWage(s, p.state, p.job);
   return (wage * p.workers) / (p.workers + p.dependents);
 }
 
@@ -49,7 +50,7 @@ function businessSpendingPower(s: GameState, good: GoodId): number {
   let total = 0;
   for (const p of s.pops) {
     if (!jobs.has(p.job)) continue;
-    const wage = s.labor[laborKey(p.state, p.job)].wage;
+    const wage = stateWage(s, p.state, p.job);
     total += p.workers * Math.pow(wage / AVG_WAGE, g.incomeElasticity);
   }
   return total;

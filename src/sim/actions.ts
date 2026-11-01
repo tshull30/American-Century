@@ -3,11 +3,16 @@ import { BUILDING_BY_ID, methodOf, type BuildingTypeId } from "./data/buildings"
 import { GOOD_BY_ID, type GoodId, type TechId } from "./data/goods";
 import type { LawId, PartyId } from "./data/laws";
 import { antitrustCap, donate as donateImpl } from "./politics";
-import { foundPac as foundPacImpl, fundPac as fundPacImpl, pacSpend as pacSpendImpl } from "./congress";
+import { foundPac as foundPacImpl, fundPac as fundPacImpl, pacRace as pacRaceImpl, pacSpend as pacSpendImpl } from "./congress";
+import { BREAK_FEE, makeOffer } from "./deals";
+import { permitBlock } from "./geo";
+import { AMENITY_BY_ID, amenityCost, HQ_FORMS, hqLevels, towerAllowed } from "./hq";
+import type { AmenityId, HqForm } from "./types";
 import { STATE_BY_CODE } from "./data/states";
 import {
   addBuilding, buildCostPerLevel, creditLimit, log, queueConstruction, releaseCompany,
 } from "./engine";
+import { permitMult } from "./geo";
 import type { Company, GameState } from "./types";
 import { fmtMoney } from "./util";
 
@@ -26,32 +31,36 @@ export function liquidity(c: Company): number {
   return c.cash + Math.max(0, creditLimit(c) - c.debt);
 }
 
-export function buildQuote(s: GameState, type: BuildingTypeId, state: string, levels: number, method?: string) {
+export function buildQuote(s: GameState, type: BuildingTypeId, city: string, levels: number, method?: string, c?: Company) {
   const def = BUILDING_BY_ID[type];
-  const total = buildCostPerLevel(s, type, state, method) * levels;
-  const unsubsidized = buildCostPerLevel(s, type, state, method, false) * levels;
-  return { total, unsubsidized, months: def.buildTime, monthly: total / def.buildTime };
+  const total = buildCostPerLevel(s, type, city, method, true, c) * levels;
+  const unsubsidized = buildCostPerLevel(s, type, city, method, false, c) * levels;
+  const months = def.buildTime * (c ? permitMult(s, city, c) : 1);
+  return { total, unsubsidized, months, monthly: total / months };
 }
 
-export function build(s: GameState, cid: number, type: BuildingTypeId, state: string, levels: number, method?: string): Result {
+export function build(s: GameState, cid: number, type: BuildingTypeId, city: string, levels: number, method?: string): Result {
   const c = company(s, cid);
   if (levels <= 0) return fail("Pick at least one level.");
-  if (!STATE_BY_CODE[state]) return fail("Unknown state.");
+  const where = s.cities[city];
+  if (!where) return fail("Unknown city.");
+  const block = permitBlock(s, city, c, type);
+  if (block) return fail(block);
   const m = method ?? BUILDING_BY_ID[type].methods[0].id;
-  const q = buildQuote(s, type, state, levels, m);
+  const q = buildQuote(s, type, city, levels, m, c);
   if (q.total > liquidity(c)) return fail(`Not enough cash or credit: needs ${fmtMoney(q.total)}.`);
-  let b = c.buildings.find((x) => x.type === type && x.state === state && x.method === m);
-  if (!b) b = addBuilding(s, c, type, state, 0, m);
+  let b = c.buildings.find((x) => x.type === type && x.city === city && x.method === m);
+  if (!b) b = addBuilding(s, c, type, city, 0, m);
   queueConstruction(s, c, b, levels);
   for (const g of Object.keys(methodOf(type, m).output) as GoodId[]) ensureSells(s, c, g);
-  return ok(`Started ${levels} level${levels > 1 ? "s" : ""} of ${BUILDING_BY_ID[type].name} in ${STATE_BY_CODE[state].name} (${fmtMoney(q.total)} over ${q.months} months).`);
+  return ok(`Started ${levels} level${levels > 1 ? "s" : ""} of ${BUILDING_BY_ID[type].name} in ${where.name} (${fmtMoney(q.total)} over ${q.months.toFixed(1)} months).`);
 }
 
 export function expand(s: GameState, cid: number, bid: number, levels: number): Result {
   const c = company(s, cid);
   const b = c.buildings.find((x) => x.id === bid);
   if (!b) return fail("No such building.");
-  return build(s, cid, b.type, b.state, levels, b.method);
+  return build(s, cid, b.type, b.city, levels, b.method);
 }
 
 export function downsize(s: GameState, cid: number, bid: number, levels: number): Result {
@@ -63,11 +72,11 @@ export function downsize(s: GameState, cid: number, bid: number, levels: number)
   const def = BUILDING_BY_ID[b.type];
   b.level -= n;
   // Write off the book value of the closed levels; recover 20% as salvage.
-  const book = buildCostPerLevel(s, b.type, b.state, b.method, false) * n * 0.6;
+  const book = buildCostPerLevel(s, b.type, b.city, b.method, false) * n * 0.6;
   c.ppe = Math.max(0, c.ppe - book);
   c.cash += book * 0.2;
   if (b.level <= 0 && b.construction.length === 0) c.buildings = c.buildings.filter((x) => x !== b);
-  return ok(`Closed ${n} level${n > 1 ? "s" : ""} of ${def.name} in ${STATE_BY_CODE[b.state].name}. Workers will be laid off.`);
+  return ok(`Closed ${n} level${n > 1 ? "s" : ""} of ${def.name} in ${s.cities[b.city]?.name ?? STATE_BY_CODE[b.state].name}. Workers will be laid off.`);
 }
 
 export function setMethod(s: GameState, cid: number, bid: number, method: string): Result {
@@ -76,7 +85,7 @@ export function setMethod(s: GameState, cid: number, bid: number, method: string
   if (!b) return fail("No such building.");
   const m = methodOf(b.type, method);
   if (m.id === b.method) return fail("Already using that method.");
-  const cost = buildCostPerLevel(s, b.type, b.state, m.id, false) * b.level * (m.retoolCost ?? 0.2);
+  const cost = buildCostPerLevel(s, b.type, b.city, m.id, false) * b.level * (m.retoolCost ?? 0.2);
   if (cost > liquidity(c)) return fail(`Retooling costs ${fmtMoney(cost)}.`);
   c.cash -= cost;
   c.ppe += cost;
@@ -169,13 +178,11 @@ export function buyback(s: GameState, cid: number, amount: number): Result {
   return ok(`Bought back ${fmtMoney(retired * price)} of stock.`);
 }
 
-export const ACQUISITION_PREMIUM = 1.3;
-
-export function acquisitionPrice(target: Company): number {
-  return target.marketCap * ACQUISITION_PREMIUM;
+export function acquisitionPrice(target: Company, premium = 0.35): number {
+  return target.marketCap * (1 + premium);
 }
 
-/** Antitrust: block deals that would push the buyer past the legal cap in a market both already sell in. */
+/** Antitrust hard limit: deals that would push the buyer past the legal cap in a shared market. */
 export function antitrustIssue(s: GameState, buyer: Company, target: Company): string | null {
   const cap = antitrustCap(s);
   for (const [g, snap] of Object.entries(s.markets)) {
@@ -187,37 +194,71 @@ export function antitrustIssue(s: GameState, buyer: Company, target: Company): s
   return null;
 }
 
-export function acquire(s: GameState, buyerId: number, targetId: number, payment: "cash" | "stock"): Result {
+/** Make a takeover offer at a premium. The board decides now; regulators and closing take months. */
+export function offer(s: GameState, buyerId: number, targetId: number, premium: number, payment: "cash" | "stock"): Result {
   const buyer = company(s, buyerId);
   const target = company(s, targetId);
   if (!target.alive || buyer === target) return fail("Invalid target.");
   if (target.isPlayer) return fail("You can't buy the player.");
-  const price = acquisitionPrice(target);
-  const block = antitrustIssue(s, buyer, target);
-  if (block) return fail(block);
-  if (payment === "cash") {
-    if (price > liquidity(buyer)) return fail(`Needs ${fmtMoney(price)} in cash and credit.`);
-    buyer.cash -= price;
-    if (buyer.cash < 0) { buyer.debt += -buyer.cash; buyer.cash = 0; }
-  } else {
-    if (price > buyer.marketCap * 0.5) return fail("Paying in stock would more than halve your ownership. Shareholders refuse.");
-    const sp = buyer.marketCap / buyer.shares;
-    buyer.shares += price / sp;
-    buyer.marketCap += price;
+  const r = makeOffer(s, buyer, target, premium, payment, liquidity(buyer));
+  if (r.ok && (buyer.isPlayer || target.marketCap > 5e9)) log(s, r.message.replace(`${target.name}'s board`, `${target.name}'s board`).replace(/^/, `${buyer.name} → ${target.name}: `), "deal", buyer.id);
+  return { ok: r.ok, message: r.message };
+}
+
+/** Advance pending deals; close or kill them when their review ends. */
+export function processDeals(s: GameState) {
+  for (const d of s.deals) {
+    d.daysLeft--;
   }
-  mergeInto(s, buyer, target);
-  log(s, `${buyer.name} acquired ${target.name} for ${fmtMoney(price)} (${payment}).`, "deal", buyer.id);
-  return ok(`Acquired ${target.name} for ${fmtMoney(price)}.`);
+  const done = s.deals.filter((d) => d.daysLeft <= 0);
+  s.deals = s.deals.filter((d) => d.daysLeft > 0);
+  for (const d of done) {
+    const buyer = s.companies.find((c) => c.id === d.buyerId);
+    const target = s.companies.find((c) => c.id === d.targetId);
+    if (!buyer?.alive || !target?.alive) continue;
+    const fee = d.price * BREAK_FEE;
+    if (d.stage === "second_request" && seededBlock(s, d.blockChance)) {
+      buyer.cash -= fee; target.cash += fee;
+      if (buyer.cash < 0) { buyer.debt += -buyer.cash; buyer.cash = 0; }
+      log(s, `Regulators sued to block ${buyer.name}'s takeover of ${target.name}; the deal is dead. ${buyer.name} pays a ${fmtMoney(fee)} break fee.`, "deal", buyer.id);
+      continue;
+    }
+    if (d.payment === "cash") {
+      if (d.price > liquidity(buyer)) {
+        buyer.cash -= fee; target.cash += fee;
+        log(s, `${buyer.name} couldn't finance its ${fmtMoney(d.price)} takeover of ${target.name} at closing and paid a ${fmtMoney(fee)} break fee.`, "deal", buyer.id);
+        continue;
+      }
+      buyer.cash -= d.price;
+      if (buyer.cash < 0) { buyer.debt += -buyer.cash; buyer.cash = 0; }
+    } else {
+      const sp = buyer.marketCap / buyer.shares;
+      buyer.shares += d.price / sp;
+      buyer.marketCap += d.price;
+    }
+    mergeInto(s, buyer, target);
+    log(s, `${buyer.name} completed its ${fmtMoney(d.price)} acquisition of ${target.name}.`, "deal", buyer.id);
+  }
+}
+
+import { rand as seededRand } from "./util";
+function seededBlock(s: GameState, p: number) { return seededRand(s) < p; }
+
+export function pendingDeals(s: GameState, cid: number) {
+  return s.deals.filter((d) => d.buyerId === cid);
 }
 
 function mergeInto(s: GameState, buyer: Company, target: Company) {
   for (const b of target.buildings) {
-    const same = buyer.buildings.find((x) => x.type === b.type && x.state === b.state && x.method === b.method);
-    if (same && b.type !== "hq") {
+    if (b.type === "hq") {
+      // The target's head office becomes regular office space folded into the buyer's HQ.
+      const hq = buyer.buildings.find((x) => x.type === "hq");
+      if (hq) { hq.level += b.level; continue; }
+    }
+    const same = buyer.buildings.find((x) => x.type === b.type && x.city === b.city && x.method === b.method);
+    if (same) {
       same.level += b.level;
       same.construction.push(...b.construction);
-    } else if (b.type === "hq" && same) {
-      same.level += b.level;
     } else {
       buyer.buildings.push(b);
     }
@@ -285,4 +326,61 @@ export function pacSpend(s: GameState, cid: number, politicianId: string, amount
   if (!c.pac) return fail("Found a PAC first.");
   if (amount > c.pac.funds) return fail(`${c.pac.name} only has ${fmtMoney(c.pac.funds)}. Move more money into it first.`);
   return ok(pacSpendImpl(s, c, politicianId, amount, mode));
+}
+
+export function pacRace(s: GameState, cid: number, raceId: string, side: "D" | "R", amount: number): Result {
+  const c = company(s, cid);
+  if (!c.pac) return fail("Found a PAC first.");
+  if (amount > c.pac.funds) return fail(`${c.pac.name} only has ${fmtMoney(c.pac.funds)}. Move more money into it first.`);
+  return ok(pacRaceImpl(s, c, raceId, side, amount));
+}
+
+export function setHqForm(s: GameState, cid: number, form: HqForm): Result {
+  const c = company(s, cid);
+  if (c.hqSite.form === form) return fail("Already built that way.");
+  if (HQ_FORMS[form].needsTower && !towerAllowed(s, c.hqSite.city)) return fail(`${s.cities[c.hqSite.city]?.name} has no downtown that can take a skyscraper.`);
+  const cost = buildCostPerLevel(s, "hq", c.hqSite.city, undefined, false, c) * hqLevels(c) * 0.3 * HQ_FORMS[form].costMult;
+  if (cost > liquidity(c)) return fail(`Rebuilding costs ${fmtMoney(cost)}.`);
+  c.cash -= cost;
+  c.ppe += cost;
+  c.hqSite.form = form;
+  c.hqSite.amenities = c.hqSite.amenities.slice(0, HQ_FORMS[form].slots);
+  return ok(`Rebuilt headquarters as a ${HQ_FORMS[form].name.toLowerCase()} for ${fmtMoney(cost)}.`);
+}
+
+export function toggleAmenity(s: GameState, cid: number, id: AmenityId): Result {
+  const c = company(s, cid);
+  if (c.hqSite.amenities.includes(id)) {
+    c.hqSite.amenities = c.hqSite.amenities.filter((a) => a !== id);
+    return ok(`Closed the ${AMENITY_BY_ID[id].name.toLowerCase()}.`);
+  }
+  if (c.hqSite.amenities.length >= HQ_FORMS[c.hqSite.form].slots) return fail(`A ${HQ_FORMS[c.hqSite.form].name.toLowerCase()} has room for ${HQ_FORMS[c.hqSite.form].slots} amenities.`);
+  const cost = amenityCost(c, id);
+  if (cost > liquidity(c)) return fail(`Needs ${fmtMoney(cost)}.`);
+  c.cash -= cost;
+  c.ppe += cost;
+  c.hqSite.amenities.push(id);
+  return ok(`Opened the ${AMENITY_BY_ID[id].name.toLowerCase()} (${fmtMoney(cost)}).`);
+}
+
+/** Move headquarters to another city: rebuild the HQ there, change state taxes, and change who loves you. */
+export function relocateHq(s: GameState, cid: number, city: string): Result {
+  const c = company(s, cid);
+  const dest = s.cities[city];
+  if (!dest) return fail("Unknown city.");
+  if (city === c.hqSite.city) return fail("You're already there.");
+  const lv = hqLevels(c);
+  const cost = buildCostPerLevel(s, "hq", city, undefined, false, c) * lv * 0.5;
+  if (cost > liquidity(c)) return fail(`Moving costs ${fmtMoney(cost)}.`);
+  const old = s.cities[c.hqSite.city];
+  c.cash -= cost;
+  c.ppe += cost * 0.5;
+  for (const b of c.buildings) if (b.type === "hq") { b.city = city; b.state = dest.state; }
+  c.hqSite.city = city;
+  c.hq = dest.state;
+  if (HQ_FORMS[c.hqSite.form].needsTower && !dest.flags.includes("tower")) c.hqSite.form = "campus";
+  if (old) old.opinion[c.id] = Math.max(0, (old.opinion[c.id] ?? 0.5) - 0.25);
+  dest.opinion[c.id] = Math.min(1, (dest.opinion[c.id] ?? 0.5) + 0.2);
+  log(s, `${c.name} is moving its headquarters to ${dest.name}.`, "deal", c.id);
+  return ok(`Headquarters moving to ${dest.name} (${fmtMoney(cost)}).`);
 }

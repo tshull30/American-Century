@@ -1,7 +1,7 @@
 // Congress: real members at game start, faction-driven votes, the filibuster and veto,
 // seat-by-seat elections, state legislatures and PACs.
-import { APPORTIONMENT, MEMBERS_2026, STATE_LEAN, STATE_LEGS, VACANCIES_2026, type Faction } from "./data/congress";
-import { factionDef, FIRST_NAMES, LAST_NAMES } from "./data/factions";
+import { MEMBERS_2026, STATE_LEAN, STATE_LEGS, VACANCIES_2026 } from "./data/congress";
+import { factionDef } from "./data/factions";
 import { LAW_BY_ID, type LawId, type PartyId } from "./data/laws";
 import type { Company, GameState, Politician, VoteResult } from "./types";
 import { clamp, dateOfDay, fmtMoney, rand, randNormal } from "./util";
@@ -18,7 +18,7 @@ export function initCongress(s: GameState) {
     const lean = m.chamber === "senate" ? base : clamp(base + (m.party === "D" ? 0.12 : -0.12) + 0.05 * randNormal(s), 0.12, 0.92);
     return {
       id: m.id, name: m.name, party: m.party, label: m.label, faction: m.faction, chamber: m.chamber, state: m.state,
-      district: m.district, cls: m.cls, lean, real: true, sinceYear: 2025, friends: {}, pacFor: 0, pacAgainst: 0,
+      district: m.district, cls: m.cls, lean, real: true, sinceYear: 2025, friends: {}, pacFor: 0, pacAgainst: 0, personal: 0,
     };
   });
   s.vacancies = VACANCIES_2026.map((v) => ({ ...v }));
@@ -112,111 +112,6 @@ export function recordVote(s: GameState, law: LawId, target: number, w: Whip): V
   return v;
 }
 
-// ---------------------------------------------------------------- elections
-
-function newName(s: GameState, used: Set<string>): string {
-  for (let i = 0; i < 30; i++) {
-    const n = `${FIRST_NAMES[Math.floor(rand(s) * FIRST_NAMES.length)]} ${LAST_NAMES[Math.floor(rand(s) * LAST_NAMES.length)]}`;
-    if (!used.has(n)) return n;
-  }
-  return `${FIRST_NAMES[0]} ${LAST_NAMES[0]} ${Math.floor(rand(s) * 99)}`;
-}
-
-function pickFaction(s: GameState, party: "D" | "R", lean: number): Faction {
-  const r = rand(s);
-  if (party === "D") {
-    if (lean > 0.7) return r < 0.15 ? "socialist" : r < 0.6 ? "progressive" : "liberal";
-    if (lean > 0.55) return r < 0.3 ? "progressive" : r < 0.8 ? "liberal" : "moderate";
-    return r < 0.6 ? "moderate" : "bluedog";
-  }
-  if (lean < 0.3) return r < 0.55 ? "maga" : r < 0.75 ? "populist" : r < 0.85 ? "libertarian" : "corporate";
-  if (lean < 0.45) return r < 0.4 ? "maga" : r < 0.8 ? "corporate" : r < 0.9 ? "populist" : "libertarian";
-  return r < 0.6 ? "moderate" : "corporate";
-}
-
-/** PAC money moves the needle a little, with diminishing returns. */
-function pacEdge(m: Politician): number {
-  const unit = m.chamber === "senate" ? 5e6 : 1e6;
-  const f = (x: number) => Math.min(0.04, 0.01 * Math.sqrt(x / unit));
-  const towardIncumbent = f(m.pacFor) - f(m.pacAgainst);
-  return m.party === "D" ? towardIncumbent : -towardIncumbent;
-}
-
-function contest(s: GameState, used: Set<string>, swing: number, year: number, seat: { chamber: "senate" | "house"; state: string; district?: number; cls?: number; lean: number }, inc?: Politician): Politician {
-  const running = inc && rand(s) > 0.06;
-  let dShare = seat.lean + swing + 0.03 * randNormal(s);
-  if (inc) dShare += pacEdge(inc);
-  if (running && inc) dShare += inc.party === "D" ? 0.02 : -0.02;
-  const winner: "D" | "R" = dShare >= 0.5 ? "D" : "R";
-  if (running && inc && inc.party === winner) { inc.pacFor = 0; inc.pacAgainst = 0; return inc; }
-  const name = newName(s, used);
-  used.add(name);
-  return {
-    id: `gen-${s.day}-${Math.floor(rand(s) * 1e9)}`, name, party: winner, label: winner, faction: pickFaction(s, winner, seat.lean),
-    chamber: seat.chamber, state: seat.state, district: seat.district, cls: seat.cls, lean: seat.lean, real: false, sinceYear: year + 1,
-    friends: {}, pacFor: 0, pacAgainst: 0,
-  };
-}
-
-export interface CongressResult {
-  houseD: number; houseR: number; senateD: number; senateR: number; flips: string[]; ecD?: number; ecR?: number; presidentName?: string; presidentParty?: PartyId;
-}
-
-export function holdCongressElections(s: GameState, dShare: number, year: number, presidential: boolean): CongressResult {
-  const swing = dShare - 0.5;
-  const used = new Set(s.politicians.map((p) => p.name));
-  const flips: string[] = [];
-  const next: Politician[] = [];
-  // House: every seat.
-  const byDistrict = new Map<string, Politician>();
-  for (const p of s.politicians) if (p.chamber === "house") byDistrict.set(`${p.state}-${p.district}`, p);
-  for (const [st, n] of Object.entries(APPORTIONMENT)) {
-    for (const d of n === 1 ? [0] : Array.from({ length: n }, (_, i) => i + 1)) {
-      const inc = byDistrict.get(`${st}-${d}`);
-      const lean = inc?.lean ?? clamp((STATE_LEAN[st] ?? 0.5) + 0.05 * randNormal(s), 0.15, 0.9);
-      const w = contest(s, used, swing, year, { chamber: "house", state: st, district: d, lean }, inc);
-      if (inc && w.party !== inc.party && flips.length < 12) flips.push(`${st}-${d === 0 ? "AL" : d}`);
-      next.push(w);
-    }
-  }
-  // Senate: one class.
-  const cls = [2, 3, 1][Math.round((year - 2026) / 2) % 3];
-  for (const p of s.politicians) {
-    if (p.chamber !== "senate") continue;
-    if (p.cls !== cls) { next.push(p); continue; }
-    const w = contest(s, used, swing, year, { chamber: "senate", state: p.state, cls: p.cls, lean: p.lean }, p);
-    if (w.party !== p.party) flips.push(`${p.state} Senate`);
-    next.push(w);
-  }
-  s.politicians = next;
-  s.vacancies = [];
-  // State legislatures drift toward what the national mood and state lean imply.
-  for (const [st, leg] of Object.entries(s.stateLegs)) {
-    const target = 1 / (1 + Math.exp(-((STATE_LEAN[st] ?? 0.5) + swing - 0.5) * 10));
-    const move = (d: number, r: number) => {
-      const tot = d + r;
-      if (!tot) return [0, 0];
-      const nd = Math.round(d + (target * tot - d) * 0.35 + randNormal(s) * tot * 0.01);
-      return [clamp(nd, 0, tot), tot - clamp(nd, 0, tot)];
-    };
-    [leg.senateD, leg.senateR] = move(leg.senateD, leg.senateR);
-    [leg.houseD, leg.houseR] = move(leg.houseD, leg.houseR);
-  }
-  const h = seats(s, "house"), se = seats(s, "senate");
-  const res: CongressResult = { houseD: h.D, houseR: h.R, senateD: se.D, senateR: se.R, flips };
-  if (presidential) {
-    let ecD = 3; // DC
-    for (const [st, n] of Object.entries(APPORTIONMENT)) {
-      const share = (STATE_LEAN[st] ?? 0.5) + swing + 0.02 * randNormal(s);
-      if (share >= 0.5) ecD += n + 2;
-    }
-    res.ecD = ecD;
-    res.ecR = 538 - ecD;
-    res.presidentParty = ecD >= 270 ? "commonwealth" : "frontier";
-  }
-  return res;
-}
-
 /** A new president: the incumbent if eligible and their party held on, otherwise a senator of the winning party. */
 export function pickPresident(s: GameState, party: PartyId): { name: string; vp: string } {
   const p = fromParty(party);
@@ -260,17 +155,40 @@ export function fundPac(c: Company, amount: number): string {
   return `Moved ${fmtMoney(amount)} into ${c.pac.name}.`;
 }
 
+/** Spend PAC money on a member's race: backing them, or backing their opponent. Builds (or burns) goodwill either way. */
 export function pacSpend(s: GameState, c: Company, pid: string, amount: number, mode: "support" | "oppose"): string {
   const p = s.politicians.find((x) => x.id === pid);
   if (!c.pac || !p) return "Nothing happened.";
   c.pac.funds -= amount;
   c.pac.spent += amount;
+  const race = s.races.find((r) => r.incumbentId === p.id);
+  const side: "D" | "R" = mode === "support" ? p.party : p.party === "D" ? "R" : "D";
+  if (race) {
+    const v = race.pac[c.id] ?? (race.pac[c.id] = { D: 0, R: 0 });
+    v[side] += amount;
+  }
   if (mode === "support") {
     p.pacFor += amount;
     p.friends[c.id] = (p.friends[c.id] ?? 0) + amount;
-    return `${c.pac.name} spent ${fmtMoney(amount)} backing ${p.name}.`;
+    return `${c.pac.name} spent ${fmtMoney(amount)} backing ${p.name}${race ? "" : " (issue ads; their seat isn't up this cycle)"}.`;
   }
   p.pacAgainst += amount;
   p.friends[c.id] = (p.friends[c.id] ?? 0) - amount * 0.5;
-  return `${c.pac.name} spent ${fmtMoney(amount)} on ads against ${p.name}.`;
+  return race ? `${c.pac.name} spent ${fmtMoney(amount)} against ${p.name}.` : `${c.pac.name} ran ${fmtMoney(amount)} of attack ads on ${p.name}; their seat isn't up this cycle.`;
+}
+
+/** Spend PAC money directly in a race, for one party's nominee. */
+export function pacRace(s: GameState, c: Company, raceId: string, side: "D" | "R", amount: number): string {
+  const r = s.races.find((x) => x.id === raceId);
+  if (!c.pac || !r) return "Nothing happened.";
+  c.pac.funds -= amount;
+  c.pac.spent += amount;
+  const v = r.pac[c.id] ?? (r.pac[c.id] = { D: 0, R: 0 });
+  v[side] += amount;
+  const nom = r.nominees[side];
+  if (nom?.politicianId) {
+    const p = s.politicians.find((x) => x.id === nom.politicianId);
+    if (p) p.friends[c.id] = (p.friends[c.id] ?? 0) + amount;
+  }
+  return `${c.pac.name} spent ${fmtMoney(amount)} for the ${side === "D" ? "Democrat" : "Republican"}${nom ? `, ${nom.name},` : ""} in ${r.id}.`;
 }

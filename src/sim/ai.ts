@@ -1,11 +1,11 @@
 // Rival company behavior. Simple heuristics; the same action functions the player uses.
 import { BUILDING_BY_ID, methodOf, type BuildingTypeId } from "./data/buildings";
 import { GOOD_BY_ID, type GoodId } from "./data/goods";
-import { STATES } from "./data/states";
 import {
-  acquire, acquisitionPrice, antitrustIssue, borrow, build, buyback, downsize, issueShares, liquidity, repay,
+  offer, acquisitionPrice, antitrustIssue, borrow, build, buyback, downsize, issueShares, liquidity, repay,
 } from "./actions";
 import { adminCapacity, adminLoad, buildCostPerLevel, creditLimit } from "./engine";
+import { opinionOf, permitBlock, permitMult } from "./geo";
 import type { Building, Company, GameState } from "./types";
 import { clamp, DAYS_PER_MONTH, laborKey, rand } from "./util";
 
@@ -47,25 +47,33 @@ function monthlyCosts(c: Company): number {
   return h.inputCosts + h.wages + h.rdCost + h.sgaCost + h.marketing + h.interest + h.capex;
 }
 
-/** Best state for a building: big labor pools in its key job, at low wages. Favors states where the company already operates. */
-export function bestState(s: GameState, c: Company, type: BuildingTypeId, method: string): string {
+/**
+ * Best city for a building: deep local labor pools in its key jobs at low wages, cheap land,
+ * good incentives, fast permits, a town that likes you, and for data centers cheap power with grid headroom.
+ */
+export function bestCity(s: GameState, c: Company, type: BuildingTypeId, method: string): string {
   const m = methodOf(type, method);
   const jobs = Object.entries(m.staff).sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0)).slice(0, 2);
-  let best = c.hq;
+  let best = c.hqSite.city;
   let bestScore = -Infinity;
-  const present = new Set(c.buildings.map((b) => b.state));
-  for (const st of STATES) {
+  const present = new Set(c.buildings.map((b) => b.city));
+  for (const city of Object.values(s.cities)) {
+    if (permitBlock(s, city.id, c, type)) continue;
     let score = 0;
     for (const [j, n] of jobs) {
-      const cell = s.labor[laborKey(st.code, j)];
+      const cell = s.labor[laborKey(city.id, j)];
       if (!cell) continue;
       const free = Math.max(0, cell.workforce - cell.gameEmployed);
       score += (n ?? 0) * Math.log(1 + free) - (n ?? 0) * 3 * (cell.wage / 5000);
     }
-    score -= buildCostPerLevel(s, type, st.code, method) / BUILDING_BY_ID[type].cost;
-    if (present.has(st.code)) score += 4;
+    score /= Math.max(1, jobs.reduce((a, [, n]) => a + (n ?? 0), 0)) / 20;
+    score -= (buildCostPerLevel(s, type, city.id, method, true, c) / BUILDING_BY_ID[type].cost) * 2;
+    score -= permitMult(s, city.id, c) * 2;
+    score += (opinionOf(s, city.id, c) - 0.5) * 6;
+    if (type === "datacenter") score += -city.powerIdx * 6 - Math.max(0, city.dcLoadMW / city.gridMW - 0.6) * 10 + (city.dcStance === "welcome" ? 2 : 0) - (city.flags.includes("water") ? 1.5 : 0);
+    if (present.has(city.id)) score += 2;
     score += rand(s) * 2;
-    if (score > bestScore) { bestScore = score; best = st.code; }
+    if (score > bestScore) { bestScore = score; best = city.id; }
   }
   return best;
 }
@@ -117,9 +125,9 @@ export function runAI(s: GameState, c: Company, o: { warmup: boolean }) {
     const priceOk = price >= def.refPrice * (growthMode ? 0.85 : 0.9) || (price - unitCost) / price > 0.35;
     if (demandSignal && priceOk && avgStaff > 0.8 && payback < (growthMode ? 60 : 48) && building < levels * 0.15 + 1) {
       const add = Math.max(1, Math.round(levels * 0.08));
-      const cost = buildCostPerLevel(s, template.type, template.state, template.method) * add;
+      const cost = buildCostPerLevel(s, template.type, template.city, template.method, true, c) * add;
       if (liquidity(c) > cost * 1.5) {
-        const st = rand(s) < 0.6 ? template.state : bestState(s, c, template.type, template.method);
+        const st = rand(s) < 0.5 && !permitBlock(s, template.city, c, template.type) ? template.city : bestCity(s, c, template.type, template.method);
         build(s, c.id, template.type, st, add, template.method);
       }
     } else if (inv > 3 * Math.max(sold + internal, 1) && price <= Math.max(def.refPrice * 0.31, unitCost * 1.03) && levels > 2) {
@@ -137,7 +145,7 @@ export function runAI(s: GameState, c: Company, o: { warmup: boolean }) {
     const have = c.buildings.filter((b) => b.type === "rnd").reduce((a, b) => a + b.level + b.construction.reduce((x, j) => x + j.levels, 0), 0);
     if (want > have * 1.1) {
       const add = Math.max(1, Math.round(Math.min(want - have, have * 0.08 + 1)));
-      if (liquidity(c) > buildCostPerLevel(s, "rnd", lab?.state ?? c.hq) * add * 2) build(s, c.id, "rnd", lab?.state ?? c.hq, add);
+      if (liquidity(c) > buildCostPerLevel(s, "rnd", lab?.city ?? c.hqSite.city) * add * 2) build(s, c.id, "rnd", lab?.city ?? c.hqSite.city, add);
     }
   }
 
@@ -147,21 +155,21 @@ export function runAI(s: GameState, c: Company, o: { warmup: boolean }) {
   const hqBuilding = c.buildings.filter((b) => b.type === "hq").reduce((a, b) => a + b.construction.reduce((x, j) => x + j.levels, 0), 0);
   if (load > cap * 0.95 && hqBuilding === 0) {
     const add = Math.ceil((load * 1.1 - cap) / 15);
-    if (add > 0 && liquidity(c) > buildCostPerLevel(s, "hq", c.hq) * add) build(s, c.id, "hq", c.hq, add);
+    if (add > 0 && liquidity(c) > buildCostPerLevel(s, "hq", c.hqSite.city, undefined, true, c) * add) build(s, c.id, "hq", c.hqSite.city, add);
   }
 
   // Return excess cash.
   if (c.debt < c.cash && c.cash > 8 * costs && c.kind !== "startup") buyback(s, c.id, (c.cash - 5 * costs) * 0.5);
 
   // Occasional acquisitions by cash-rich incumbents.
-  if (c.kind === "incumbent" && rand(s) < 0.04 && c.cash > 5e9) {
+  if (c.kind === "incumbent" && rand(s) < 0.03 && c.cash > 5e9 && !s.deals.some((d) => d.buyerId === c.id)) {
     const myGoods = new Set(goods.keys());
     const targets = s.companies.filter((t) =>
       t.alive && !t.isPlayer && t !== c && t.kind !== "incumbent" && t.marketCap < c.marketCap * 0.02 &&
       Object.keys(t.prices).some((g) => myGoods.has(g as GoodId)) && !antitrustIssue(s, c, t) &&
       acquisitionPrice(t) < c.cash * 0.8,
     );
-    if (targets.length) acquire(s, c.id, targets[Math.floor(rand(s) * targets.length)].id, "cash");
+    if (targets.length) offer(s, c.id, targets[Math.floor(rand(s) * targets.length)].id, 0.35 + rand(s) * 0.25, "cash");
   }
 
 }

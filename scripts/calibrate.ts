@@ -7,7 +7,7 @@ import type { GameState } from "../src/sim/types";
 
 const years = Number(process.argv[2] ?? 5);
 const seed = Number(process.argv[3] ?? 42);
-const s = newGame({ kind: "startup", name: "Test Co", ticker: "TEST", good: "software", hq: "TX" }, seed);
+const s = newGame({ kind: "incumbent", key: "orchard" }, seed);
 
 function table(s: GameState) {
   console.log(`\n=== ${dateLabel(s.month)} ===`);

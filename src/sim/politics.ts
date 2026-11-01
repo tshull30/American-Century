@@ -6,7 +6,8 @@ import type { JobId } from "./data/jobs";
 import { LAWS, LAW_BY_ID, PARTIES, type LawId, type PartyId } from "./data/laws";
 import type { Company, GameState, Politics } from "./types";
 import { clamp, dateOfDay, dayLabel, fmtMoney, rand, randNormal, START_YEAR } from "./util";
-import { decayFriendship, holdCongressElections, initCongress, pickPresident, recordVote, refreshMajorities, whip } from "./congress";
+import { decayFriendship, initCongress, pickPresident, recordVote, refreshMajorities, whip } from "./congress";
+import { holdGeneral } from "./elections";
 
 // ---------------------------------------------------------------- law effects
 
@@ -180,15 +181,16 @@ export function updatePolitics(s: GameState, log: (text: string, kind?: "politic
   for (const pop of s.pops) {
     const n = pop.workers;
     let l = JOB_LEAN[pop.job];
-    if (pop.sol < 80) l += p.president === "commonwealth" ? -0.015 : 0.015; // struggling voters punish incumbents
+    if (pop.sol < 75) l += p.president === "commonwealth" ? -0.008 : 0.008; // struggling voters punish incumbents
     lean += l * n;
     people += n;
   }
-  let poll = lean / people;
-  const swing = (p.approval - 0.5) * 0.3;
+  // Occupational leans net out near even; the swing comes from approval.
+  let poll = 0.5 + (lean / people - 0.522);
+  const swing = (p.approval - 0.48) * 0.2;
   poll += p.president === "commonwealth" ? swing : -swing;
   poll += donationEdge(s);
-  p.poll += (clamp(poll, 0.38, 0.62) - p.poll) * 0.3;
+  p.poll += (clamp(poll, 0.42, 0.58) - p.poll) * 0.3;
 
   // Legislation: the House majority sets the agenda; committee work takes months, then both chambers vote.
   decayFriendship(s);
@@ -248,11 +250,12 @@ export function maybeHoldElection(s: GameState, log: (text: string, kind?: "poli
   if (s.day < p.nextElectionDay) return;
   const year = dateOfDay(s.day).getUTCFullYear();
   const presidential = isPresidentialYear(year);
-  let share = p.poll + 0.02 * randNormal(s);
-  if (!presidential) share += p.president === "commonwealth" ? -0.015 : 0.015; // midterm penalty
-  share = clamp(share, 0.36, 0.64);
+  let share = p.poll + 0.012 * randNormal(s);
+  if (!presidential) share += p.president === "commonwealth" ? -0.01 : 0.01; // midterm penalty
+  share = clamp(share, 0.4, 0.6);
   const oldPres = p.president, oldCong = p.congress, oldSen = p.senate;
-  const r = holdCongressElections(s, share, year, presidential);
+  s.politics.poll = share;
+  const r = holdGeneral(s, year, presidential);
   let presLine = "";
   if (presidential && r.presidentParty) {
     const winner = r.presidentParty;

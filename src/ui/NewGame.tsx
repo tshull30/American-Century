@@ -2,6 +2,7 @@ import { useState } from "react";
 import { COMPANY_SEEDS } from "../sim/data/companies";
 import { GOOD_BY_ID, type GoodId } from "../sim/data/goods";
 import { STATES } from "../sim/data/states";
+import { CITY_SEEDS } from "../sim/data/cities";
 import { newGame, type PlayerChoice } from "../sim/engine";
 import { tierOf } from "../sim/tiers";
 import type { GameState } from "../sim/types";
@@ -33,13 +34,14 @@ export function NewGame({ onStart }: { onStart: (s: GameState) => void }) {
   const [ticker, setTicker] = useState("PRDY");
   const [good, setGood] = useState<GoodId>("software");
   const [hq, setHq] = useState("TX");
+  const [city, setCity] = useState("austin");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
   const start = () => {
     setBusy(true);
     const choice: PlayerChoice = sel === "startup"
-      ? { kind: "startup", name: name.trim() || "Startup", ticker: (ticker.trim() || "NEW").toUpperCase().slice(0, 5), good, hq }
+      ? { kind: "startup", name: name.trim() || "Startup", ticker: (ticker.trim() || "NEW").toUpperCase().slice(0, 5), good, hq, city }
       : { kind: "incumbent", key: sel };
     // Let the "Building the economy" message paint before the warm-up year runs.
     window.setTimeout(() => onStart(newGame(choice)), 30);
@@ -51,7 +53,7 @@ export function NewGame({ onStart }: { onStart: (s: GameState) => void }) {
         <h1>American Century</h1>
         <p className="lede">
           Run a company in the American economy from January 2026. Hire from 5,000 census-based pops, build plants in fifty states,
-          sell into markets against real-world rivals, lobby a Congress of 535 real members, and climb from startup to trillion-dollar titan.
+          pick cities by their labor, taxes, permits and power grids, lobby a Congress of 535 real members, fight real House races, and climb from startup to trillion-dollar titan.
         </p>
       </div>
 
@@ -71,8 +73,12 @@ export function NewGame({ onStart }: { onStart: (s: GameState) => void }) {
           <label>Product <select value={good} onChange={(e) => { setGood(e.target.value as GoodId); setSel("startup"); }}>
             {STARTUP_GOODS.map((g) => <option key={g.good} value={g.good}>{GOOD_BY_ID[g.good].name}</option>)}
           </select></label>
-          <label>Headquarters <select value={hq} onChange={(e) => { setHq(e.target.value); setSel("startup"); }}>
-            {STATES.map((st) => <option key={st.code} value={st.code}>{st.name}</option>)}
+          <label>Headquarters <select value={city} onChange={(e) => { const c = CITY_SEEDS.find((x) => x.id === e.target.value)!; setCity(c.id); setHq(c.state); setSel("startup"); }}>
+            {STATES.map((st) => (
+              <optgroup key={st.code} label={st.name}>
+                {CITY_SEEDS.filter((c) => c.state === st.code).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </optgroup>
+            ))}
           </select></label>
         </div>
         <div className="hint">{STARTUP_GOODS.find((g) => g.good === good)?.blurb}</div>

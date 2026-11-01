@@ -21,6 +21,7 @@ export interface Building {
   id: number;
   type: BuildingTypeId;
   state: string;
+  city: string;
   method: string;
   level: number;
   construction: Construction[];
@@ -97,6 +98,10 @@ export interface Politician {
   lean: number;
   /** True for the real members seated at game start. */
   real: boolean;
+  /** How much better (+) or worse than the seat's lean this member runs, in vote share. */
+  personal: number;
+  /** Announced they won't run again this cycle. */
+  retiring?: boolean;
   sinceYear: number;
   /** Goodwill toward companies whose PACs backed them, in dollars (decays). */
   friends: Record<number, number>;
@@ -196,11 +201,95 @@ export interface Company {
   lastEarnings?: EarningsResult;
   /** Workers laid off this month (hurts public image). */
   layoffs: number;
+  layoffsByJob: Partial<Record<JobId, number>>;
+  layoffsByCity: Record<string, number>;
+  /** Opinion of the company by pop type, 0–1. */
+  jobOpinion: Partial<Record<JobId, number>>;
   pac?: Pac;
+  hqSite: HqSite;
+}
+
+export type HqForm = "tower" | "campus" | "block";
+export type AmenityId = "cafeteria" | "childcare" | "fitness" | "innovation_lab" | "plaza" | "visitor_center" | "shuttle" | "exec_suites" | "solar_roof";
+
+export interface HqSite {
+  city: string;
+  form: HqForm;
+  amenities: AmenityId[];
+}
+
+export interface CityState {
+  id: string;
+  name: string;
+  state: string;
+  lat: number;
+  lon: number;
+  tech: number;
+  mfg: number;
+  col: number;
+  flags: string[];
+  /** Share of the state's population living here (dynamic). */
+  share: number;
+  /** Democratic lean of the city council. */
+  council: number;
+  /** Local policies. */
+  taxBreak: number;
+  permitSpeed: number;
+  dcStance: "welcome" | "neutral" | "moratorium";
+  minWage: number;
+  union: number;
+  powerIdx: number;
+  gridMW: number;
+  /** Data-center load drawn from the local grid, MW. */
+  dcLoadMW: number;
+  /** Opinion of each company, 0–1. */
+  opinion: Record<number, number>;
+  rest?: boolean;
+}
+
+export interface Race {
+  id: string;
+  chamber: "senate" | "house";
+  state: string;
+  district?: number;
+  cls?: number;
+  special?: boolean;
+  lean: number;
+  incumbentId?: string;
+  open: boolean;
+  primaryDay: number;
+  primaryDone: boolean;
+  nominees: Partial<Record<"D" | "R", Candidate>>;
+  /** PAC money spent for each party's nominee, by company. */
+  pac: Record<number, { D: number; R: number }>;
+  /** Democratic share projected today. */
+  proj: number;
+  result?: { dShare: number; winner: "D" | "R" };
+}
+
+export interface Candidate {
+  name: string;
+  faction: Faction;
+  personal: number;
+  politicianId?: string;
+  incumbent: boolean;
+}
+
+export interface Deal {
+  id: number;
+  buyerId: number;
+  targetId: number;
+  price: number;
+  payment: "cash" | "stock";
+  stage: "review" | "second_request";
+  daysLeft: number;
+  blockChance: number;
+  startedDay: number;
 }
 
 export interface LaborCell {
   state: string;
+  city: string;
   job: JobId;
   /** Workforce from pops (before immigration policy). */
   baseWorkforce: number;
@@ -333,6 +422,13 @@ export interface GameState {
   worldEvents: WorldEvent[];
   politics: Politics;
   politicians: Politician[];
+  races: Race[];
+  cities: Record<string, CityState>;
+  /** Average market wage by state and job ("ST:job"), for pops. */
+  stateWage: Record<string, number>;
+  deals: Deal[];
+  /** State populations at game start, for showing migration. */
+  statePopStart: Record<string, number>;
   vacancies: { state: string; district: number }[];
   stateLegs: Record<string, StateLegislature>;
   /** National average standard of living (100 = 2026 average). */

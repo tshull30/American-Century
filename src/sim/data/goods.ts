@@ -78,7 +78,7 @@ export const GOODS: GoodDef[] = [
   { id: "software", name: "Software", unit: "seat-months", refPrice: 100, recipe: { cloud: 0.01 }, tech: "software",
     marketUS: 420e9, marketWorld: 480e9, growth: 0.1, incomeElasticity: 1, priceSensitivity: 2, decay: 1, importShare: 0.05,
     buyerJobs: ["clerk", "professional", "manager", "software", "engineer", "scientist"], color: "#42a5f5" },
-  { id: "cloud", name: "Cloud Compute", unit: "compute units", refPrice: 1000, importPrice: 1100, recipe: { ai_accelerators: 0.01, components: 0.5 }, tech: "cloud",
+  { id: "cloud", name: "Cloud Compute", unit: "compute units", refPrice: 1000, importPrice: 1100, recipe: { ai_accelerators: 0.01, components: 0.1 }, tech: "cloud",
     marketUS: 320e9, marketWorld: 330e9, growth: 0.18, incomeElasticity: 1, priceSensitivity: 2, decay: 1, importShare: 0.02,
     buyerJobs: ["professional", "manager", "software", "engineer", "scientist"], color: "#29b6f6" },
   { id: "data_platforms", name: "Data Platforms", unit: "contract-months", refPrice: 100000, recipe: { cloud: 20 }, tech: "software",

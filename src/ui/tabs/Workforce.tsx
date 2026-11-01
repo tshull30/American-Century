@@ -4,6 +4,8 @@ import { CULTURE_BY_ID, CULTURES, type CultureId } from "../../sim/data/cultures
 import { JOB_BY_ID, type JobId } from "../../sim/data/jobs";
 import { STATE_BY_CODE } from "../../sim/data/states";
 import { staffNeeds } from "../../sim/engine";
+import { cityLabel } from "../../sim/geo";
+import { JOBS } from "../../sim/data/jobs";
 import { fmtMoney, fmtNum, fmtPct, laborKey } from "../../sim/util";
 import { Bar, Panel, Table, useGame } from "../components";
 
@@ -64,7 +66,7 @@ export function Workforce() {
               rowKey={(r) => r.k}
               initialSort="have"
               cols={[
-                { key: "st", label: "State", render: (r) => STATE_BY_CODE[r.cell.state].name, sort: (r) => r.cell.state },
+                { key: "st", label: "City", render: (r) => cityLabel(s, r.cell.city), sort: (r) => r.cell.city },
                 { key: "job", label: "Job", render: (r) => JOB_BY_ID[r.cell.job].plural, sort: (r) => r.cell.job },
                 { key: "have", label: "Employed", num: true, render: (r) => fmtNum(r.have), sort: (r) => r.have },
                 { key: "fill", label: "Filled", render: (r) => <Bar value={r.need ? r.have / r.need : 1} />, sort: (r) => (r.need ? r.have / r.need : 1) },
@@ -90,6 +92,13 @@ export function Workforce() {
               ]}
             />
           </div>
+        </Panel>
+        <Panel title="Who likes you" right={`National image ${fmtPct(me.image, 0)}`}>
+          <Table rows={JOBS} rowKey={(j) => j.id} cols={[
+            { key: "j", label: "Pop type", render: (j) => j.plural },
+            { key: "o", label: "Opinion of you", render: (j) => { const o = me.jobOpinion[j.id] ?? 0.5; return <span className="row" style={{ flexWrap: "nowrap" }}><Bar value={o} tone={o > 0.6 ? "good" : o < 0.4 ? "bad" : undefined} /><span className={o > 0.6 ? "pos" : o < 0.4 ? "neg" : ""}>{fmtPct(o, 0)}</span></span>; }, sort: (j) => me.jobOpinion[j.id] ?? 0.5 },
+          ]} />
+          <p className="hint">Workers who like you are easier to hire. Pay above market and HQ perks help; layoffs and overcharging for necessities hurt, especially with service workers, laborers and clerks. Each city's view of you is on the Pops & Map tab.</p>
         </Panel>
         <Panel title="Workforce by culture">
           <Table

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { acquire, build } from "../src/sim/actions";
+import { offer, build } from "../src/sim/actions";
 import { STATES } from "../src/sim/data/states";
 import { newGame, player, tick, ttm } from "../src/sim/engine";
 import { generatePops, rake } from "../src/sim/pops";
@@ -61,22 +61,25 @@ describe("simulation", () => {
   it("builds, finishes construction and staffs new levels", () => {
     const s = newGame({ kind: "startup", name: "T", ticker: "T", good: "software", hq: "TX" }, 1);
     const me = player(s);
-    expect(build(s, me.id, "software", "CA", 2).ok).toBe(true);
+    expect(build(s, me.id, "software", "sf", 2).ok).toBe(true);
     months(s, 5);
-    const b = me.buildings.find((x) => x.type === "software" && x.state === "CA")!;
+    const b = me.buildings.find((x) => x.type === "software" && x.city === "sf")!;
     expect(b.level).toBe(2);
     expect(b.staffRatio).toBeGreaterThan(0.9);
   });
 
-  it("acquires a company and merges its assets", () => {
+  it("takes months and board approval to acquire a company", () => {
     const s = newGame({ kind: "incumbent", key: "windward" }, 2);
     const me = player(s);
     const lattice = s.companies.find((c) => c.name === "Lattice Labs")!;
-    const sites = me.buildings.length;
-    const r = acquire(s, me.id, lattice.id, "cash");
+    const low = offer(s, me.id, lattice.id, 0.05, "cash");
+    expect(low.ok).toBe(false);
+    let r = offer(s, me.id, lattice.id, 0.9, "cash");
+    for (let i = 0; i < 5 && !r.ok; i++) r = offer(s, me.id, lattice.id, 0.9, "cash");
     expect(r.ok).toBe(true);
+    expect(lattice.alive).toBe(true);
+    months(s, 16);
     expect(lattice.alive).toBe(false);
-    expect(me.buildings.length).toBeGreaterThanOrEqual(sites);
   });
 });
 

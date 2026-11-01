@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { acquire, acquisitionPrice, antitrustIssue, liquidity } from "../../sim/actions";
+import { antitrustIssue, liquidity, offer } from "../../sim/actions";
+import { boardOdds, BREAK_FEE, blockChance, requiredPremium, scrutiny } from "../../sim/deals";
+import { dayLabel } from "../../sim/util";
 import { GOOD_BY_ID, type GoodId } from "../../sim/data/goods";
 import { STATE_BY_CODE } from "../../sim/data/states";
 import { revenueGrowth, ttm } from "../../sim/engine";
@@ -34,6 +36,17 @@ export function Rivals() {
         </div>
       </Panel>
       <div>
+        {s.deals.length > 0 && (
+          <Panel title="Pending deals">
+            <Table rows={s.deals} rowKey={(d) => d.id} cols={[
+              { key: "b", label: "Buyer", render: (d) => s.companies.find((c) => c.id === d.buyerId)?.name },
+              { key: "t", label: "Target", render: (d) => s.companies.find((c) => c.id === d.targetId)?.name },
+              { key: "p", label: "Price", num: true, render: (d) => fmtMoney(d.price) },
+              { key: "st", label: "Stage", render: (d) => (d.stage === "second_request" ? "In-depth antitrust review" : "Closing") },
+              { key: "e", label: "Expected", render: (d) => dayLabel(s.day + d.daysLeft) },
+            ]} />
+          </Panel>
+        )}
         {target && target.alive ? (
           <Panel title={target.name}>
             <p className="hint" style={{ marginTop: 0 }}>{target.tagline}</p>
@@ -48,8 +61,8 @@ export function Rivals() {
             {target.id !== me.id && <AcquireBox target={target} onDone={() => setTarget(null)} />}
           </Panel>
         ) : (
-          <Panel title="Mergers & acquisitions">
-            <p className="hint">Click a company to see its details and make an offer. Acquisitions cost market cap plus a 30% premium. You get every plant, worker, product, brand and technology the target owns, along with its cash and its debt. Regulators block deals that would give you more than 40% of a market you both sell in.</p>
+          <Panel title="Mergers and acquisitions">
+            <p className="hint">Click a company to make an offer. Its board wants a premium (more for startups, hot stocks and established companies), regulators may open an in-depth review, and deals take months to close. You get every plant, worker, product, brand and technology the target owns, with its cash and its debt.</p>
           </Panel>
         )}
       </div>
@@ -57,20 +70,35 @@ export function Rivals() {
   );
 
   function AcquireBox({ target, onDone }: { target: Company; onDone: () => void }) {
-    const price = acquisitionPrice(target);
+    const [premium, setPremium] = useState(Math.round(requiredPremium(s, me, target) * 100) / 100);
+    const [payment, setPayment] = useState<"cash" | "stock">("cash");
+    const price = target.marketCap * (1 + premium);
     const block = antitrustIssue(s, me, target);
-    const cashOk = price <= liquidity(me);
-    const stockOk = price <= me.marketCap * 0.5;
+    const odds = boardOdds(s, me, target, premium);
+    const review = scrutiny(s, me, target, price);
+    const killed = blockChance(s, me, target, price);
     return (
       <div style={{ marginTop: 12 }}>
-        <div className="row"><strong>Offer price: {fmtMoney(price)}</strong> <span className="muted">(30% premium)</span></div>
+        <div className="row">
+          Premium <input type="range" min={0} max={1.2} step={0.05} value={premium} onChange={(e) => setPremium(Number(e.target.value))} style={{ width: 200 }} />
+          <strong>{fmtPct(premium, 0)}</strong> over market, <strong>{fmtMoney(price)}</strong>
+        </div>
+        <div className="row">
+          Pay with
+          <select value={payment} onChange={(e) => setPayment(e.target.value as "cash" | "stock")}><option value="cash">Cash and credit</option><option value="stock">Your stock</option></select>
+        </div>
+        <table className="t" style={{ marginTop: 8 }}><tbody>
+          <tr><td>Board accepts</td><td className="num">{fmtPct(odds, 0)} chance</td></tr>
+          <tr><td>In-depth antitrust review</td><td className="num">{fmtPct(review, 0)} chance, 6–14 months</td></tr>
+          <tr><td>If reviewed, blocked</td><td className="num">{fmtPct(killed, 0)} chance; you'd owe a {fmtMoney(price * BREAK_FEE)} break fee</td></tr>
+          <tr><td>Without review</td><td className="num">closes in 2–3 months</td></tr>
+        </tbody></table>
         {block && <div className="neg" style={{ marginTop: 6 }}>{block}</div>}
         <div className="row" style={{ marginTop: 8 }}>
-          <button className="primary" disabled={!!block || !cashOk} onClick={() => { const r = acquire(s, me.id, target.id, "cash"); act(r); if (r.ok) onDone(); }}>Pay cash</button>
-          <button disabled={!!block || !stockOk} onClick={() => { const r = acquire(s, me.id, target.id, "stock"); act(r); if (r.ok) onDone(); }}>Pay in stock</button>
+          <button className="primary" disabled={!!block} onClick={() => { const r = offer(s, me.id, target.id, premium, payment); act(r); if (r.ok) onDone(); }}>Make the offer</button>
         </div>
         <div className="hint" style={{ marginTop: 6 }}>
-          Cash and credit available: {fmtMoney(liquidity(me))}. A stock deal issues {fmtPct(price / Math.max(1, me.marketCap), 1)} new shares{stockOk ? "" : " (shareholders won't accept more than 50%)"}.
+          Cash and credit available: {fmtMoney(liquidity(me))}; cash deals must still be fundable at closing. Stock deals can't issue more than 30% new shares. Big buyers draw far more scrutiny, and so does a Congress full of populists and progressives.
         </div>
       </div>
     );
