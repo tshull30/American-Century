@@ -22,6 +22,8 @@ Deep and spreadsheet-y, but fast: daily ticks, five game speeds, and everything 
 
 **New in v0.9:** people. Every executive, rival CEO and member of Congress has views on five issues (economy, labor, climate, trade, Big Tech) and an itemized opinion of your company. A new People tab shows dossiers: backgrounds and mottos for your (fictional) executives and rival CEOs, belief scales, and a ledger of exactly why each person likes or dislikes you. Members of Congress (real people, with stances modeled from their caucus faction) react to jobs and layoffs in their state, your lobbying, PAC money, offshoring, your energy footprint and Big Tech's power; friends lean your way on close votes, and hostile members call you to testify. Rival CEOs feud with you (and undercut your prices), take public swipes, offer two-year partnerships, and their boards ask a lower or higher takeover premium depending on how they feel. Your executives have morale: they ask for raises, perform better when happy, and quit when miserable. Also new: earnings guidance (lowball, realistic or bold) and 20 milestones with front-page headlines.
 
+**New in v0.10:** moonshots (fusion, self-driving, quantum computing, humanoid robots, an Alzheimer's cure, general AI and a crewed Mars mission: multi-year bets with permanent payoffs, which the richest rivals chase too), keynote launch events (a careful reveal or promise the moon), a Super Bowl ad every January, a second-headquarters contest where cities bid billions, corporate espionage, your CEO's social feed (hype, thank the workers, or dunk on a rival), and meme-stock manias that lift small companies and then crash them.
+
 ## Play
 
 ```bash

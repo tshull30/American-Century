@@ -1,7 +1,8 @@
 import { setResearchAlloc } from "../../sim/actions";
 import { TECHS, GOOD_BY_ID } from "../../sim/data/goods";
 import { BASELINE_TECH_START, researchCost, researchOutput } from "../../sim/engine";
-import { fmtNum } from "../../sim/util";
+import { fmtMoney, fmtNum } from "../../sim/util";
+import { cancelMoonshot, FUNDING, MOONSHOTS, startMoonshot, type Funding } from "../../sim/fun";
 import { Bar, Panel, Table, useGame } from "../components";
 
 export function Research() {
@@ -32,6 +33,50 @@ export function Research() {
           ]}
         />
       </Panel>
+      <Moonshots />
     </div>
+  );
+}
+
+function Moonshots() {
+  const { s, me, act } = useGame();
+  return (
+    <Panel help="moonshots" title="Moonshots" right="Long bets that change the company if they work. Two at a time.">
+      <div className="moonshots">
+        {MOONSHOTS.map((m) => {
+          const st = me.moonshots?.[m.id];
+          const done = me.perks?.includes(m.id);
+          const rivals = s.companies.filter((c) => c.alive && !c.isPlayer && (c.moonshots?.[m.id] || c.perks?.includes(m.id)));
+          return (
+            <article key={m.id} className={`moonshot ${st ? "active" : ""} ${done ? "done" : ""}`}>
+              <h3>{m.name}</h3>
+              <p className="blurb">{m.blurb}</p>
+              <dl>
+                <dt>Payoff</dt><dd>{m.payoff}</dd>
+                <dt>Cost</dt><dd>{fmtMoney(m.monthly)} a month at full funding</dd>
+                <dt>Time</dt><dd>about {m.months} months; {Math.round(m.odds * 100)}% odds the prototype works</dd>
+                {rivals.length > 0 && <><dt>Rivals</dt><dd>{rivals.map((c) => `${c.name}${c.perks?.includes(m.id) ? " (done)" : ""}`).join(", ")}</dd></>}
+              </dl>
+              {done ? <span className="deal-stamp ok">Achieved</span> : st ? (
+                <>
+                  <div className="row" style={{ flexWrap: "nowrap" }}><Bar value={st.progress} tone={undefined} /><span className="muted small">{Math.round(st.progress * 100)}%, {fmtMoney(st.spent)} spent{st.attempts ? `, attempt ${st.attempts + 1}` : ""}</span></div>
+                  <div className="row" style={{ marginTop: 6 }}>
+                    <div className="segmented small">
+                      {(Object.keys(FUNDING) as Funding[]).map((f) => <button key={f} className={st.funding === f ? "on" : ""} onClick={() => act(startMoonshot(s, me, m.id, f))}>{FUNDING[f].name}</button>)}
+                    </div>
+                    <button className="small danger" onClick={() => act(cancelMoonshot(me, m.id))}>Shut it down</button>
+                  </div>
+                </>
+              ) : (
+                <div className="row" style={{ marginTop: 6 }}>
+                  <button onClick={() => act(startMoonshot(s, me, m.id, "full"))}>Launch the program</button>
+                  <button className="small" onClick={() => act(startMoonshot(s, me, m.id, "lean"))}>Start lean</button>
+                </div>
+              )}
+            </article>
+          );
+        })}
+      </div>
+    </Panel>
   );
 }

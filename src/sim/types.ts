@@ -223,6 +223,16 @@ export interface Company {
   layoffsByCity: Record<string, number>;
   /** Research and marketing multiplier from partnerships. */
   allyBoost?: number;
+  /** Moonshots in progress and completed. */
+  moonshots?: Partial<Record<import("./fun").MoonshotId, import("./fun").MoonshotState>>;
+  perks?: import("./fun").MoonshotId[];
+  /** Month of the last launch event per product. */
+  launches?: Partial<Record<GoodId, number>>;
+  posts?: { month: number; text: string }[];
+  lastPost?: number;
+  hq2?: import("./fun").Hq2;
+  lastSpy?: number;
+  meme?: { until: number; mult: number };
   /** Earnings guidance the CFO gave Wall Street. */
   guidance?: "low" | "mid" | "high";
   guidanceQuarter?: number;

@@ -5,6 +5,7 @@ import { quality } from "../../sim/engine";
 import { fmtMoney, fmtNum, fmtPct, fmtPrice } from "../../sim/util";
 import { LineChart, Panel, Table, useGame } from "../components";
 import { dateLabel } from "../../sim/util";
+import { holdLaunch, launchCost } from "../../sim/fun";
 
 export function Markets() {
   const { s, me, act } = useGame();
@@ -16,6 +17,24 @@ export function Markets() {
 
   return (
     <div>
+      <Panel help="launches" title="Launch events" right="A keynote can make a product, or embarrass it. Once every nine months per product.">
+        <Table
+          rows={myGoods.filter((g) => GOOD_BY_ID[g].tech)}
+          rowKey={(x) => x}
+          cols={[
+            { key: "g", label: "Product", render: (g) => GOOD_BY_ID[g].name },
+            { key: "q", label: "Quality vs market", num: true, render: (g) => { const q = quality(s, me, g); return <span className={q >= 1.05 ? "pos" : q < 0.97 ? "neg" : ""}>{q >= 1 ? "+" : "−"}{Math.abs((q - 1) * 100).toFixed(0)}%</span>; } },
+            { key: "c", label: "Event cost", num: true, render: (g) => fmtMoney(launchCost(me, g)) },
+            { key: "l", label: "Last launch", render: (g) => me.launches?.[g] !== undefined ? dateLabel(me.launches[g]!) : <span className="muted">never</span> },
+            { key: "a", label: "", render: (g) => (
+              <span className="row" style={{ flexWrap: "nowrap", gap: 6 }}>
+                <button className="small" onClick={() => act(holdLaunch(s, me, g, false))} title="Safer: smaller upside, small downside">Careful reveal</button>
+                <button className="small" onClick={() => act(holdLaunch(s, me, g, true))} title="Big hype: huge if the product is better than the market's, ugly if it isn't">Promise the moon</button>
+              </span>
+            ) },
+          ]}
+        />
+      </Panel>
       <Panel title="Your products" right="Auto-pricing raises prices when you sell out and cuts them when stock piles up">
         <Table
           rows={myGoods}

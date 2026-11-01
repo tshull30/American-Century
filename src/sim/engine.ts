@@ -7,6 +7,7 @@ import { NEED_OF_GOOD } from "./data/needs";
 import { STATES, STATE_BY_CODE } from "./data/states";
 import { activePartners, updatePeople } from "./people";
 import { checkMilestones } from "./milestones";
+import { updateFun } from "./fun";
 import { calibrateConsumers, driftPreferences, updateConsumers } from "./consumers";
 import { initMacro, updateMacro, updateWorldEvents } from "./macro";
 import {
@@ -32,7 +33,7 @@ import {
 } from "./util";
 import { runAI, autoPrice, maintainHQ } from "./ai";
 
-export const SAVE_VERSION = 9;
+export const SAVE_VERSION = 10;
 export const BASELINE_TECH_START = 10;
 const DT = 1 / DAYS_PER_MONTH;
 const DEPRECIATION = 0.006;
@@ -690,6 +691,7 @@ function monthly(s: GameState) {
     updatePeople(s, (t, k, extra) => { if (!warmup && me) log(s, t, k, me.id, extra?.headline && s.decisions?.some((d) => d.headline === extra.headline) ? "decision" : "news", extra); }, warmup);
     const partners = activePartners(s);
     for (const c of alive) c.allyBoost = c.isPlayer ? 1 + 0.05 * partners.length : partners.includes(c.id) ? 1.05 : 1;
+    updateFun(s, (c) => (t, k, extra) => { if (!warmup) log(s, t, k, c.id, c.isPlayer ? (extra?.headline && s.decisions?.some((d) => d.headline === extra.headline) ? "decision" : "news") : undefined, extra); }, warmup);
     if (!warmup && me) checkMilestones(s, me, (t, extra) => log(s, t, "good", me.id, "news", extra));
   }
   const peer = peerReturns(alive);

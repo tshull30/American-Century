@@ -202,9 +202,9 @@ export function hasTrait(c: Company, t: TraitId, roles?: ExecRole[]): boolean {
 }
 
 export const leadEffects = {
-  research: (c: Company) => (1 + 0.12 * roleFactor(c, "cto") + (hasTrait(c, "visionary") ? 0.1 : 0) + (hasTrait(c, "engineer") ? 0.15 : 0)) * (c.allyBoost ?? 1),
-  efficiency: (c: Company) => 1 + 0.03 * roleFactor(c, "coo") + (hasTrait(c, "operator") ? 0.02 : 0),
-  runningCost: (c: Company) => (hasTrait(c, "cost_cutter") ? 0.96 : 1) * (hasTrait(c, "union_friendly") ? 1.01 : 1),
+  research: (c: Company) => (1 + 0.12 * roleFactor(c, "cto") + (hasTrait(c, "visionary") ? 0.1 : 0) + (hasTrait(c, "engineer") ? 0.15 : 0)) * (c.allyBoost ?? 1) * (c.perks?.includes("quantum") ? 1.3 : 1) * (c.perks?.includes("agi") ? 1.5 : 1),
+  efficiency: (c: Company) => (1 + 0.03 * roleFactor(c, "coo") + (hasTrait(c, "operator") ? 0.02 : 0)) * (c.perks?.includes("agi") ? 1.05 : 1),
+  runningCost: (c: Company) => (hasTrait(c, "cost_cutter") ? 0.96 : 1) * (hasTrait(c, "union_friendly") ? 1.01 : 1) * (c.perks?.includes("fusion") ? 0.92 : 1) * (c.perks?.includes("humanoids") ? 0.9 : 1),
   marketing: (c: Company) => (1 + 0.12 * roleFactor(c, "cmo") + (hasTrait(c, "growth_hacker") ? 0.2 : 0) + (hasTrait(c, "celebrity") ? 0.15 : 0)) * (c.allyBoost ?? 1),
   interest: (c: Company) => -0.004 * roleFactor(c, "cfo") - (hasTrait(c, "penny_pincher") ? 0.004 : 0),
   credit: (c: Company) => 1 + 0.08 * roleFactor(c, "cfo"),

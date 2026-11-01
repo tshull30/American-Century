@@ -4,6 +4,7 @@ import { tierOf } from "../../sim/tiers";
 import { dateLabel, dayLabel, dayOfMonthStart, fmtMoney, fmtNum, fmtPct } from "../../sim/util";
 import { computeAlerts } from "../alerts";
 import { MILESTONES } from "../../sim/milestones";
+import { ceoPost } from "../../sim/fun";
 import { LineChart, Panel, Signed, Stat, Table, useGame } from "../components";
 
 export function Overview() {
@@ -40,6 +41,7 @@ export function Overview() {
         <Panel title="Market cap">
           <LineChart data={hist.map((h) => ({ x: dateLabel(h.month), y: h.marketCap }))} fmt={(v) => fmtMoney(v, 1)} />
         </Panel>
+        <CeoFeed />
         <Panel title="Monthly net income">
           <LineChart zero data={hist.map((h) => ({ x: dateLabel(h.month), y: h.netIncome }))} fmt={(v) => fmtMoney(v, 1)} />
         </Panel>
@@ -106,5 +108,28 @@ export function Overview() {
         </Panel>
       </div>
     </div>
+  );
+}
+
+function CeoFeed() {
+  const { s, me, act } = useGame();
+  const ceo = me.leadership?.execs.find((e) => e.role === "ceo");
+  const handle = ceo ? "@" + ceo.name.split(" ").map((w, i) => (i === 0 ? w[0] : w)).join("").toLowerCase().replace(/[^a-z]/g, "") : "";
+  const used = me.lastPost === s.month;
+  return (
+    <Panel help="posts" title="Your CEO's feed" right={ceo ? `${ceo.name} ${handle}` : "No CEO"}>
+      {(me.posts ?? []).length === 0 && <p className="empty">{ceo ? `${ceo.name} hasn't posted yet.` : "Hire a CEO first."}</p>}
+      <div className="feed">
+        {(me.posts ?? []).slice(0, 3).map((p, i) => (
+          <div key={i} className="post"><span className="post-who"><strong>{ceo?.name ?? me.name}</strong> <span className="muted">{handle}, {dateLabel(p.month)}</span></span><p>{p.text}</p></div>
+        ))}
+      </div>
+      <div className="row" style={{ marginTop: 8 }}>
+        <button disabled={!ceo || used} onClick={() => act(ceoPost(s, me, "hype"))} title="Lifts the stock, more for a showman. Small chance the SEC writes.">Hype the roadmap</button>
+        <button disabled={!ceo || used} onClick={() => act(ceoPost(s, me, "thanks"))} title="Workers and the press like it.">Thank the workers</button>
+        <button disabled={!ceo || used} className="danger" onClick={() => act(ceoPost(s, me, "dunk"))} title="Dunk on your biggest rival. Viral or petty.">Dunk on a rival</button>
+        {used && <span className="muted small">One post a month.</span>}
+      </div>
+    </Panel>
   );
 }

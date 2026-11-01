@@ -5,7 +5,8 @@ import { buildCostPerLevel } from "../../sim/engine";
 import { citiesInState, cityLabel, opinionOf } from "../../sim/geo";
 import { AMENITIES, amenityCost, HQ_FORMS, hqLevels, hqUpkeep, towerAllowed } from "../../sim/hq";
 import type { AmenityId, Company, HqForm } from "../../sim/types";
-import { fmtMoney, fmtNum, fmtPct } from "../../sim/util";
+import { dateLabel, fmtMoney, fmtNum, fmtPct } from "../../sim/util";
+import { startHq2 } from "../../sim/fun";
 import { Panel, Table, useGame } from "../components";
 
 /** An engraved elevation of the HQ: a tower's floors, a campus's buildings, or a city block. */
@@ -110,6 +111,22 @@ export function Headquarters() {
             } },
           ]}
         />
+      </Panel>
+      <Panel help="hq2" title="Second headquarters" right="Make cities compete for 5,000 jobs">
+        {!me.hq2 ? (
+          <div className="row"><span className="muted">Announce a public search. Cities bid tax breaks and cash for three months; then you pick.</span><button onClick={() => act(startHq2(s, me))} disabled={me.marketCap < 150e9} title={me.marketCap < 150e9 ? "Needs a $150 billion market value" : ""}>Announce the search</button></div>
+        ) : me.hq2.done ? (
+          <p>Your second headquarters is in <strong>{cityLabel(s, me.hq2.done)}</strong>.</p>
+        ) : (
+          <>
+            <p className="muted">Bidding closes {dateLabel(me.hq2.endMonth)}. {me.hq2.bids.length} cities have bid.</p>
+            <Table rows={me.hq2.bids.slice(0, 10)} rowKey={(b) => b.city} cols={[
+              { key: "c", label: "City", render: (b) => cityLabel(s, b.city) },
+              { key: "a", label: "Incentives", num: true, render: (b) => fmtMoney(b.amount) },
+              { key: "o", label: "Locals like you", num: true, render: (b) => fmtPct(s.cities[b.city]?.opinion[me.id] ?? 0.5, 0) },
+            ]} />
+          </>
+        )}
       </Panel>
     </div>
   );

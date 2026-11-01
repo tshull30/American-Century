@@ -66,6 +66,19 @@ export const TOPICS: Topic[] = [
   { id: "guidance", title: "Earnings guidance", group: "Company", body: [
     "Each quarter you can tell Wall Street what to expect. Bold guidance lifts the stock now and raises the bar by 3%; lowball guidance dips the stock and lowers the bar. You can change it once a quarter, and switching back undoes the move. See [[earnings]].",
   ] },
+  { id: "moonshots", title: "Moonshots", group: "Company", body: [
+    "Moonshots are multi-year bets: fusion, self-driving, quantum computing, humanoid robots, a cure for Alzheimer's, general AI and a crewed Mars mission. Each burns hundreds of millions a month and takes years. When the program finishes, the prototype gets one test: if it works, the payoff is permanent; if not, the team goes back to about half way and tries again with better odds.",
+    "Lean funding costs half and goes at 60% speed; a crash program costs double for 60% more speed but slightly worse odds. A strong CTO speeds things up. You can run two at once, and the richest rivals run their own.",
+  ] },
+  { id: "launches", title: "Launch events", group: "Company", body: [
+    "Hold a keynote for any product with a technology behind it. The outcome depends mostly on how your product compares with the market's, plus your CMO, your CEO and luck. A careful reveal is a modest bet; promising the moon multiplies both the win and the embarrassment. Once every nine months per product.",
+  ] },
+  { id: "posts", title: "Your CEO's feed", group: "Company", body: [
+    "Once a month your CEO can post. Hyping the roadmap lifts the stock, more for a celebrity or visionary, but sometimes draws a letter from the SEC. Thanking workers helps your image and how workers see you. Dunking on your biggest rival goes viral or looks petty, and that rival's CEO won't forget.",
+  ] },
+  { id: "hq2", title: "Second headquarters", group: "Company", body: [
+    "Companies worth $150 billion or more can announce a search for a second headquarters. Cities bid cash and tax breaks for three months; then you pick from the four best offers. The winner gets five headquarters levels and a lot of goodwill; the losing finalists sulk a little.",
+  ] },
   { id: "acquisitions", title: "Acquisitions", group: "Company", body: [
     "Click a company on the Rivals tab to make an offer. Its board wants a premium: more for startups, hot stocks and established companies, and more from a much bigger buyer. A dealmaker CEO or CFO shaves it.",
     "Regulators may open a second request, an in-depth review lasting months, and can sue to block. Big buyers, overlapping markets, strict antitrust law and a populist or progressive Congress all raise the odds. A blocked deal costs a 4% break fee.",
