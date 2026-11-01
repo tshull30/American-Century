@@ -4,11 +4,12 @@ import { feature } from "topojson-client";
 import statesTopo from "us-atlas/states-albers-10m.json";
 import { CULTURES, CULTURE_BY_ID, type CultureId } from "../../sim/data/cultures";
 import { JOBS, JOB_BY_ID, type JobId } from "../../sim/data/jobs";
+import { NEEDS, solTier } from "../../sim/data/needs";
 import { STATES, STATE_BY_CODE, STATE_BY_FIPS } from "../../sim/data/states";
 import { fmtMoney, fmtNum, fmtPct, laborKey } from "../../sim/util";
 import { Panel, Table, useGame } from "../components";
 
-type Metric = "workforce" | "free" | "wage" | "mine" | "culture";
+type Metric = "workforce" | "free" | "wage" | "mine" | "culture" | "sol";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const topo = statesTopo as any;
@@ -38,7 +39,11 @@ export function Pops() {
     const jobs = job === "all" ? JOBS.map((j) => j.id) : [job];
     for (const st of STATES) {
       let x = 0;
-      if (metric === "culture") {
+      if (metric === "sol") {
+        let sum = 0, n = 0;
+        for (const p of s.pops) if (p.state === st.code && (job === "all" || p.job === job)) { const k = p.workers + p.dependents; sum += p.sol * k; n += k; }
+        x = n ? sum / n : 0;
+      } else if (metric === "culture") {
         const pops = s.pops.filter((p) => p.state === st.code && (job === "all" || p.job === job));
         const tot = pops.reduce((a, p) => a + p.workers, 0);
         x = tot ? pops.filter((p) => p.culture === culture).reduce((a, p) => a + p.workers, 0) / tot : 0;
@@ -62,9 +67,10 @@ export function Pops() {
   }, [metric, job, culture, s.month]);
 
   const max = Math.max(1e-9, ...Object.values(values));
-  const fmt = (x: number) => metric === "wage" ? fmtMoney(x, 1) + "/mo" : metric === "culture" ? fmtPct(x, 1) : fmtNum(x);
+  const min = metric === "sol" ? Math.min(...Object.values(values)) : 0;
+  const fmt = (x: number) => metric === "wage" ? fmtMoney(x, 1) + "/mo" : metric === "culture" ? fmtPct(x, 1) : metric === "sol" ? x.toFixed(0) : fmtNum(x);
   // log scale for counts so small states are still readable
-  const scale = (x: number) => metric === "wage" || metric === "culture" ? x / max : Math.log1p(x) / Math.log1p(max);
+  const scale = (x: number) => metric === "sol" ? (x - min) / Math.max(1e-9, max - min) : metric === "wage" || metric === "culture" ? x / max : Math.log1p(x) / Math.log1p(max);
 
   const popRows = useMemo(() => s.pops.filter((p) =>
     (!sel || p.state === sel) && (cultFilter === "all" || p.culture === cultFilter) && (jobFilter === "all" || p.job === jobFilter),
@@ -82,6 +88,7 @@ export function Pops() {
               <option value="wage">Market wage</option>
               <option value="mine">Your employees</option>
               <option value="culture">Culture share</option>
+              <option value="sol">Standard of living</option>
             </select>
             <select value={job} onChange={(e) => setJob(e.target.value as JobId | "all")}>
               <option value="all">All jobs</option>
@@ -120,10 +127,10 @@ export function Pops() {
           </div>
           <div className="row" style={{ justifyContent: "space-between" }}>
             <div className="legend-ramp">
-              <span>{fmt(metric === "wage" || metric === "culture" ? 0 : 0)}</span>
+              <span>{fmt(min)}</span>
               <div className="ramp" style={{ background: `linear-gradient(90deg, ${ramp(0)}, ${ramp(1)})` }} />
               <span>{fmt(max)}</span>
-              {metric !== "wage" && metric !== "culture" && <span>(log scale)</span>}
+              {metric !== "wage" && metric !== "culture" && metric !== "sol" && <span>(log scale)</span>}
             </div>
             <span className="hint">Click a state to list its pops.</span>
           </div>
@@ -154,6 +161,7 @@ export function Pops() {
               { key: "l", label: "Pop", render: (p) => <><span className="swatch" style={{ background: CULTURE_BY_ID[p.culture].color }} /> {CULTURE_BY_ID[p.culture].adjective} {JOB_BY_ID[p.job].plural.toLowerCase()}{sel ? "" : ` from ${STATE_BY_CODE[p.state].name}`}</>, sort: (p) => p.culture + p.job },
               { key: "w", label: "Workers", num: true, render: (p) => fmtNum(p.workers), sort: (p) => p.workers },
               { key: "d", label: "Dependents", num: true, render: (p) => fmtNum(p.dependents), sort: (p) => p.dependents },
+              { key: "sol", label: "Living std.", num: true, title: "Standard of living (100 = 2026 average). Hover for need satisfaction.", render: (p) => <span title={NEEDS.map((n, i) => `${n.name}: ${(p.sat[i] ?? 0).toFixed(2)}`).join("\n")}>{p.sol} <span className="muted">{solTier(p.sol)}</span></span>, sort: (p) => p.sol },
               { key: "wage", label: "Wage", num: true, render: (p) => fmtMoney(s.labor[laborKey(p.state, p.job)].wage, 1), sort: (p) => s.labor[laborKey(p.state, p.job)].wage },
               { key: "emp", label: "At game companies", num: true, render: (p) => { const c = s.labor[laborKey(p.state, p.job)]; return fmtPct(c.gameEmployed / c.workforce, 1); }, title: "Share of this pop's state-and-job labor pool working for companies in the game" },
             ]}

@@ -3,6 +3,30 @@ import type { GameState } from "./types";
 export const START_YEAR = 2026;
 export const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+const DAY0 = Date.UTC(START_YEAR, 0, 1);
+const MS_DAY = 86400000;
+/** Average days per month: monthly rates are spread over days with this. */
+export const DAYS_PER_MONTH = 30.4375;
+
+export function dateOfDay(day: number): Date {
+  return new Date(DAY0 + day * MS_DAY);
+}
+/** Month index (0 = January 2026) for a day number. */
+export function monthOfDay(day: number): number {
+  const d = dateOfDay(day);
+  return (d.getUTCFullYear() - START_YEAR) * 12 + d.getUTCMonth();
+}
+/** Day number of the 1st of a month index. */
+export function dayOfMonthStart(month: number): number {
+  const y = START_YEAR + Math.floor(month / 12);
+  const m = ((month % 12) + 12) % 12;
+  return Math.round((Date.UTC(y, m, 1) - DAY0) / MS_DAY);
+}
+export function dayLabel(day: number): string {
+  const d = dateOfDay(day);
+  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+}
+
 /** Month 0 = January 2026. Negative months are the 2025 warm-up year. */
 export function dateLabel(month: number): string {
   const y = START_YEAR + Math.floor(month / 12);

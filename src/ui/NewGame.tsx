@@ -9,6 +9,13 @@ import { fmtMoney } from "../sim/util";
 import { hasLocal, importFile, loadLocal } from "./save";
 
 const STARTUP_GOODS: { good: GoodId; blurb: string }[] = [
+  { good: "digital_ads", blurb: "Sell advertising to every business in America. Runs on cloud compute." },
+  { good: "streaming", blurb: "Films and series for households. Content licensing is a big running cost." },
+  { good: "pharmaceuticals", blurb: "Drugs for a huge, price-insensitive market. Lives and dies by R&D." },
+  { good: "groceries", blurb: "Feed the country. Thin margins, enormous market, laborer-heavy plants." },
+  { good: "apparel", blurb: "Clothing and footwear: a brand game. Tariffs on imports help you." },
+  { good: "electricity", blurb: "Build power plants: gas, solar or nuclear. Slow, capital-heavy, steady." },
+  { good: "gas_cars", blurb: "Gasoline vehicles: the biggest market there is, slowly shrinking." },
   { good: "software", blurb: "Cheapest to start. Needs software developers; hosting runs on cloud compute." },
   { good: "data_platforms", blurb: "Small, lucrative contracts with government and big business. Needs analysts and developers." },
   { good: "cloud", blurb: "Capital-hungry data centers that run on AI accelerators." },
@@ -69,17 +76,21 @@ export function NewGame({ onStart }: { onStart: (s: GameState) => void }) {
         <div className="hint">{STARTUP_GOODS.find((g) => g.good === good)?.blurb}</div>
       </div>
 
-      <div className="section-title">Or take over an existing company</div>
-      <div className="cards">
-        {COMPANY_SEEDS.map((c) => (
-          <button key={c.key} className={`card ${sel === c.key ? "sel" : ""}`} onClick={() => setSel(c.key)}>
-            <div className="name"><span className="swatch" style={{ background: c.color }} />{c.name} <span className="muted" style={{ fontWeight: 400 }}>{c.ticker}</span></div>
-            <div className="tag">{c.tagline}</div>
-            <div className="meta"><span>{tierOf(c.marketCap).name}</span><span>{fmtMoney(c.marketCap)}</span></div>
-            <div className="meta"><span>{c.produce.map((p) => GOOD_BY_ID[p.good].name).join(", ") || "Pre-revenue"}</span><span>like {c.inspiredBy}</span></div>
-          </button>
-        ))}
-      </div>
+      {([["incumbent", "Or take over an established giant"], ["challenger", "…a challenger"], ["startup", "…or a young startup"]] as const).map(([tier, title]) => (
+        <div key={tier}>
+          <div className="section-title">{title}</div>
+          <div className="cards">
+            {COMPANY_SEEDS.filter((c) => c.tier === tier).map((c) => (
+              <button key={c.key} className={`card ${sel === c.key ? "sel" : ""}`} onClick={() => setSel(c.key)}>
+                <div className="name"><span className="swatch" style={{ background: c.color }} />{c.name} <span className="muted" style={{ fontWeight: 400 }}>{c.ticker}</span></div>
+                <div className="tag">{c.tagline}</div>
+                <div className="meta"><span>{tierOf(c.marketCap).name}</span><span>{fmtMoney(c.marketCap)}</span></div>
+                <div className="meta"><span>{Array.from(new Set(c.produce.map((p) => GOOD_BY_ID[p.good].name))).join(", ") || "Pre-revenue"}</span><span>like {c.inspiredBy}</span></div>
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
 
       <div className="row" style={{ marginTop: 24 }}>
         <button className="primary" onClick={start} disabled={busy} style={{ padding: "8px 22px", fontSize: 15 }}>

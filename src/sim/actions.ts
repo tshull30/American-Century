@@ -1,6 +1,8 @@
 // Things a company can do. The player's UI and the AI rivals both go through these.
 import { BUILDING_BY_ID, methodOf, type BuildingTypeId } from "./data/buildings";
 import { GOOD_BY_ID, type GoodId, type TechId } from "./data/goods";
+import type { LawId, PartyId } from "./data/laws";
+import { antitrustCap, donate as donateImpl } from "./politics";
 import { STATE_BY_CODE } from "./data/states";
 import {
   addBuilding, buildCostPerLevel, creditLimit, log, queueConstruction, releaseCompany,
@@ -23,19 +25,20 @@ export function liquidity(c: Company): number {
   return c.cash + Math.max(0, creditLimit(c) - c.debt);
 }
 
-export function buildQuote(type: BuildingTypeId, state: string, levels: number) {
+export function buildQuote(s: GameState, type: BuildingTypeId, state: string, levels: number, method?: string) {
   const def = BUILDING_BY_ID[type];
-  const total = buildCostPerLevel(type, state) * levels;
-  return { total, months: def.buildTime, monthly: total / def.buildTime };
+  const total = buildCostPerLevel(s, type, state, method) * levels;
+  const unsubsidized = buildCostPerLevel(s, type, state, method, false) * levels;
+  return { total, unsubsidized, months: def.buildTime, monthly: total / def.buildTime };
 }
 
 export function build(s: GameState, cid: number, type: BuildingTypeId, state: string, levels: number, method?: string): Result {
   const c = company(s, cid);
   if (levels <= 0) return fail("Pick at least one level.");
   if (!STATE_BY_CODE[state]) return fail("Unknown state.");
-  const q = buildQuote(type, state, levels);
-  if (q.total > liquidity(c)) return fail(`Not enough cash or credit: needs ${fmtMoney(q.total)}.`);
   const m = method ?? BUILDING_BY_ID[type].methods[0].id;
+  const q = buildQuote(s, type, state, levels, m);
+  if (q.total > liquidity(c)) return fail(`Not enough cash or credit: needs ${fmtMoney(q.total)}.`);
   let b = c.buildings.find((x) => x.type === type && x.state === state && x.method === m);
   if (!b) b = addBuilding(s, c, type, state, 0, m);
   queueConstruction(s, c, b, levels);
@@ -59,7 +62,7 @@ export function downsize(s: GameState, cid: number, bid: number, levels: number)
   const def = BUILDING_BY_ID[b.type];
   b.level -= n;
   // Write off the book value of the closed levels; recover 20% as salvage.
-  const book = buildCostPerLevel(b.type, b.state) * n * 0.6;
+  const book = buildCostPerLevel(s, b.type, b.state, b.method, false) * n * 0.6;
   c.ppe = Math.max(0, c.ppe - book);
   c.cash += book * 0.2;
   if (b.level <= 0 && b.construction.length === 0) c.buildings = c.buildings.filter((x) => x !== b);
@@ -72,7 +75,7 @@ export function setMethod(s: GameState, cid: number, bid: number, method: string
   if (!b) return fail("No such building.");
   const m = methodOf(b.type, method);
   if (m.id === b.method) return fail("Already using that method.");
-  const cost = buildCostPerLevel(b.type, b.state) * b.level * (m.retoolCost ?? 0.2);
+  const cost = buildCostPerLevel(s, b.type, b.state, m.id, false) * b.level * (m.retoolCost ?? 0.2);
   if (cost > liquidity(c)) return fail(`Retooling costs ${fmtMoney(cost)}.`);
   c.cash -= cost;
   c.ppe += cost;
@@ -87,6 +90,7 @@ export function ensureSells(_s: GameState, c: Company, g: GoodId) {
     c.autoPrice[g] = true;
   }
   if (c.brand[g] === undefined) c.brand[g] = 0.00001;
+  if (c.image === undefined) c.image = 0.6;
   if (c.reputation[g] === undefined) c.reputation[g] = 1;
   const t = GOOD_BY_ID[g].tech;
   if (t && c.researchAlloc[t] === undefined) c.researchAlloc[t] = 5;
@@ -170,13 +174,14 @@ export function acquisitionPrice(target: Company): number {
   return target.marketCap * ACQUISITION_PREMIUM;
 }
 
-/** Antitrust: block deals that would give the buyer more than 40% of a market both already sell in. */
+/** Antitrust: block deals that would push the buyer past the legal cap in a market both already sell in. */
 export function antitrustIssue(s: GameState, buyer: Company, target: Company): string | null {
+  const cap = antitrustCap(s);
   for (const [g, snap] of Object.entries(s.markets)) {
     if (!snap) continue;
     const a = snap.sales[buyer.id]?.share ?? 0;
     const b = snap.sales[target.id]?.share ?? 0;
-    if (a > 0.02 && b > 0.02 && a + b > 0.4) return `Regulators would block it: combined ${GOOD_BY_ID[g as GoodId].name} share of ${((a + b) * 100).toFixed(0)}%.`;
+    if (a > 0.02 && b > 0.02 && a + b > cap) return `Regulators would block it: combined ${GOOD_BY_ID[g as GoodId].name} share of ${((a + b) * 100).toFixed(0)}% (limit ${(cap * 100).toFixed(0)}%).`;
   }
   return null;
 }
@@ -239,4 +244,23 @@ function mergeInto(s: GameState, buyer: Company, target: Company) {
     bh.netIncome += h.netIncome;
   });
   releaseCompany(s, target);
+}
+
+export function setDividend(s: GameState, cid: number, pct: number): Result {
+  company(s, cid).dividendPct = Math.min(1, Math.max(0, pct));
+  return ok("Dividend policy updated.");
+}
+
+/** Set (or clear, with monthly = 0) a standing lobbying campaign on a law. */
+export function setLobbying(s: GameState, cid: number, law: LawId, dir: 1 | -1, monthly: number): Result {
+  const c = company(s, cid);
+  c.lobbying = c.lobbying.filter((l) => l.law !== law);
+  if (monthly > 0) c.lobbying.push({ law, dir, monthly });
+  return ok(monthly > 0 ? `Lobbying ${fmtMoney(monthly)} a month.` : "Lobbying stopped.");
+}
+
+export function donate(s: GameState, cid: number, party: PartyId, amount: number): Result {
+  const c = company(s, cid);
+  if (amount > c.cash) return fail("Not enough cash.");
+  return ok(donateImpl(s, c, party, amount));
 }

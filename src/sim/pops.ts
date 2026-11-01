@@ -12,6 +12,10 @@ export interface Pop {
   workers: number;
   /** Non-working household members (children, retirees, etc.) supported by these workers. */
   dependents: number;
+  /** Standard of living (100 = average American in 2026). */
+  sol: number;
+  /** Satisfaction of each need, in NEEDS order (1 = average American in 2026). */
+  sat: number[];
 }
 
 /** Share of the total population that is in the labor force. */
@@ -87,7 +91,7 @@ export function generatePops(): Pop[] {
   if (POPS_OVERRIDE) {
     for (const [state, culture, job, workers] of POPS_OVERRIDE) {
       if (workers < MIN_POP) continue;
-      pops.push({ id: id++, state, culture: culture as CultureId, job: job as JobId, workers, dependents: Math.round(workers * (1 / LABOR_FORCE_RATE - 1)) });
+      pops.push({ id: id++, state, culture: culture as CultureId, job: job as JobId, workers, dependents: Math.round(workers * (1 / LABOR_FORCE_RATE - 1)), sol: 100, sat: [] });
     }
     return pops;
   }
@@ -110,6 +114,8 @@ export function generatePops(): Pop[] {
           job: j.id,
           workers,
           dependents: Math.round(workers * (1 / LABOR_FORCE_RATE - 1)),
+          sol: 100,
+          sat: [],
         });
       });
     });

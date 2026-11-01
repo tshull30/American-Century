@@ -2,7 +2,7 @@
 // Usage: npm run calibrate -- [years] [seed]
 import { newGame, tick, ttm } from "../src/sim/engine";
 import { tierOf } from "../src/sim/tiers";
-import { dateLabel, fmtMoney, fmtNum } from "../src/sim/util";
+import { dateLabel, dayLabel, fmtMoney, fmtNum, fmtPct } from "../src/sim/util";
 import type { GameState } from "../src/sim/types";
 
 const years = Number(process.argv[2] ?? 5);
@@ -31,10 +31,13 @@ function table(s: GameState) {
 }
 
 table(s);
+const t0 = Date.now();
 for (let y = 0; y < years; y++) {
-  for (let i = 0; i < 12; i++) tick(s);
+  const target = s.month + 12;
+  while (s.month < target && !s.gameOver) tick(s);
+  console.log(`(${((Date.now() - t0) / 1000).toFixed(1)}s) SoL ${s.sol.toFixed(1)}  gap ${fmtPct(s.macro.gap)}  fed ${fmtPct(s.macro.fedRate)}  infl ${fmtPct(s.macro.inflation)}  pres ${s.politics.president} cong ${s.politics.congress}  laws ${JSON.stringify(s.politics.laws)}`);
   table(s);
   if (s.gameOver) { console.log("GAME OVER:", s.gameOver); break; }
 }
 console.log("\nrecent events:");
-for (const e of s.events.slice(-15)) console.log(" ", dateLabel(e.month), e.text);
+for (const e of s.events.slice(-25)) console.log(" ", dayLabel(e.day), e.text);

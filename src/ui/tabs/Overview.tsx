@@ -1,7 +1,7 @@
 import { GOOD_BY_ID, type GoodId } from "../../sim/data/goods";
-import { adminCapacity, adminLoad, revenueGrowth, ttm } from "../../sim/engine";
+import { adminCapacity, adminLoad, interestRate, revenueGrowth, ttm } from "../../sim/engine";
 import { tierOf } from "../../sim/tiers";
-import { dateLabel, fmtMoney, fmtNum, fmtPct } from "../../sim/util";
+import { dateLabel, dayLabel, fmtMoney, fmtNum, fmtPct } from "../../sim/util";
 import { LineChart, Panel, Signed, Stat, Table, useGame } from "../components";
 
 export function Overview() {
@@ -13,7 +13,7 @@ export function Overview() {
   const peers = s.companies.filter((c) => c.alive && tierOf(c.marketCap).id === tier.id).sort((a, b) => b.marketCap - a.marketCap);
   const hist = me.history.slice(-60);
   const last = me.history[me.history.length - 1];
-  const myEvents = s.events.filter((e) => e.companyId === me.id || e.kind === "deal").slice(-10).reverse();
+  const myEvents = s.events.filter((e) => e.companyId === me.id || e.kind === "deal" || e.kind === "politics").slice(-12).reverse();
   const load = adminLoad(me), cap = adminCapacity(me);
 
   const alerts: string[] = [];
@@ -72,9 +72,22 @@ export function Overview() {
             ]}
           />
         </Panel>
+        <Panel title="Economy" right={s.macro.recession ? <span className="neg">Recession</span> : undefined}>
+          <div className="stats">
+            <Stat label="GDP growth" value={fmtPct(s.macro.gdpGrowth, 1)} sub={`output gap ${fmtPct(s.macro.gap, 1)}`} />
+            <Stat label="Inflation" value={fmtPct(s.macro.inflation, 1)} />
+            <Stat label="Fed funds rate" value={fmtPct(s.macro.fedRate, 2)} sub={`your borrowing ${fmtPct(interestRate(s, me), 1)}`} />
+            <Stat label="Living standard" value={s.sol.toFixed(0)} sub="100 = 2026 average" />
+          </div>
+          {s.worldEvents.length > 0 && (
+            <ul style={{ margin: "10px 0 0", paddingLeft: 18 }}>
+              {s.worldEvents.map((e) => <li key={e.id}><strong>{e.name}</strong> <span className="muted">until {dayLabel(e.untilDay)}</span>: {e.description}</li>)}
+            </ul>
+          )}
+        </Panel>
         <Panel title="News">
           <ul className="events">
-            {myEvents.map((e, i) => <li key={i}><span className="when">{dateLabel(e.month)}</span><span className={e.kind}>{e.text}</span></li>)}
+            {myEvents.map((e, i) => <li key={i}><span className="when">{dayLabel(e.day)}</span><span className={e.kind}>{e.text}</span></li>)}
           </ul>
         </Panel>
       </div>

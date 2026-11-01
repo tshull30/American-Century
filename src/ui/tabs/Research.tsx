@@ -15,7 +15,7 @@ export function Research() {
         <p className="hint">
           Every tech level above the market baseline makes your products about 8% better, and buyers weigh quality squared.
           The rest of the market improves by one level a year, so standing still means falling behind. Bigger product lines
-          cost more research per level, and every level of lead costs 25% more. Build R&D labs on the Production tab.
+          cost more research per level, and every level of lead costs 40% more. Build R&D labs on the Production tab.
         </p>
         <Table
           rows={TECHS}

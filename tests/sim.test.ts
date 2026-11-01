@@ -3,6 +3,14 @@ import { acquire, build } from "../src/sim/actions";
 import { STATES } from "../src/sim/data/states";
 import { newGame, player, tick, ttm } from "../src/sim/engine";
 import { generatePops, rake } from "../src/sim/pops";
+import { setLobbying } from "../src/sim/actions";
+import { electionDay } from "../src/sim/politics";
+import type { GameState } from "../src/sim/types";
+
+function months(s: GameState, n: number) {
+  const target = s.month + n;
+  while (s.month < target && !s.gameOver) tick(s);
+}
 
 describe("pops", () => {
   it("rakes a seed matrix to match row and column targets", () => {
@@ -25,14 +33,14 @@ describe("simulation", () => {
   it("is deterministic for a given seed", () => {
     const a = newGame({ kind: "incumbent", key: "kestrel" }, 123);
     const b = newGame({ kind: "incumbent", key: "kestrel" }, 123);
-    for (let i = 0; i < 6; i++) { tick(a); tick(b); }
+    for (let i = 0; i < 40; i++) { tick(a); tick(b); }
     expect(player(a).cash).toBe(player(b).cash);
     expect(a.companies.map((c) => c.marketCap)).toEqual(b.companies.map((c) => c.marketCap));
   });
 
   it("runs three years without NaNs and keeps incumbents in a sane range", () => {
     const s = newGame({ kind: "startup", name: "T", ticker: "T", good: "software", hq: "TX" }, 5);
-    for (let i = 0; i < 36; i++) tick(s);
+    months(s, 36);
     for (const c of s.companies) {
       expect(Number.isFinite(c.cash)).toBe(true);
       expect(Number.isFinite(c.marketCap)).toBe(true);
@@ -52,7 +60,7 @@ describe("simulation", () => {
     const s = newGame({ kind: "startup", name: "T", ticker: "T", good: "software", hq: "TX" }, 1);
     const me = player(s);
     expect(build(s, me.id, "software", "CA", 2).ok).toBe(true);
-    for (let i = 0; i < 5; i++) tick(s);
+    months(s, 5);
     const b = me.buildings.find((x) => x.type === "software" && x.state === "CA")!;
     expect(b.level).toBe(2);
     expect(b.staffRatio).toBeGreaterThan(0.9);
@@ -67,5 +75,31 @@ describe("simulation", () => {
     expect(r.ok).toBe(true);
     expect(lattice.alive).toBe(false);
     expect(me.buildings.length).toBeGreaterThanOrEqual(sites);
+  });
+});
+
+describe("needs and politics", () => {
+  it("starts with a national standard of living near 100 and a full set of need stats", () => {
+    const s = newGame({ kind: "incumbent", key: "heartland" }, 3);
+    expect(s.sol).toBeGreaterThan(85);
+    expect(s.sol).toBeLessThan(115);
+    expect(Object.keys(s.needStats).length).toBe(8);
+    const poor = s.needStats.food!.byQuintile[0], rich = s.needStats.food!.byQuintile[4];
+    expect(rich).toBeGreaterThan(poor);
+  });
+
+  it("holds the 2026 midterms on 3 November", () => {
+    expect(electionDay(2026)).toBe(306);
+    const s = newGame({ kind: "incumbent", key: "orchard" }, 4);
+    months(s, 11);
+    expect(s.politics.lastResult?.presidential).toBe(false);
+  });
+
+  it("charges lobbying as a monthly expense", () => {
+    const s = newGame({ kind: "incumbent", key: "orchard" }, 6);
+    const me = player(s);
+    setLobbying(s, me.id, "tariffs", -1, 20e6);
+    months(s, 2);
+    expect(me.history[me.history.length - 1].lobbying).toBeGreaterThanOrEqual(20e6);
   });
 });

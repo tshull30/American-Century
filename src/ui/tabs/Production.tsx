@@ -31,14 +31,15 @@ export function Production() {
               { key: "st", label: "State", render: (b) => STATE_BY_CODE[b.state].name, sort: (b) => b.state },
               { key: "m", label: "Production method", render: (b) => <MethodPicker b={b} /> },
               { key: "lv", label: "Level", num: true, render: (b) => fmtNum(b.level), sort: (b) => b.level },
-              { key: "con", label: "Building", num: true, render: (b) => b.construction.length ? b.construction.map((j) => `+${j.levels} (${j.monthsLeft}mo)`).join(", ") : "", title: "Levels under construction (months left)" },
+              { key: "con", label: "Building", num: true, render: (b) => b.construction.length ? b.construction.map((j) => `+${j.levels} (${j.daysLeft}d)`).join(", ") : "", title: "Levels under construction (days left)" },
               { key: "staff", label: "Staffed", render: (b) => b.level > 0 ? <span className="row" style={{ flexWrap: "nowrap" }}><Bar value={b.staffRatio} />{fmtPct(b.staffRatio, 0)}</span> : "", sort: (b) => b.staffRatio },
               { key: "eff", label: "Efficiency", num: true, render: (b) => b.level > 0 ? fmtPct(b.efficiency, 0) : "", sort: (b) => b.efficiency },
               { key: "out", label: "Output / month", num: true, render: (b) => outputLabel(b) },
               { key: "w", label: "Wages / month", num: true, render: (b) => fmtMoney(b.lastWages), sort: (b) => b.lastWages },
+              { key: "p", label: "Profit last month", num: true, title: "Sales value of output minus inputs, wages and running costs (before depreciation). R&D and HQ show their cost.", render: (b) => <span className={b.lastProfit >= 0 ? "pos" : "neg"}>{fmtMoney(b.lastProfit)}</span>, sort: (b) => b.lastProfit },
               { key: "act", label: "", render: (b) => (
                 <span className="row" style={{ flexWrap: "nowrap" }}>
-                  <button className="small" onClick={() => act(expand(s, me.id, b.id, step))} title={`Build ${step} more level(s): ${fmtMoney(buildQuote(b.type, b.state, step).total)}`}>+{step}</button>
+                  <button className="small" onClick={() => act(expand(s, me.id, b.id, step))} title={`Build ${step} more level(s): ${fmtMoney(buildQuote(s, b.type, b.state, step, b.method).total)}`}>+{step}</button>
                   <button className="small" disabled={b.level <= 0} onClick={() => ask(`Close ${Math.min(step, b.level)} level(s) of ${BUILDING_BY_ID[b.type].name} in ${STATE_BY_CODE[b.state].name}? Workers are laid off and only 20% of book value is recovered.`, () => act(downsize(s, me.id, b.id, step)))}>−{step}</button>
                 </span>
               ) },
@@ -80,7 +81,7 @@ function BuildPanel() {
   const m = methodOf(type, method);
   const [state, setState] = useState(me.hq);
   const [levels, setLevels] = useState(1);
-  const q = buildQuote(type, state, levels);
+  const q = buildQuote(s, type, state, levels, method);
   const jobs = Object.entries(m.staff) as [JobId, number][];
 
   // Rank states for this building's staff: free workers and wages for its two biggest jobs.
@@ -98,6 +99,7 @@ function BuildPanel() {
     }).sort((a, b) => b.levelsHireable - a.levelsHireable);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type, method, s.month]);
+  void m;
 
   return (
     <Panel title="Build">
@@ -120,7 +122,7 @@ function BuildPanel() {
           <p className="hint" style={{ margin: "8px 0" }}>{def.description}</p>
           <table className="t">
             <tbody>
-              <tr><td>Cost</td><td className="num">{fmtMoney(q.total)} over {q.months} months</td></tr>
+              <tr><td>Cost</td><td className="num">{fmtMoney(q.total)} over {q.months} months{q.total < q.unsubsidized - 1 ? <span className="pos"> (federal subsidy saves {fmtMoney(q.unsubsidized - q.total)})</span> : null}</td></tr>
               <tr><td>Staff per level</td><td className="num">{jobs.map(([j, n]) => `${n} ${JOB_BY_ID[j].plural.toLowerCase()}`).join(", ")}</td></tr>
               <tr><td>Output per level / month</td><td className="num">
                 {Object.entries(m.output).map(([g, n]) => `${fmtNum(n ?? 0)} ${GOOD_BY_ID[g as GoodId].unit}`).join(", ") || (m.research ? `${m.research} research` : `+${m.admin} admin capacity`)}
@@ -146,7 +148,7 @@ function BuildPanel() {
                 { key: "st", label: "State", render: (r) => <a style={{ cursor: "pointer" }} onClick={() => setState(r.st.code)}>{r.st.name}</a> },
                 { key: "h", label: "Hireable levels / mo", num: true, render: (r) => r.levelsHireable.toFixed(1), sort: (r) => r.levelsHireable },
                 { key: "w", label: "Wage bill / level", num: true, render: (r) => fmtMoney(r.wage), sort: (r) => -r.wage },
-                { key: "c", label: "Build cost / level", num: true, render: (r) => fmtMoney(buildQuote(type, r.st.code, 1).total) },
+                { key: "c", label: "Build cost / level", num: true, render: (r) => fmtMoney(buildQuote(s, type, r.st.code, 1, method).total) },
               ]}
             />
           </div>

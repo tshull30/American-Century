@@ -7,24 +7,23 @@ import {
 } from "./actions";
 import { adminCapacity, adminLoad, buildCostPerLevel, creditLimit } from "./engine";
 import type { Building, Company, GameState } from "./types";
-import { clamp, laborKey, rand } from "./util";
+import { clamp, DAYS_PER_MONTH, laborKey, rand } from "./util";
 
-/** Nudge price toward where production and sales balance, never below cost. */
+/**
+ * Daily price nudge toward where production and sales balance, never below cost.
+ * About ±0.1% a day (≈3% a month).
+ */
 export function autoPrice(_s: GameState, c: Company, g: GoodId) {
-  const last = c.history[c.history.length - 1];
-  if (!last) return;
   const def = GOOD_BY_ID[g];
-  let produced = 0;
-  for (const b of c.buildings) produced += b.lastOutput[g] ?? 0;
-  const sold = (last.unitsSold[g] ?? 0) + (c.inputUse[g] ?? 0);
+  const produced = c.dayProduced[g] ?? 0;
+  const sold = (c.daySold[g] ?? 0) + (c.inputUse[g] ?? 0);
+  if (produced <= 0 && sold <= 0) return;
   const inv = Math.max(0, (c.inventory[g] ?? 0) - (c.inputUse[g] ?? 0));
   const p = c.prices[g] ?? def.refPrice;
   let next = p;
-  if (produced <= 0 && sold <= 0) return;
   // Services can't be stockpiled (unsold capacity just vanishes), so watch sell-through as well as stock.
-  const unsold = sold < produced * 0.85;
-  if (inv > 1.2 * Math.max(sold, produced * 0.5) || unsold) next = p * 0.97;
-  else if (inv < 0.25 * Math.max(produced, 1) && sold >= produced * 0.95) next = p * 1.025;
+  if (inv > 36 * Math.max(sold, produced * 0.5) || sold < produced * 0.85) next = p * 0.999;
+  else if (inv < 7.5 * Math.max(produced, 1e-9) && sold >= produced * 0.95) next = p * 1.0008;
   const floor = Math.max(def.refPrice * 0.3, (c.unitCost[g] ?? 0) * 1.02);
   next = clamp(next, floor, def.refPrice * 3);
   if (def.importPrice && def.intermediate) next = Math.min(next, def.importPrice * 0.99);
@@ -63,7 +62,7 @@ export function bestState(s: GameState, c: Company, type: BuildingTypeId, method
       const free = Math.max(0, cell.workforce - cell.gameEmployed);
       score += (n ?? 0) * Math.log(1 + free) - (n ?? 0) * 3 * (cell.wage / 5000);
     }
-    score -= buildCostPerLevel(type, st.code) / BUILDING_BY_ID[type].cost;
+    score -= buildCostPerLevel(s, type, st.code, method) / BUILDING_BY_ID[type].cost;
     if (present.has(st.code)) score += 4;
     score += rand(s) * 2;
     if (score > bestScore) { bestScore = score; best = st.code; }
@@ -100,7 +99,7 @@ export function runAI(s: GameState, c: Company, o: { warmup: boolean }) {
     let produced = 0;
     for (const b of ops) produced += b.lastOutput[g] ?? 0;
     const sold = last.unitsSold[g] ?? 0;
-    const internal = c.inputUse[g] ?? 0;
+    const internal = (c.inputUse[g] ?? 0) * DAYS_PER_MONTH;
     const inv = c.inventory[g] ?? 0;
     const price = c.prices[g] ?? def.refPrice;
     const unitCost = c.unitCost[g] ?? price * 0.7;
@@ -114,11 +113,11 @@ export function runAI(s: GameState, c: Company, o: { warmup: boolean }) {
 
     const growthMode = c.kind === "startup";
     // Expand only when sold out (the same signal that makes auto-pricing raise prices).
-    const demandSignal = (sold + internal) >= produced * (growthMode ? 0.8 : 0.9) && inv - internal < Math.max(produced, 1) * (growthMode ? 0.5 : 0.3);
+    const demandSignal = (sold + internal) >= produced * (growthMode ? 0.8 : 0.9) && inv - (c.inputUse[g] ?? 0) < Math.max(produced, 1) * (growthMode ? 0.5 : 0.3);
     const priceOk = price >= def.refPrice * (growthMode ? 0.85 : 0.9) || (price - unitCost) / price > 0.35;
     if (demandSignal && priceOk && avgStaff > 0.8 && payback < (growthMode ? 60 : 48) && building < levels * 0.15 + 1) {
-      const add = Math.max(1, Math.round(levels * 0.06));
-      const cost = buildCostPerLevel(template.type, template.state) * add;
+      const add = Math.max(1, Math.round(levels * 0.08));
+      const cost = buildCostPerLevel(s, template.type, template.state, template.method) * add;
       if (liquidity(c) > cost * 1.5) {
         const st = rand(s) < 0.6 ? template.state : bestState(s, c, template.type, template.method);
         build(s, c.id, template.type, st, add, template.method);
@@ -138,7 +137,7 @@ export function runAI(s: GameState, c: Company, o: { warmup: boolean }) {
     const have = c.buildings.filter((b) => b.type === "rnd").reduce((a, b) => a + b.level + b.construction.reduce((x, j) => x + j.levels, 0), 0);
     if (want > have * 1.1) {
       const add = Math.max(1, Math.round(Math.min(want - have, have * 0.08 + 1)));
-      if (liquidity(c) > buildCostPerLevel("rnd", lab?.state ?? c.hq) * add * 2) build(s, c.id, "rnd", lab?.state ?? c.hq, add);
+      if (liquidity(c) > buildCostPerLevel(s, "rnd", lab?.state ?? c.hq) * add * 2) build(s, c.id, "rnd", lab?.state ?? c.hq, add);
     }
   }
 
@@ -148,7 +147,7 @@ export function runAI(s: GameState, c: Company, o: { warmup: boolean }) {
   const hqBuilding = c.buildings.filter((b) => b.type === "hq").reduce((a, b) => a + b.construction.reduce((x, j) => x + j.levels, 0), 0);
   if (load > cap * 0.95 && hqBuilding === 0) {
     const add = Math.ceil((load * 1.1 - cap) / 15);
-    if (add > 0 && liquidity(c) > buildCostPerLevel("hq", c.hq) * add) build(s, c.id, "hq", c.hq, add);
+    if (add > 0 && liquidity(c) > buildCostPerLevel(s, "hq", c.hq) * add) build(s, c.id, "hq", c.hq, add);
   }
 
   // Return excess cash.

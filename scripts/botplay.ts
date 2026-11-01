@@ -12,7 +12,8 @@ const s = newGame({ kind: "startup", name: "Bot Co", ticker: "BOT", good, hq: "T
 const me = player(s);
 setMarketing(s, me.id, 0.1);
 for (let m = 0; m < years * 12 && !s.gameOver; m++) {
-  tick(s);
+  const target = s.month + 1;
+  while (s.month < target && !s.gameOver) tick(s);
   const last = me.history[me.history.length - 1];
   if (m % 3 === 0) {
     const prod = me.buildings.find((b) => b.type !== "hq" && b.type !== "rnd")!;

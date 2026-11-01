@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { tick, player } from "../sim/engine";
 import { tierOf, TIERS } from "../sim/tiers";
 import type { GameState } from "../sim/types";
-import { dateLabel, fmtMoney, fmtPct } from "../sim/util";
+import { dayLabel, fmtMoney, fmtPct } from "../sim/util";
 import { ConfirmDialog, GameCtx, makeCtx } from "./components";
 import { NewGame } from "./NewGame";
 import { exportFile, importFile, saveLocal } from "./save";
@@ -15,11 +15,15 @@ import { Finance } from "./tabs/Finance";
 import { Rivals } from "./tabs/Rivals";
 import { Pops } from "./tabs/Pops";
 import { Events } from "./tabs/Events";
+import { Politics } from "./tabs/Politics";
+import { Consumers } from "./tabs/Consumers";
 
-const SPEEDS = [0, 1500, 800, 400, 160, 40];
+/** Milliseconds per game day, and days simulated per step, for speeds 1–5. */
+const SPEEDS: [number, number][] = [[0, 0], [600, 1], [250, 1], [90, 1], [30, 1], [16, 4]];
 const TABS = [
   ["overview", "Overview"], ["production", "Production"], ["workforce", "Workforce"], ["markets", "Markets"],
-  ["research", "Research"], ["finance", "Finance"], ["rivals", "Rivals & M&A"], ["pops", "Pops & Map"], ["events", "Events"],
+  ["research", "Research"], ["finance", "Finance"], ["rivals", "Rivals & M&A"], ["consumers", "Consumers"], ["politics", "Politics"],
+  ["pops", "Pops & Map"], ["events", "Events"],
 ] as const;
 type TabId = (typeof TABS)[number][0];
 
@@ -43,16 +47,26 @@ function Game({ initial, onQuit }: { initial: GameState; onQuit: () => void }) {
     window.setTimeout(() => setToast((t) => (t?.m === m ? null : t)), 3500);
   }, []);
 
+  // The simulation runs on its own timer; the screen redraws at most ~7 times a second.
+  const dirty = useRef(false);
   useEffect(() => {
     if (!speed || s.gameOver) return;
+    const [ms, steps] = SPEEDS[speed];
     const id = window.setInterval(() => {
-      tick(s);
-      if (s.month % 12 === 0) saveLocal(s);
+      for (let i = 0; i < steps && !s.gameOver; i++) {
+        const m = s.month;
+        tick(s);
+        if (s.month !== m && s.month % 12 === 0) saveLocal(s);
+      }
       if (s.gameOver) setSpeed(0);
-      refresh();
-    }, SPEEDS[speed]);
+      dirty.current = true;
+    }, ms);
     return () => window.clearInterval(id);
-  }, [speed, s, refresh]);
+  }, [speed, s]);
+  useEffect(() => {
+    const id = window.setInterval(() => { if (dirty.current) { dirty.current = false; refresh(); } }, 140);
+    return () => window.clearInterval(id);
+  }, [refresh]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -76,7 +90,7 @@ function Game({ initial, onQuit }: { initial: GameState; onQuit: () => void }) {
   const peers = useMemo(
     () => s.companies.filter((c) => c.alive && tierOf(c.marketCap).id === tier.id).sort((a, b) => b.marketCap - a.marketCap),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [s.month, tier.id, s.companies.length],
+    [s.day, tier.id, s.companies.length],
   );
   const rank = peers.findIndex((c) => c.id === me.id) + 1;
   const prev = me.history[me.history.length - 2];
@@ -101,9 +115,9 @@ function Game({ initial, onQuit }: { initial: GameState; onQuit: () => void }) {
               {[1, 2, 3, 4, 5].map((n) => (
                 <button key={n} className={speed === n ? "active" : ""} onClick={() => setSpeed(n)} title={`Speed ${n} (key ${n})`}>{">".repeat(Math.min(n, 3))}{n > 3 ? n : ""}</button>
               ))}
-              <button onClick={() => { tick(s); refresh(); }} disabled={speed > 0 || !!s.gameOver} title="Advance one month">+1 mo</button>
+              <button onClick={() => { tick(s); refresh(); }} disabled={speed > 0 || !!s.gameOver} title="Advance one day">+1 day</button>
             </div>
-            <span className="date">{dateLabel(s.month)}</span>
+            <span className="date">{dayLabel(s.day)}</span>
             <button onClick={() => showToast(saveLocal(s) ? "Game saved in this browser." : "Couldn't save in this browser; use Export.", false)}>Save</button>
             <button onClick={() => exportFile(s)} title="Download the save file">Export</button>
             <button onClick={() => ask("Quit to the main menu? Progress since your last save is lost.", onQuit)}>Menu</button>
@@ -125,6 +139,8 @@ function Game({ initial, onQuit }: { initial: GameState; onQuit: () => void }) {
           {tab === "rivals" && <Rivals />}
           {tab === "pops" && <Pops />}
           {tab === "events" && <Events />}
+          {tab === "politics" && <Politics />}
+          {tab === "consumers" && <Consumers />}
         </main>
       </div>
       {toast && <div className={`toast ${toast.err ? "err" : ""}`}>{toast.m}</div>}

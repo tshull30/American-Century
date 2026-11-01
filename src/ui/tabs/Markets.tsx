@@ -3,7 +3,8 @@ import { setAutoPrice, setPrice } from "../../sim/actions";
 import { GOOD_BY_ID, GOODS, type GoodId } from "../../sim/data/goods";
 import { quality } from "../../sim/engine";
 import { fmtMoney, fmtNum, fmtPct, fmtPrice } from "../../sim/util";
-import { Panel, Table, useGame } from "../components";
+import { LineChart, Panel, Table, useGame } from "../components";
+import { dateLabel } from "../../sim/util";
 
 export function Markets() {
   const { s, me, act } = useGame();
@@ -55,8 +56,14 @@ export function Markets() {
             <p className="hint">
               {g.intermediate
                 ? "US companies buy from the cheapest American seller priced below the import price, then import the rest. Any surplus is exported to the world market."
-                : `${g.marketUS > 0 ? "US demand comes from pops, weighted by their income" : "Demand comes from US businesses and buyers worldwide"}${g.buyerJobs ? " (businesses employing white-collar workers)" : ""}, plus the world market. Buyers weigh quality, brand, reputation and price.`}
+                : `${g.buyerJobs ? "US demand comes from businesses (sized by the workers they employ and their pay)" : g.marketUS > 0 ? "US demand comes from pops meeting their needs, spending out of their income" : "Demand comes from US businesses and buyers worldwide"}, plus the world market. Buyers weigh quality, brand, reputation and price.`}
             </p>
+            {snap.priceHistory.length > 2 && (
+              <div style={{ marginBottom: 10 }}>
+                <div className="hint">Average market price, monthly</div>
+                <LineChart height={130} data={snap.priceHistory.map((y, i) => ({ x: dateLabel(s.month - snap.priceHistory.length + i), y }))} fmt={fmtPrice} />
+              </div>
+            )}
             <Table
               rows={Object.entries(snap.sales).map(([id, x]) => ({ c: s.companies.find((c) => c.id === Number(id))!, ...x })).filter((r) => r.c)}
               rowKey={(r) => r.c.id}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { borrow, buyback, issueShares, repay, setMarketing } from "../../sim/actions";
+import { borrow, buyback, issueShares, repay, setDividend, setMarketing } from "../../sim/actions";
 import { creditLimit, ebitdaTTM, interestRate, ttm } from "../../sim/engine";
 import type { MonthReport } from "../../sim/types";
 import { fmtMoney, fmtNum, fmtPct } from "../../sim/util";
@@ -12,6 +12,7 @@ const LINES: [keyof MonthReport, string, number][] = [
   ["rdCost", "Research & development", -1],
   ["sgaCost", "Headquarters (SG&A)", -1],
   ["marketing", "Marketing", -1],
+  ["lobbying", "Lobbying & donations", -1],
   ["depreciation", "Depreciation", -1],
   ["interest", "Interest", -1],
   ["taxes", "Taxes", -1],
@@ -45,9 +46,25 @@ export function Finance() {
                   </tr>
                 );
               })}
+              <tr><td>Dividends paid</td><td className="num">{fmtMoney(-(last?.dividends ?? 0))}</td><td className="num">{fmtMoney(-ttm(me, "dividends"))}</td></tr>
               <tr><td>Capital spending (construction)</td><td className="num">{fmtMoney(-(last?.capex ?? 0))}</td><td className="num">{fmtMoney(-ttm(me, "capex"))}</td></tr>
+              <tr><td className="muted">Month to date: revenue</td><td className="num muted">{fmtMoney(me.current.revenue)}</td><td></td></tr>
             </tbody>
           </table>
+        </Panel>
+        <Panel title="Earnings">
+          {me.lastEarnings ? (
+            <p style={{ margin: 0 }}>
+              {me.lastEarnings.quarter}: revenue {fmtMoney(me.lastEarnings.revenue)} vs {fmtMoney(me.lastEarnings.expected)} expected:{" "}
+              <strong className={me.lastEarnings.surprise >= 0 ? "pos" : "neg"}>{me.lastEarnings.surprise >= 0 ? "beat" : "miss"} by {fmtPct(Math.abs(me.lastEarnings.surprise))}</strong>
+            </p>
+          ) : <div className="hint">You report your first quarter once you have enough history.</div>}
+          <p className="hint">Wall Street expects revenue to keep growing at its recent pace. Beating estimates lifts the stock and investor sentiment; missing knocks them down, up to 8% at a time.</p>
+          <div className="row">
+            Dividend <input type="range" min={0} max={0.8} step={0.05} value={me.dividendPct} onChange={(e) => act(setDividend(s, me.id, Number(e.target.value)))} style={{ width: 200 }} />
+            <strong>{fmtPct(me.dividendPct, 0)}</strong> of quarterly profit
+          </div>
+          <div className="hint">Trailing dividend yield: {fmtPct(ttm(me, "dividends") / Math.max(1, me.marketCap), 2)}</div>
         </Panel>
         <Panel title="Marketing">
           <div className="row">
