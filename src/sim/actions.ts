@@ -407,3 +407,19 @@ export function relocateHq(s: GameState, cid: number, city: string): Result {
   log(s, `${c.name} is moving its headquarters to ${dest.name}.`, "deal", c.id);
   return ok(`Headquarters moving to ${dest.name} (${fmtMoney(cost)}).`);
 }
+
+/** Earnings guidance for the coming quarter. Bold guidance lifts the stock now and raises the bar; a lowball lowers both. */
+export function setGuidance(s: GameState, cid: number, level: "low" | "mid" | "high"): Result {
+  const c = company(s, cid);
+  const q = Math.floor(s.month / 3);
+  if (c.guidanceQuarter === q && c.guidance !== level) return fail("You've already guided Wall Street this quarter. Change it next quarter.");
+  if (c.guidance === level) return ok("That's already your guidance.");
+  const idx = { low: 0, mid: 1, high: 2 };
+  const step = Math.pow(1.02, idx[level] - idx[c.guidance ?? "mid"]);
+  c.guidance = level;
+  c.guidanceQuarter = q;
+  c.hype *= step; c.marketCap *= step;
+  if (level === "high") return ok("Bold guidance: the stock jumps, and Wall Street now expects 3% more.");
+  if (level === "low") return ok("You lowballed the quarter: the stock dips now, and beats come easier.");
+  return ok("Guidance set to what you actually expect.");
+}

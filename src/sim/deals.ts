@@ -1,3 +1,4 @@
+import { friendlyPremium } from "./people";
 import { leadEffects } from "./leadership";
 // Mergers and acquisitions: the board has to say yes, regulators get a look, and big deals take time.
 import { GOOD_BY_ID, type GoodId } from "./data/goods";
@@ -14,7 +15,7 @@ export function requiredPremium(s: GameState, buyer: Company, target: Company): 
   if (buyer.marketCap > target.marketCap * 50) p += 0.1; // they know you can afford it
   if (target.kind === "incumbent") p += 0.15;
   void s;
-  return Math.max(0.1, p + leadEffects.premium(buyer));
+  return Math.max(0.05, p + leadEffects.premium(buyer) + friendlyPremium(s, buyer, target));
 }
 
 /** Chance the board accepts at a given premium. */

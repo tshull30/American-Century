@@ -3,6 +3,7 @@ import { interestRate, revenueGrowth, ttm } from "../../sim/engine";
 import { tierOf } from "../../sim/tiers";
 import { dateLabel, dayLabel, dayOfMonthStart, fmtMoney, fmtNum, fmtPct } from "../../sim/util";
 import { computeAlerts } from "../alerts";
+import { MILESTONES } from "../../sim/milestones";
 import { LineChart, Panel, Signed, Stat, Table, useGame } from "../components";
 
 export function Overview() {
@@ -41,6 +42,19 @@ export function Overview() {
         </Panel>
         <Panel title="Monthly net income">
           <LineChart zero data={hist.map((h) => ({ x: dateLabel(h.month), y: h.netIncome }))} fmt={(v) => fmtMoney(v, 1)} />
+        </Panel>
+        <Panel title="Milestones" right={`${MILESTONES.filter((m) => s.milestones?.[m.id] !== undefined).length} of ${MILESTONES.length}`}>
+          <ul className="milestones">
+            {MILESTONES.map((m) => {
+              const at = s.milestones?.[m.id];
+              return (
+                <li key={m.id} className={at !== undefined ? "got" : ""} title={m.detail}>
+                  <span className="medal" aria-hidden>{at !== undefined ? "✦" : "◇"}</span>
+                  <span><strong>{m.name}</strong><span className="muted"> {at === undefined ? m.detail : at < 0 ? "before you took over" : dateLabel(at)}</span></span>
+                </li>
+              );
+            })}
+          </ul>
         </Panel>
       </div>
       <div>

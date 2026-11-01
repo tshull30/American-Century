@@ -54,6 +54,10 @@ function pull(s: GameState, m: Politician, law: LawId, dir: 1 | -1): number {
     if (Math.abs(friend) < 1) continue;
     for (const l of c.lobbying) if (l.law === law) p += (l.dir === dir ? 1 : -1) * (friend / unit);
   }
+  // What the member thinks of the player sways close calls on the player's lobbying.
+  const me = s.companies.find((c) => c.isPlayer);
+  const sc = m.regard?.score ?? 0;
+  if (me && Math.abs(sc) > 15) for (const l of me.lobbying) if (l.law === law) p += (l.dir === dir ? 1 : -1) * (sc / 40);
   let forD = 0, against = 0;
   for (const c of s.companies) if (c.alive) for (const l of c.lobbying) if (l.law === law) (l.dir === dir ? (forD += l.monthly * leadEffects.lobbying(c)) : (against += l.monthly * leadEffects.lobbying(c)));
   p += ((influence(forD) - influence(against)) / 3) * factionDef(m.faction, m.party).swayable;

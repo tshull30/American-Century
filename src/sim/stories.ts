@@ -5,6 +5,7 @@ import { GOOD_BY_ID, type GoodId } from "./data/goods";
 import { BLUE_COLLAR } from "./data/jobs";
 import { cityLabel } from "./geo";
 import { hasTrait } from "./leadership";
+import { applyPeopleDecision, noteUnion } from "./people";
 import type { Building, Company, GameEvent, GameState } from "./types";
 import { clamp, fmtMoney, rand } from "./util";
 
@@ -21,7 +22,7 @@ export interface Decision {
 }
 export interface Scheduled { day: number; kind: "recall_leak" | "breach_fine" | "spill_fine"; companyId: number; data: Record<string, string | number> }
 
-export type StoryKind = "recall" | "breach" | "union" | "strike" | "lawsuit" | "spill" | "whistleblower" | "ransomware" | "stadium" | "water_protest";
+export type StoryKind = "recall" | "breach" | "union" | "strike" | "lawsuit" | "spill" | "whistleblower" | "ransomware" | "stadium" | "water_protest" | "exec_raise" | "partner_offer" | "hearing";
 
 type Log = (text: string, kind: GameEvent["kind"], extra?: Pick<GameEvent, "headline" | "deck">) => void;
 
@@ -231,6 +232,7 @@ function apply(s: GameState, c: Company, d: Decision, opt: string, log: (c: Comp
       return "The statement says the breach was limited.";
     }
     case "union": {
+      if (c.isPlayer) noteUnion(s, opt === "recognize");
       if (opt === "recognize") {
         c.wagePolicy += 0.02;
         for (const j of BLUE_COLLAR) c.jobOpinion[j] = clamp((c.jobOpinion[j] ?? 0.5) + 0.15, 0, 1);
@@ -290,6 +292,8 @@ function apply(s: GameState, c: Company, d: Decision, opt: string, log: (c: Comp
       if (city) { city.opinion[c.id] = clamp((city.opinion[c.id] ?? 0.5) - 0.15, 0, 1); if (rand(s) < 0.35) city.dcStance = "moratorium"; }
       return "You're riding out the protest.";
     }
+    case "exec_raise": case "partner_offer": case "hearing":
+      return applyPeopleDecision(s, c, d.kind, opt, d.data, L);
   }
   return "";
 }

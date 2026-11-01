@@ -113,6 +113,8 @@ export interface Politician {
   /** PAC money spent for and against them this election cycle. */
   pacFor: number;
   pacAgainst: number;
+  /** What they think of the player's company, and why. */
+  regard?: import("./people").Regard;
 }
 
 export interface StateLegislature {
@@ -219,6 +221,11 @@ export interface Company {
   layoffs: number;
   layoffsByJob: Partial<Record<JobId, number>>;
   layoffsByCity: Record<string, number>;
+  /** Research and marketing multiplier from partnerships. */
+  allyBoost?: number;
+  /** Earnings guidance the CFO gave Wall Street. */
+  guidance?: "low" | "mid" | "high";
+  guidanceQuarter?: number;
   /** Opinion of the company by pop type, 0–1. */
   jobOpinion: Partial<Record<JobId, number>>;
   pac?: Pac;
@@ -492,4 +499,8 @@ export interface GameState {
   politicsUsedNames?: string[];
   nextId: number;
   gameOver?: string;
+  /** People: the player's record, relations with rival companies, and milestones reached. */
+  record?: import("./people").Record_;
+  relations?: Record<number, import("./people").Relation>;
+  milestones?: Record<string, number>;
 }

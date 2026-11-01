@@ -6,6 +6,7 @@
 // when the stock lags its peers.
 import { personName } from "./names";
 import { cultureFor } from "./names";
+import { notePoach } from "./people";
 import type { Company, GameState } from "./types";
 import { clamp, rand } from "./util";
 
@@ -57,6 +58,11 @@ export interface Exec {
   pay: number;
   hiredMonth: number;
   from?: string;
+  /** People: beliefs, background, opinion of the player (rival CEOs) and morale (your own team). */
+  beliefs?: import("./people").Beliefs;
+  bio?: import("./people").Bio;
+  regard?: import("./people").Regard;
+  morale?: number;
 }
 
 export type BoardKind = "founder" | "insider" | "independent" | "institutional" | "activist";
@@ -188,17 +194,18 @@ function execOf(c: Company, r: ExecRole): Exec | undefined {
 export function roleFactor(c: Company, r: ExecRole): number {
   if (!c.leadership) return 0;
   const e = execOf(c, r);
-  return e ? (e.skill - 3) / 2 : -1.5;
+  // Happy executives play above their résumé; miserable ones coast.
+  return e ? (e.skill - 3) / 2 + clamp(((e.morale ?? 65) - 65) / 100, -0.25, 0.15) : -1.5;
 }
 export function hasTrait(c: Company, t: TraitId, roles?: ExecRole[]): boolean {
   return !!c.leadership?.execs.some((e) => e.traits.includes(t) && (!roles || roles.includes(e.role)));
 }
 
 export const leadEffects = {
-  research: (c: Company) => 1 + 0.12 * roleFactor(c, "cto") + (hasTrait(c, "visionary") ? 0.1 : 0) + (hasTrait(c, "engineer") ? 0.15 : 0),
+  research: (c: Company) => (1 + 0.12 * roleFactor(c, "cto") + (hasTrait(c, "visionary") ? 0.1 : 0) + (hasTrait(c, "engineer") ? 0.15 : 0)) * (c.allyBoost ?? 1),
   efficiency: (c: Company) => 1 + 0.03 * roleFactor(c, "coo") + (hasTrait(c, "operator") ? 0.02 : 0),
   runningCost: (c: Company) => (hasTrait(c, "cost_cutter") ? 0.96 : 1) * (hasTrait(c, "union_friendly") ? 1.01 : 1),
-  marketing: (c: Company) => 1 + 0.12 * roleFactor(c, "cmo") + (hasTrait(c, "growth_hacker") ? 0.2 : 0) + (hasTrait(c, "celebrity") ? 0.15 : 0),
+  marketing: (c: Company) => (1 + 0.12 * roleFactor(c, "cmo") + (hasTrait(c, "growth_hacker") ? 0.2 : 0) + (hasTrait(c, "celebrity") ? 0.15 : 0)) * (c.allyBoost ?? 1),
   interest: (c: Company) => -0.004 * roleFactor(c, "cfo") - (hasTrait(c, "penny_pincher") ? 0.004 : 0),
   credit: (c: Company) => 1 + 0.08 * roleFactor(c, "cfo"),
   valuation: (c: Company) => 1 + 0.04 * roleFactor(c, "ceo") + (hasTrait(c, "visionary", ["ceo"]) ? 0.03 : 0),
@@ -277,13 +284,14 @@ export function hireExec(s: GameState, c: Company, role: ExecRole, candidateId: 
   if (old) { severance = old.pay; L.execs = L.execs.filter((e) => e !== old); }
   // Poached from a rival: they need a replacement.
   if (cand.from) {
+    notePoach(s, cand.from);
     const o = s.companies.find((x) => x.name === cand.from);
     if (o?.leadership) {
       o.leadership.execs = o.leadership.execs.filter((e) => e.id !== cand.id);
       o.leadership.execs.push(makeExec(s, o, role, -0.3));
     }
   }
-  const hired: Exec = { ...cand, hiredMonth: s.month };
+  const hired: Exec = { ...cand, hiredMonth: s.month, morale: 75, regard: undefined };
   L.execs.push(hired);
   L.candidates![role] = L.candidates![role]!.filter((e) => e.id !== candidateId);
   c.cash -= severance + hired.pay * 0.25; // severance for the old one, a signing bonus for the new
@@ -308,7 +316,7 @@ export function answerPoach(s: GameState, c: Company, match: boolean): { ok: boo
   const e = L.execs.find((x) => x.id === p.execId);
   L.poach = undefined;
   if (!e) return { ok: false, message: "They already left." };
-  if (match) { e.pay = p.pay; return { ok: true, message: `${e.name} is staying, now earning $${(e.pay / 1e6).toFixed(1)}M a year.` }; }
+  if (match) { e.pay = p.pay; e.morale = Math.min(100, (e.morale ?? 60) + 15); return { ok: true, message: `${e.name} is staying, now earning $${(e.pay / 1e6).toFixed(1)}M a year.` }; }
   return { ok: true, message: departTo(s, c, e, p.rivalId) };
 }
 
@@ -360,7 +368,8 @@ export function updateLeadership(s: GameState, c: Company, peerReturn: number, l
   // Poaching attempts on the player's best people.
   if (c.isPlayer && !L.poach) {
     for (const e of L.execs) {
-      if (e.skill < 3.5 || e.traits.includes("loyal") || rand(s) > 0.012) continue;
+      const unhappy = (e.morale ?? 65) < 40 ? 3 : (e.morale ?? 65) > 80 ? 0.4 : 1;
+      if (e.skill < 3.5 || e.traits.includes("loyal") || rand(s) > 0.012 * unhappy) continue;
       const rivals = s.companies.filter((o) => o.alive && o !== c && o.marketCap > c.marketCap * 0.3);
       if (!rivals.length) break;
       const o = rivals[Math.floor(rand(s) * rivals.length)];

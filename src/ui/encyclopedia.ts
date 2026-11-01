@@ -56,6 +56,16 @@ export const TOPICS: Topic[] = [
     "Every tech level above the market baseline makes products about 8% better, and buyers weigh quality squared. The market improves one level a year, so standing still means falling behind, though industry spillover keeps even a company with no lab within about a level of the frontier.",
     "Bigger product lines cost more research per level, and every level of lead costs 40% more. Labs and a strong CTO drive output.",
   ] },
+  { id: "people", title: "People", group: "Company", body: [
+    "Everyone in the game has views on five issues (the economy, labor, climate, trade and Big Tech) and an opinion of your company. The People tab lists your team, rival CEOs and members of Congress, with the reasons behind each opinion.",
+    "Members of Congress care about jobs you provide in their state, layoffs there, which way you lobby on the laws they care about, your PAC's money, offshoring, your energy footprint, Big Tech's power and your public image. Members who like you lean your way on close votes you lobby for. Hostile members may call you to testify; a skilled CEO can turn a hearing into good press. Meet them (three meetings a month) or invite them to cut a ribbon at a site in their state.",
+    "Members of Congress are real people; their stances come from the game's model of their caucus faction, not from anything they've said. Executives and rival CEOs are fictional.",
+    "Rival CEOs resent you for competing head to head, undercutting their prices and hiring away their people, and respect success and a CEO who sees the world as they do. A CEO who can't stand you starts a feud and undercuts your prices; one who likes you may propose a two-year partnership (+5% research and marketing for both), and their board accepts a lower takeover premium. Play golf, propose a truce, or take a public jab if your CEO is a showman.",
+    "Your executives have morale. Pay below the market rate, a sinking stock, a nervous board, and company moves that cut against their beliefs all lower it. Unhappy executives are easier to poach, ask for raises and sometimes quit; happy ones perform a little better.",
+  ] },
+  { id: "guidance", title: "Earnings guidance", group: "Company", body: [
+    "Each quarter you can tell Wall Street what to expect. Bold guidance lifts the stock now and raises the bar by 3%; lowball guidance dips the stock and lowers the bar. You can change it once a quarter, and switching back undoes the move. See [[earnings]].",
+  ] },
   { id: "acquisitions", title: "Acquisitions", group: "Company", body: [
     "Click a company on the Rivals tab to make an offer. Its board wants a premium: more for startups, hot stocks and established companies, and more from a much bigger buyer. A dealmaker CEO or CFO shaves it.",
     "Regulators may open a second request, an in-depth review lasting months, and can sue to block. Big buyers, overlapping markets, strict antitrust law and a populist or progressive Congress all raise the odds. A blocked deal costs a 4% break fee.",

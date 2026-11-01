@@ -334,3 +334,51 @@ table.t tr.blocked td:first-child { color: var(--seal); }
 .bo-figs dt { color: var(--ink-3); }
 .bo-figs dd { margin: 0; text-align: right; }
 button.big { width: 100%; padding: 9px; font-size: 15px; }
+
+/* People: dossiers */
+.people { display: grid; grid-template-columns: minmax(320px, 420px) 1fr; gap: 16px; align-items: start; }
+.roster .panel { margin-bottom: 14px; }
+.person { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: none; border: none; border-bottom: 1px solid var(--rule-soft); border-radius: 0; padding: 7px 4px; }
+.person:hover { background: var(--paper); }
+.person.on { background: var(--paper); box-shadow: inset 3px 0 0 var(--ink); }
+.person .who { display: flex; flex-direction: column; flex: 1; min-width: 0; line-height: 1.25; }
+.person .who strong { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.seal { flex: none; width: 34px; height: 34px; border-radius: 50%; border: 1.5px double var(--ink-2); outline: 1px solid var(--rule); outline-offset: 2px; display: inline-flex; align-items: center; justify-content: center; font-family: var(--display); font-size: 14px; letter-spacing: 0.04em; color: var(--ink-2); background: var(--paper-2); }
+.dossier .seal { width: 64px; height: 64px; font-size: 24px; border-width: 3px; outline-offset: 3px; }
+.regard-chip { flex: none; font-size: 12px; padding: 1px 7px; border: 1px solid var(--rule); border-radius: 10px; color: var(--ink-2); background: var(--paper); }
+.regard-chip.pos { border-color: #9cc2a3; color: var(--good, #2e6b3f); }
+.regard-chip.neg { border-color: #d7a8a4; color: var(--seal); }
+.dossier-col { position: sticky; top: 0; }
+.dossier { background: var(--paper-2); border: 1px solid var(--rule); padding: 22px 26px 24px; box-shadow: 0 1px 0 var(--rule-soft); }
+.dossier header { display: flex; gap: 18px; align-items: center; padding-bottom: 14px; border-bottom: 3px double var(--rule); margin-bottom: 14px; }
+.dossier h2 { font-family: var(--display); font-weight: 500; font-size: 30px; margin: 0 0 2px; letter-spacing: 0.005em; }
+.dossier h3 { font-family: var(--display); font-weight: 500; font-size: 18px; margin: 20px 0 8px; padding-bottom: 4px; border-bottom: 1px solid var(--rule-soft); }
+.dossier .bio { max-width: 68ch; line-height: 1.55; margin: 0 0 10px; }
+.motto { font-family: var(--display); font-style: italic; font-size: 19px; line-height: 1.4; margin: 6px 0 12px; padding-left: 14px; border-left: 2px solid var(--ink-2); max-width: 60ch; color: var(--ink); }
+.thought { font-family: var(--display); font-style: italic; font-size: 16px; margin: 8px 0 6px; color: var(--ink); }
+.traits-row { margin-bottom: 4px; }
+.scales { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 28px; }
+.scale-label { font-weight: 600; font-size: 13px; }
+.scale-ends { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-3, #6b6b6b); margin: 1px 0 3px; }
+.scale-rule { position: relative; height: 9px; border-top: 1px solid var(--ink-2); border-bottom: 1px solid var(--rule); background: repeating-linear-gradient(90deg, transparent 0 9px, var(--rule-soft) 9px 10px); }
+.scale-mark { position: absolute; top: -5px; width: 11px; height: 17px; margin-left: -5.5px; background: var(--ink); clip-path: polygon(50% 0, 100% 35%, 50% 100%, 0 35%); }
+.opinion { max-width: 520px; }
+.opinion-rule { background: linear-gradient(90deg, rgba(168,50,42,0.18), transparent 45%, transparent 55%, rgba(46,107,63,0.2)); }
+table.ledger { width: 100%; max-width: 560px; border-collapse: collapse; margin-top: 8px; }
+table.ledger td { padding: 3px 0; vertical-align: bottom; }
+table.ledger td.lead { display: flex; align-items: baseline; }
+table.ledger td.lead i { flex: 1; border-bottom: 1px dotted var(--rule); margin: 0 6px; min-width: 12px; transform: translateY(-3px); }
+table.ledger td.num { width: 56px; text-align: right; font-variant-numeric: tabular-nums; padding-left: 6px; }
+table.ledger tr.ledger-total td { border-top: 1px solid var(--ink-2); font-weight: 600; padding-top: 5px; }
+.dossier .actions { margin-top: 14px; gap: 8px; flex-wrap: wrap; }
+.relation { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+button.danger { color: var(--seal); border-color: #d7a8a4; }
+.small { font-size: 12.5px; }
+.segmented.small button { padding: 3px 9px; font-size: 12.5px; }
+@media (max-width: 1100px) { .people { grid-template-columns: 1fr; } .dossier-col { position: static; } .scales { grid-template-columns: 1fr; } }
+
+.milestones { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: 24px; }
+.milestones li { display: flex; gap: 8px; align-items: baseline; padding: 3px 0; break-inside: avoid; color: var(--ink-3); }
+.milestones li.got { color: var(--ink); }
+.milestones .medal { flex: none; width: 14px; color: var(--rule); }
+.milestones li.got .medal { color: #a07d2c; }

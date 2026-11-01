@@ -1,4 +1,5 @@
 // Rival company behavior. Simple heuristics; the same action functions the player uses.
+import { feudPriceMult } from "./people";
 import { BUILDING_BY_ID, methodOf, type BuildingTypeId } from "./data/buildings";
 import { GOOD_BY_ID, type GoodId } from "./data/goods";
 import {
@@ -36,7 +37,7 @@ export function autoPrice(s: GameState, c: Company, g: GoodId) {
   const others = s.markets[g]?.othersPrice ?? def.refPrice;
   const brandStrength = Math.min(1, (c.brand[g] ?? 0) / 0.02);
   const premium = Math.min(1.7, Math.pow(Math.max(1, quality(s, c, g) ** 2 * (c.reputation[g] ?? 1)), 1 / def.priceSensitivity) * (1 + 0.4 * brandStrength));
-  const ceiling = Math.max(floor, Math.min(def.refPrice * 3, others * premium));
+  const ceiling = Math.max(floor, Math.min(def.refPrice * 3, others * premium) * (c.isPlayer ? 1 : feudPriceMult(s, c, g)));
   next = clamp(next, floor, (globalThis as { NOCEIL?: boolean }).NOCEIL ? def.refPrice * 3 : ceiling);
   if (def.importPrice && def.intermediate) next = Math.min(next, def.importPrice * 0.99);
   c.prices[g] = next;

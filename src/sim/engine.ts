@@ -5,6 +5,8 @@ import { GOOD_BY_ID, MARKET_GOODS, TECHS, type GoodId, type TechId } from "./dat
 import { BLUE_COLLAR, JOBS, JOB_BY_ID, LOW_WAGE, type JobId } from "./data/jobs";
 import { NEED_OF_GOOD } from "./data/needs";
 import { STATES, STATE_BY_CODE } from "./data/states";
+import { activePartners, updatePeople } from "./people";
+import { checkMilestones } from "./milestones";
 import { calibrateConsumers, driftPreferences, updateConsumers } from "./consumers";
 import { initMacro, updateMacro, updateWorldEvents } from "./macro";
 import {
@@ -30,7 +32,7 @@ import {
 } from "./util";
 import { runAI, autoPrice, maintainHQ } from "./ai";
 
-export const SAVE_VERSION = 8;
+export const SAVE_VERSION = 9;
 export const BASELINE_TECH_START = 10;
 const DT = 1 / DAYS_PER_MONTH;
 const DEPRECIATION = 0.006;
@@ -683,6 +685,13 @@ function monthly(s: GameState) {
   for (const c of alive) updateBrand(s, c);
   updateCities(s, say);
   if (!warmup) rollStories(s, (c) => (t, k, extra) => log(s, t, k, c.id, c.isPlayer ? (extra?.headline && s.decisions?.some((d) => d.headline === extra.headline) ? "decision" : "news") : undefined, extra));
+  {
+    const me = alive.find((c) => c.isPlayer);
+    updatePeople(s, (t, k, extra) => { if (!warmup && me) log(s, t, k, me.id, extra?.headline && s.decisions?.some((d) => d.headline === extra.headline) ? "decision" : "news", extra); }, warmup);
+    const partners = activePartners(s);
+    for (const c of alive) c.allyBoost = c.isPlayer ? 1 + 0.05 * partners.length : partners.includes(c.id) ? 1.05 : 1;
+    if (!warmup && me) checkMilestones(s, me, (t, extra) => log(s, t, "good", me.id, "news", extra));
+  }
   const peer = peerReturns(alive);
   for (const c of alive) {
     updateJobOpinion(s, c);
@@ -1085,7 +1094,9 @@ function earnings(s: GameState, c: Company, r: MonthReport) {
   if (base <= 1e6) return;
   // Consensus: last year's trend, slightly conservative (companies guide low), shaded by the CFO.
   const gExp = c.growthHint;
-  const shade = 0.985 * leadEffects.expectations(c);
+  // Guidance: what the CFO told Wall Street to expect.
+  const guide = c.guidance === "low" ? 0.97 : c.guidance === "high" ? 1.03 : 1;
+  const shade = 0.985 * leadEffects.expectations(c) * guide;
   const expected = base * Math.pow(1 + gExp, years) * shade;
   // Margin: what the last two quarters before this one showed (fresher than a year ago).
   const recent = c.history.slice(-8, -2);

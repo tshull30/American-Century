@@ -23,6 +23,8 @@ export function computeAlerts(s: GameState, me: Company): Alert[] {
   if (me.distressMonths > 0) out.push({ tone: "bad", tab: "finance", text: `Net debt is over your credit limit: ${6 - me.distressMonths} month${me.distressMonths === 5 ? "" : "s"} until default` });
   if (last && last.netIncome < 0 && me.cash < -last.netIncome * 6) out.push({ tone: "bad", tab: "finance", text: `Under six months of cash at the current burn (${fmtMoney(-last.netIncome)} a month)` });
   const load = adminLoad(me), cap = adminCapacity(me);
+  const sad = me.leadership?.execs.filter((e) => (e.morale ?? 65) < 35) ?? [];
+  if (sad.length) out.push({ tone: "warn", tab: "people", text: `${sad[0].name} (${sad[0].role.toUpperCase()}) is unhappy and may leave` });
   if (load > cap) out.push({ tone: "warn", tab: "production", text: `Headquarters overloaded (${load} of ${cap} levels): add HQ levels` });
 
   const short = me.buildings.filter((b) => b.level > 0 && b.staffRatio < 0.8 && !b.construction.length);

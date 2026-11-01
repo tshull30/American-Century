@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { borrow, buyback, issueShares, repay, setDividend, setMarketing } from "../../sim/actions";
+import { borrow, buyback, issueShares, repay, setDividend, setGuidance, setMarketing } from "../../sim/actions";
 import { creditLimit, ebitdaTTM, interestRate, ttm } from "../../sim/engine";
 import type { MonthReport } from "../../sim/types";
 import { fmtMoney, fmtNum, fmtPct } from "../../sim/util";
@@ -68,6 +68,15 @@ export function Finance() {
               </table>
             );
           })() : <div className="hint">You report your first quarter once you have enough history.</div>}
+          <div className="row" style={{ marginBottom: 8 }}>
+            Guidance
+            <div className="segmented small">
+              {([["low", "Lowball"], ["mid", "Realistic"], ["high", "Bold"]] as const).map(([k, l]) => (
+                <button key={k} className={(me.guidance ?? "mid") === k ? "on" : ""} onClick={() => act(setGuidance(s, me.id, k))}>{l}</button>
+              ))}
+            </div>
+            <span className="muted small">{(me.guidance ?? "mid") === "high" ? "Wall Street expects 3% more; the stock got a lift." : (me.guidance ?? "mid") === "low" ? "Wall Street expects 3% less; beats come easier." : "Analysts take your numbers at face value."} One change a quarter.</span>
+          </div>
           <div className="row">
             Dividend <input type="range" min={0} max={0.8} step={0.05} value={me.dividendPct} onChange={(e) => act(setDividend(s, me.id, Number(e.target.value)))} style={{ width: 200 }} />
             <strong>{fmtPct(me.dividendPct, 0)}</strong> of quarterly profit
