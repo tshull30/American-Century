@@ -13,6 +13,9 @@ export interface Pop {
   workers: number;
   /** Non-working household members (children, retirees, etc.) supported by these workers. */
   dependents: number;
+  /** Home metro or region, and its county. */
+  area?: string;
+  county?: string;
   /** Standard of living (100 = average American in 2026). */
   sol: number;
   /** Satisfaction of each need, in NEEDS order (1 = average American in 2026). */
@@ -127,6 +130,6 @@ export function generatePops(): Pop[] {
   return pops;
 }
 
-export function popLabel(_p: Pop, cultureAdj: string, jobName: string, stateName: string): string {
-  return `${cultureAdj} ${jobName.toLowerCase()}s from ${stateName}`;
+export function popLabel(p: Pop, cultureAdj: string, jobPlural: string, stateName: string): string {
+  return `${cultureAdj} ${jobPlural.toLowerCase()} from ${p.county ? `${p.county}, ` : ""}${stateName}`;
 }

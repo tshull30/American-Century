@@ -7,7 +7,8 @@ export const PAUSE_TAGS: { tag: EventTag; label: string; on: boolean }[] = [
   { tag: "finance", label: "Your quarterly earnings, debt over the credit limit", on: true },
   { tag: "tier", label: "You move to a new market-cap tier", on: true },
   { tag: "city", label: "A city you're in bans or allows data centers", on: false },
-  { tag: "macro", label: "A recession starts", on: true },
+  { tag: "macro", label: "World events and recessions", on: true },
+  { tag: "news", label: "Company news: fires, viral hits, verdicts", on: true },
   { tag: "leadership", label: "Executives leave or get poached, scandals, activists, proxy fights", on: true },
   { tag: "build", label: "Construction finishes", on: false },
 ];

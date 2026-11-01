@@ -41,7 +41,7 @@ export function World() {
   return (
     <div>
       <div className="grid2">
-        <Panel title="The world" right={last?.tariffs ? `You paid ${fmtMoney(last.tariffs)} in tariffs and freight last month` : "Build abroad from the Production tab"}>
+        <Panel help="world" title="The world" right={last?.tariffs ? `You paid ${fmtMoney(last.tariffs)} in tariffs and freight last month` : "Build abroad from the Production tab"}>
           <Table<CountryDef>
             rows={COUNTRIES}
             rowKey={(c) => c.id}
@@ -57,7 +57,6 @@ export function World() {
               { key: "y", label: "Your levels", num: true, render: (c) => myLevels(c.id) ? fmtNum(myLevels(c.id)) : "", sort: (c) => myLevels(c.id) },
             ]}
           />
-          <p className="hint">Plants abroad pay local wages and get local incentives, but produce less per worker, and everything they sell into the US pays tariffs and freight. Mexico and Canada are duty-free under USMCA until tariffs get heavy; China pays extra duties and can't host chip, AI or research work. Offshoring also costs you goodwill with American factory workers and towns.</p>
         </Panel>
         <div>
           <Panel title={country.name} right={`${fmtNum(workers(country.id))} hireable workers`}>

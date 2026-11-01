@@ -26,13 +26,12 @@ export function Consumers() {
   return (
     <div className="grid2">
       <div>
-        <Panel title="American households">
+        <Panel help="consumers" title="American households">
           <div className="stats">
             <Stat label="Standard of living" value={s.sol.toFixed(1)} sub={`${solTier(s.sol)}; 100 is the 2026 average`} />
             <Stat label="Economy" value={s.macro.recession ? "Recession" : s.macro.gap > 0.01 ? "Boom" : "Steady"} sub={`output gap ${fmtPct(s.macro.gap, 1)}`} />
             <Stat label="Inflation" value={fmtPct(s.macro.inflation, 1)} sub={`Fed funds ${fmtPct(s.macro.fedRate, 2)}`} />
           </div>
-          <p className="hint">Each pop splits its income across needs. Basic needs (food, energy, healthcare, clothing) take a bigger share of a small paycheck; transport, computing and entertainment grow with income. Within a need, goods compete on price: if EVs get cheaper, households shift away from gas cars. When companies raise prices or wages stall, living standards fall, and voters notice.</p>
         </Panel>
         <Panel title="Standard of living over time">
           <LineChart data={hist.map((h) => ({ x: dateLabel(h.month), y: h.sol }))} fmt={(v) => v.toFixed(1)} />
@@ -46,7 +45,7 @@ export function Consumers() {
         </Panel>
       </div>
       <div>
-        <Panel title="Needs" right="Satisfaction by income fifth: poorest → richest (1.00 = 2026 average)">
+        <Panel help="consumers" title="Needs" right="Satisfaction by income fifth: poorest → richest (1.00 = 2026 average)">
           <Table
             rows={NEEDS}
             rowKey={(n) => n.id}
@@ -67,7 +66,6 @@ export function Consumers() {
               } },
             ]}
           />
-          <p className="hint">★ marks markets you sell in. Click through to the Markets tab to see who supplies each good.</p>
         </Panel>
         <Panel title="By state">
           <div className="scroll" style={{ maxHeight: 420 }}>

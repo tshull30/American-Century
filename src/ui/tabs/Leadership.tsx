@@ -76,11 +76,10 @@ export function Leadership() {
         })()}
 
         {role && (
-          <Panel title={`Candidates for ${ROLE_NAME[role]}`} right={<span className="row">
+          <Panel help="executives" title={`Candidates for ${ROLE_NAME[role]}`} right={<span className="row">
             <button className="small" onClick={() => { me.cash -= 2e6; refreshCandidates(s, me, role); act({ ok: true, message: "The headhunters sent a fresh list ($2M)." }); }}>New search ($2M)</button>
             <button className="small" onClick={() => setRole("")}>Close</button>
           </span>}>
-            <p className="hint" style={{ marginTop: 0 }}>{ROLE_EFFECT[role]}. Hiring pays a signing bonus of a quarter of a year's pay; replacing someone pays them a year's severance.</p>
             <Table
               rows={cands}
               rowKey={(e) => e.id}
@@ -98,7 +97,7 @@ export function Leadership() {
       </div>
 
       <div>
-        <Panel title="Board of directors" right={`Annual meeting ${dateLabel(b.nextMeeting)}`}>
+        <Panel help="board" title="Board of directors" right={`Annual meeting ${dateLabel(b.nextMeeting)}`}>
           <div className="row" style={{ marginBottom: 8 }}>
             <span>Confidence in management</span>
             <Bar value={conf} tone={conf > 0.6 ? "good" : conf < 0.35 ? "bad" : "warn"} />
@@ -115,14 +114,12 @@ export function Leadership() {
               { key: "s", label: "Since", render: (d) => dateLabel(d.since), sort: (d) => d.since },
             ]}
           />
-          <p className="hint">The board must approve acquisitions worth more than 5% of your company, issuing more than 5% new shares, moving headquarters, and projects costing more than 15% of your market value. Its confidence follows your stock against your tier, your CEO, and scandals. At the annual meeting unhappy shareholders replace directors, and a board that has lost faith fires the CEO.</p>
         </Panel>
 
         {b.activist && (
-          <Panel title={`Activist investor: ${b.activist.fund}`}>
+          <Panel help="activists" title={`Activist investor: ${b.activist.fund}`}>
             <p style={{ marginTop: 0 }}>Owns {fmtPct(b.activist.stake, 1)} of the company and demands: <strong>{DEMAND_TEXT[b.activist.demand]}</strong>.</p>
             {b.activist.demand === "buyback" && <p>Bought back so far: {fmtMoney(b.activist.boughtBack)} of {fmtMoney(b.activist.buybackTarget)} (Finance tab).</p>}
-            <p className="hint">Give them what they want and they go away. Ignore them and they'll run their own slate at the annual meeting; if they win a majority of the board, they force their demand through and pick a new CEO.</p>
           </Panel>
         )}
 

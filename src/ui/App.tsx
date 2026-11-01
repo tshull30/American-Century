@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { tick, player } from "../sim/engine";
 import { tierOf, TIERS } from "../sim/tiers";
-import type { GameState } from "../sim/types";
+import type { GameEvent, GameState } from "../sim/types";
 import { dayLabel, fmtMoney, fmtPct } from "../sim/util";
 import { ConfirmDialog, GameCtx, Guilloche, makeCtx } from "./components";
 import { NewGame } from "./NewGame";
 import { exportFile, importFile, saveLocal } from "./save";
 import { autosaveDue, loadSettings, loadUi, saveSettings, saveUi, type Settings } from "./settings";
 import { SettingsDialog } from "./SettingsDialog";
+import { Encyclopedia } from "./Encyclopedia";
+import { AnnualReport, FrontPage, Ticker } from "./Press";
 import { computeAlerts } from "./alerts";
 import { Overview } from "./tabs/Overview";
 import { Production } from "./tabs/Production";
@@ -54,7 +56,9 @@ function Game({ initial, onQuit }: { initial: GameState; onQuit: () => void }) {
   settingsRef.current = settings;
   const setSettings = useCallback((x: Settings) => { setSettingsRaw(x); saveSettings(x); }, []);
   const [showSettings, setShowSettings] = useState(false);
-  const [pausedBy, setPausedBy] = useState<string[] | null>(null);
+  const [pausedBy, setPausedBy] = useState<GameEvent[] | null>(null);
+  const [front, setFront] = useState<GameEvent[] | null>(null);
+  const [report, setReport] = useState<number | null>(null);
   const [toast, setToast] = useState<{ m: string; err?: boolean } | null>(null);
   const showToast = useCallback((m: string, err?: boolean) => {
     setToast({ m, err });
@@ -75,11 +79,15 @@ function Game({ initial, onQuit }: { initial: GameState; onQuit: () => void }) {
         if (s.month !== m && autosaveDue(settingsRef.current.autosave, s.month)) saveLocal(s);
         // Pause on anything the player asked to be stopped for.
         const start = lastEvent ? s.events.lastIndexOf(lastEvent) + 1 : 0;
-        const hits = s.events.slice(start).filter((e) => e.tag && settingsRef.current.pause[e.tag]).map((e) => e.text);
-        if (hits.length) {
-          setPausedBy(hits.slice(0, 4));
+        const fresh = s.events.slice(start);
+        const hits = fresh.filter((e) => e.tag && (e.tag === "decision" || settingsRef.current.pause[e.tag]));
+        const newYear = s.month !== m && s.month > 0 && s.month % 12 === 0;
+        if (hits.length || newYear) {
           lastSpeed.current = speed;
           setSpeed(0);
+          if (newYear) setReport(2025 + s.month / 12);
+          if (hits.some((e) => e.headline || e.cert || e.tag === "decision")) setFront(hits);
+          else if (hits.length) setPausedBy(hits.slice(0, 4));
           break;
         }
       }
@@ -98,7 +106,8 @@ function Game({ initial, onQuit }: { initial: GameState; onQuit: () => void }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName;
-      if (e.key === "Escape") { setPending(null); setShowSettings(false); setPausedBy(null); return; }
+      if (e.key === "Escape") { setPending(null); setShowSettings(false); setPausedBy(null); setHelpTopic(null); return; }
+      if (e.key === "F1") { e.preventDefault(); setHelpTopic((t) => (t ? null : "basics")); return; }
       if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.code === "Space") {
         e.preventDefault();
@@ -119,7 +128,8 @@ function Game({ initial, onQuit }: { initial: GameState; onQuit: () => void }) {
 
   const [pending, setPending] = useState<{ message: string; onYes: () => void } | null>(null);
   const ask = useCallback((message: string, onYes: () => void) => setPending({ message, onYes }), []);
-  const ctx = makeCtx(s, refresh, showToast, ask);
+  const [helpTopic, setHelpTopic] = useState<string | null>(null);
+  const ctx = makeCtx(s, refresh, showToast, ask, (t) => setHelpTopic(t));
   const me = player(s);
   const tier = tierOf(me.marketCap);
   const peers = useMemo(
@@ -158,6 +168,7 @@ function Game({ initial, onQuit }: { initial: GameState; onQuit: () => void }) {
             <span className="date">{dayLabel(s.day)}</span>
             <button onClick={() => showToast(saveLocal(s) ? "Game saved in this browser." : "Couldn't save in this browser; use Export.", false)}>Save</button>
             <button onClick={() => exportFile(s)} title="Download the save file">Export</button>
+            <button onClick={() => setHelpTopic("basics")} title="Encyclopedia (F1)">Encyclopedia</button>
             <button onClick={() => setShowSettings(true)} title="Settings and keyboard shortcuts (?)">Settings</button>
             <button onClick={() => ask("Quit to the main menu? Progress since your last save is lost.", onQuit)}>Menu</button>
           </div>
@@ -165,13 +176,14 @@ function Game({ initial, onQuit }: { initial: GameState; onQuit: () => void }) {
             <div className="gameover"><strong>Game over.</strong> {s.gameOver}<button onClick={onQuit}>New game</button></div>
           )}
         </div>
+        <Ticker s={s} />
         <nav className="tabs">
           {TABS.map(([id, label]) => <button key={id} className={tab === id ? "on" : ""} onClick={() => setTab(id)}>{label}</button>)}
         </nav>
         {pausedBy && (
           <div className="pausebar">
             <strong>Paused.</strong>
-            <span className="pausetext">{pausedBy.join(" ")}</span>
+            <span className="pausetext">{pausedBy.map((e) => e.text).join(" ")}</span>
             <button onClick={() => { setPausedBy(null); setSpeed(lastSpeed.current || 2); }}>Resume</button>
             <button className="link" onClick={() => setPausedBy(null)}>Dismiss</button>
           </div>
@@ -179,7 +191,7 @@ function Game({ initial, onQuit }: { initial: GameState; onQuit: () => void }) {
         {alerts.length > 0 && (
           <div className="alerts">
             {alerts.slice(0, 6).map((a) => (
-              <button key={a.text} className={`alert ${a.tone}`} onClick={() => setTab(a.tab as TabId)}>{a.text}</button>
+              <button key={a.text} className={`alert ${a.tone}`} onClick={() => (a.tab === "front" ? setFront([]) : setTab(a.tab as TabId))}>{a.text}</button>
             ))}
             {alerts.length > 6 && <span className="muted">and {alerts.length - 6} more on Overview</span>}
           </div>
@@ -203,6 +215,9 @@ function Game({ initial, onQuit }: { initial: GameState; onQuit: () => void }) {
         </main>
       </div>
       {toast && <div className={`toast ${toast.err ? "err" : ""}`}>{toast.m}</div>}
+      {front && <FrontPage s={s} events={front} onClose={() => setFront(null)} onDecide={(m) => { showToast(m); refresh(); if (!(s.decisions ?? []).length) setFront(null); }} />}
+      {report && !front && <AnnualReport s={s} year={report} onClose={() => setReport(null)} />}
+      {helpTopic && <Encyclopedia topic={helpTopic} onClose={() => setHelpTopic(null)} />}
       {showSettings && <SettingsDialog settings={settings} onChange={setSettings} onClose={() => setShowSettings(false)} />}
       {pending && <ConfirmDialog message={pending.message} onNo={() => setPending(null)} onYes={() => { const f = pending.onYes; setPending(null); f(); }} />}
     </GameCtx.Provider>

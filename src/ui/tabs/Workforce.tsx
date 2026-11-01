@@ -34,7 +34,7 @@ export function Workforce() {
         const n = (have * p.workers) / sum;
         const key = `${k}:${p.culture}`;
         out.set(key, {
-          label: `${CULTURE_BY_ID[p.culture].adjective} ${JOB_BY_ID[p.job].plural.toLowerCase()} from ${STATE_BY_CODE[p.state].name}`,
+          label: `${CULTURE_BY_ID[p.culture].adjective} ${JOB_BY_ID[p.job].plural.toLowerCase()} from ${s.cities[cell.city]?.county ? `${s.cities[cell.city].county}, ` : ""}${STATE_BY_CODE[p.state]?.name ?? s.cities[cell.city]?.name ?? p.state}`,
           culture: p.culture, job: p.job, state: p.state, n,
         });
         byCulture.set(p.culture, (byCulture.get(p.culture) ?? 0) + n);
@@ -47,12 +47,11 @@ export function Workforce() {
   return (
     <div className="grid2">
       <div>
-        <Panel title="Pay">
+        <Panel help="wages" title="Pay">
           <div className="row">
             Wage offer <input type="range" min={0.7} max={1.6} step={0.05} value={me.wagePolicy} onChange={(e) => act(setWagePolicy(s, me.id, Number(e.target.value)))} style={{ width: 220 }} />
             <strong>{fmtPct(me.wagePolicy, 0)}</strong> of the local market wage
           </div>
-          <p className="hint">Paying above market wins you a bigger share of the workers available each month (about 5% of each local pool can be hired monthly). Hiring a big share of a state's workforce pushes local wages up for everyone.</p>
           <div className="stats">
             <div className="stat"><div className="label">Employees</div><div className="value">{fmtNum(total)}</div></div>
             <div className="stat"><div className="label">Monthly payroll</div><div className="value">{fmtMoney(wageBill)}</div></div>
@@ -93,13 +92,12 @@ export function Workforce() {
             />
           </div>
         </Panel>
-        <Panel title="Who likes you" right={`National image ${fmtPct(me.image, 0)}`}>
+        <Panel help="worker-opinion" title="Who likes you" right={`National image ${fmtPct(me.image, 0)}`}>
           <Table rows={JOBS} rowKey={(j) => j.id} cols={[
             { key: "j", label: "Pop type", render: (j) => j.plural },
             { key: "g", label: "Group", render: (j) => <span className="muted">{j.group}</span>, sort: (j) => j.group },
             { key: "o", label: "Opinion of you", render: (j) => { const o = me.jobOpinion[j.id] ?? 0.5; return <span className="row" style={{ flexWrap: "nowrap" }}><Bar value={o} tone={o > 0.6 ? "good" : o < 0.4 ? "bad" : undefined} /><span className={o > 0.6 ? "pos" : o < 0.4 ? "neg" : ""}>{fmtPct(o, 0)}</span></span>; }, sort: (j) => me.jobOpinion[j.id] ?? 0.5 },
           ]} />
-          <p className="hint">Workers who like you are easier to hire. Pay above market and HQ perks help; layoffs and overcharging for necessities hurt, especially with service workers, laborers and clerks. Each city's view of you is on the Pops & Map tab.</p>
         </Panel>
         <Panel title="Workforce by culture">
           <Table

@@ -29,6 +29,8 @@ export interface Building {
   /** Filled by the sim each day. */
   staffRatio: number;
   efficiency: number;
+  /** Strike, outage or similar: runs at reduced output until this day. */
+  disruptedUntil?: number;
   /** Output per month at the current rate. */
   lastOutput: GoodMap;
   /** Wage bill per month at the current rate. */
@@ -264,6 +266,8 @@ export interface CityState {
   /** Opinion of each company, 0–1. */
   opinion: Record<number, number>;
   rest?: boolean;
+  /** Main county of the metro or region. */
+  county?: string;
   /** A country abroad rather than a US city. */
   foreign?: boolean;
 }
@@ -338,7 +342,7 @@ export interface MarketSnapshot {
   priceHistory: number[];
 }
 
-export type EventTag = "election" | "law" | "deal" | "finance" | "tier" | "city" | "build" | "macro" | "leadership";
+export type EventTag = "election" | "law" | "deal" | "finance" | "tier" | "city" | "build" | "macro" | "leadership" | "news" | "decision";
 
 export interface GameEvent {
   day: number;
@@ -346,6 +350,11 @@ export interface GameEvent {
   kind: "info" | "good" | "bad" | "deal" | "politics";
   /** Why this event might pause the game (see PAUSE_TAGS in the UI). */
   tag?: EventTag;
+  /** Front-page treatment. */
+  headline?: string;
+  deck?: string;
+  /** A completed merger: shown as a certificate. */
+  cert?: { buyer: string; target: string; price: number; buyerCeo?: string; targetCeo?: string };
   companyId?: number;
 }
 
@@ -376,8 +385,9 @@ export interface WorldEvent {
   importMult?: GoodMap;
   demandMult?: GoodMap;
   prefMult?: GoodMap;
-  /** Output multiplier for plants in these countries. */
+  /** Output multiplier for plants in these countries (or US states). */
   countryOutput?: Record<string, number>;
+  siteTypes?: string[];
 }
 
 export interface Bill {
@@ -469,6 +479,10 @@ export interface GameState {
   intlPops?: import("./intl").IntlPop[];
   /** Net immigrants (workers) so far this year. */
   immigrantsThisYear?: number;
+  /** Decisions waiting on the player. */
+  decisions?: import("./stories").Decision[];
+  /** Follow-ups to earlier stories (a quietly fixed defect that comes out later, and so on). */
+  scheduled?: import("./stories").Scheduled[];
   /** Real politicians already used as candidates (so nobody runs twice). */
   politicsUsedNames?: string[];
   nextId: number;

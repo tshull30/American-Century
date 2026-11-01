@@ -114,11 +114,10 @@ export function Politics() {
                   <span>{w.senate.yes} yes of {w.senate.need} needed{w.senate.rule === "cloture" ? " (filibuster)" : " (reconciliation)"}</span>
                 </div>
                 <p className="hint">
-                  {w.passes ? "On today's whip count it would pass." : w.vetoed && !w.override ? `It would clear Congress, but President ${p.presidentName} would veto it.` : "On today's whip count it would fail."}{" "}
-                  Members vote their faction's position. Those only mildly opposed can be moved by industry lobbying, and members your PAC has backed lean your way.
+                  {w.passes ? "On today's whip count it would pass." : w.vetoed && !w.override ? `It would clear Congress, but President ${p.presidentName} would veto it.` : "On today's whip count it would fail."}
                 </p>
               </>
-            ) : <div className="hint">Nothing on the floor. The House majority brings up bills from its platform, plus any bill with enough lobbying behind it to pass.</div>}
+            ) : <p className="empty">Nothing on the floor.</p>}
             {p.lastVote && (
               <p className="hint" style={{ marginTop: 8 }}>
                 Last vote, {dayLabel(p.lastVote.day)}: {LAW_BY_ID[p.lastVote.law].name} to {LAW_BY_ID[p.lastVote.law].levels[p.lastVote.target].name}, House {p.lastVote.house.yes}–{p.lastVote.house.no}, Senate {p.lastVote.senate.yes}–{p.lastVote.senate.no}:{" "}
@@ -130,7 +129,7 @@ export function Politics() {
 
         <div>
           <PacPanel />
-          <Panel title="Campaign donations" right={`Public image ${fmtPct(me.image, 0)}`}>
+          <Panel help="lobbying" title="Campaign donations" right={`Public image ${fmtPct(me.image, 0)}`}>
             <div className="row">
               {(["commonwealth", "frontier"] as PartyId[]).map((party) => [10e6, 100e6, 1e9].map((amt) => (
                 <button key={party + amt} disabled={amt > me.cash} onClick={() => ask(`Give ${fmtMoney(amt)} to the ${PARTIES[party].name}? It nudges the national vote and dents your public image.`, () => act(donate(s, me.id, party, amt)))}>
@@ -138,13 +137,12 @@ export function Politics() {
                 </button>
               )))}
             </div>
-            <p className="hint">Party donations shift the national vote by up to about 2.5 points, with sharply diminishing returns, and reset after every election. This cycle you've given Democrats {fmtMoney(me.donations.commonwealth ?? 0)} and Republicans {fmtMoney(me.donations.frontier ?? 0)}.</p>
           </Panel>
         </div>
       </div>
 
       <div style={{ height: 16 }} />
-      <Panel title="Laws and lobbying" right={`You spend ${fmtMoney(myLobby)} a month`}>
+      <Panel help="lobbying" title="Laws and lobbying" right={`You spend ${fmtMoney(myLobby)} a month`}>
         <Table
           rows={LAWS}
           rowKey={(l) => l.id}
@@ -158,7 +156,6 @@ export function Politics() {
             { key: "mine", label: "Your lobbying", render: (l) => <LobbyControl law={l.id} /> },
           ]}
         />
-        <p className="hint">Hover a law to see every level. Lobbying is a monthly expense. Its pull grows with the square root of spending, so $40M a month is only twice as persuasive as $10M. Tax and subsidy bills can pass the Senate with 51 votes through reconciliation; everything else needs 60.</p>
       </Panel>
 
       <div style={{ height: 16 }} />
@@ -173,8 +170,7 @@ function PacPanel() {
   const [amount, setAmount] = useState(10);
   if (!me.pac) {
     return (
-      <Panel title="Political action committee">
-        <p className="hint" style={{ marginTop: 0 }}>A super PAC lets your company spend directly on congressional races: backing allies, running ads against opponents. Members you back lean toward your lobbying positions when a vote is close. Registering costs $2M.</p>
+      <Panel help="pac" title="Political action committee">
         <div className="row">
           <input value={name} onChange={(e) => setName(e.target.value)} style={{ width: 260 }} aria-label="PAC name" />
           <button className="primary" onClick={() => act(foundPac(s, me.id, name))}>Register PAC</button>
@@ -184,7 +180,7 @@ function PacPanel() {
   }
   const backed = s.politicians.filter((m) => (m.friends[me.id] ?? 0) > 0).sort((a, b) => (b.friends[me.id] ?? 0) - (a.friends[me.id] ?? 0));
   return (
-    <Panel title={me.pac.name} right={`Founded ${dayLabel(me.pac.foundedDay)}`}>
+    <Panel help="pac" title={me.pac.name} right={`Founded ${dayLabel(me.pac.foundedDay)}`}>
       <div className="stats">
         <div className="stat"><div className="label">Cash on hand</div><div className="value">{fmtMoney(me.pac.funds)}</div></div>
         <div className="stat"><div className="label">Raised</div><div className="value">{fmtMoney(me.pac.raised)}</div></div>
@@ -194,7 +190,6 @@ function PacPanel() {
         Move <input type="number" min={1} value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value) || 1))} style={{ width: 70 }} /> million from the company
         <button onClick={() => act(fundPac(s, me.id, amount * 1e6))}>Transfer</button>
       </div>
-      <p className="hint">Back or oppose any member from the directory below or from a state's page on the map. Each click spends $1M on a House race or $5M on a Senate race. Spending moves their next election by up to 4 points.</p>
       {backed.length > 0 && (
         <div className="scroll" style={{ maxHeight: 200 }}>
           <Table rows={backed} rowKey={(m) => m.id} cols={[
@@ -218,7 +213,7 @@ function MemberDirectory() {
     (!q || m.name.toLowerCase().includes(q.toLowerCase()) || m.state === q.toUpperCase()),
   ), [s.politicians, chamber, party, q]);
   return (
-    <Panel title="Members of Congress" right={
+    <Panel help="congress" title="Members of Congress" right={
       <span className="row">
         <input placeholder="Name or state (TX)" value={q} onChange={(e) => setQ(e.target.value)} style={{ width: 170 }} aria-label="Search members" />
         <select value={chamber} onChange={(e) => setChamber(e.target.value as typeof chamber)}><option value="all">Both chambers</option><option value="senate">Senate</option><option value="house">House</option></select>
@@ -243,7 +238,6 @@ function MemberDirectory() {
           ]}
         />
       </div>
-      <p className="hint">Members marked * won their seat during your game. Factions are the game's shorthand, assigned from caucus membership and public positioning. Politicians appear as satire.</p>
     </Panel>
   );
 }

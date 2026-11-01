@@ -1,6 +1,7 @@
 // Cities: local labor markets, policies, power grids and public opinion.
 import { BUILDING_BY_ID, type BuildingTypeId } from "./data/buildings";
 import { CITY_POLITICS, CITY_SEEDS, POWER_PRICE, STATE_LIB } from "./data/cities";
+import { METRO_COUNTY, REGIONS } from "./data/regions";
 import { RESOURCE_NAME, resourceMult } from "./data/resources";
 import { STATE_PRES_2024 } from "./data/districts";
 import { LAW_BY_ID } from "./data/laws";
@@ -37,12 +38,18 @@ export function initCities(s: GameState) {
       const big = inState.sort((a, b) => b.pop - a.pop)[0];
       // Whatever the metros don't account for of the state's vote is the rest of the state's.
       const lean = clamp((stLean - leanUsed) / rest, 0.15, 0.75);
-      cities[`rest-${st.code}`] = makeCity(
-        `rest-${st.code}`, `Rest of ${st.name}`, st.code, big ? big.lat - 0.6 : 39, big ? big.lon + 0.8 : -98,
-        st.techIndex * 0.75, st.mfgIndex * 1.15, st.wageIndex * 0.9, ["dc+"], rest, undefined, rest * st.population, lean, clamp(stLib + 0.1, 0, 0.9),
-      );
-      cities[`rest-${st.code}`].rest = true;
+      const regions = REGIONS[st.code]?.length ? REGIONS[st.code] : [[`Rural ${st.name}`, "", 1, big ? big.lat - 0.6 : 39, big ? big.lon + 0.8 : -98] as const];
+      const wsum = regions.reduce((a, r) => a + r[2], 0);
+      regions.forEach((r, i) => {
+        const id = i === 0 ? `rest-${st.code}` : `rest-${st.code}-${i + 1}`;
+        const share = (rest * r[2]) / wsum;
+        cities[id] = makeCity(id, r[0], st.code, r[3], r[4], st.techIndex * 0.75, st.mfgIndex * 1.15, st.wageIndex * 0.9, ["dc+"], share, undefined, share * st.population,
+          clamp(lean - 0.02 * i, 0.12, 0.78), clamp(stLib + 0.1, 0, 0.9));
+        cities[id].rest = true;
+        if (r[1]) cities[id].county = r[1];
+      });
     }
+    for (const c of inState) if (cities[c.id]) cities[c.id].county = METRO_COUNTY[c.id];
   }
   s.cities = cities;
 }
@@ -190,7 +197,7 @@ export function permitBlock(s: GameState, cityId: string, c: Company, type: Buil
   if (type === "datacenter" && city.dcStance === "moratorium") return `${city.name} has a moratorium on new data centers.`;
   const res = BUILDING_BY_ID[type].resource;
   if (res && resourceMult(res, city.state) <= 0) return `There are no ${RESOURCE_NAME[res]} in ${STATE_BY_CODE[city.state]?.name ?? city.state}.`;
-  if (res && !city.rest && s.cities[`rest-${city.state}`]) return `Wells and farms go outside the big metros: try Rest of ${STATE_BY_CODE[city.state]?.name ?? city.state}.`;
+  if (res && !city.rest && s.cities[`rest-${city.state}`]) return `Wells, mines and farms go outside the big metros: try ${s.cities[`rest-${city.state}`].name}.`;
   if (city.foreign && type === "hq") return "Headquarters stay in the US.";
   if (city.foreign && COUNTRY_BY_ID[city.state]?.trade === "rival" && (type === "fab" || type === "design" || type === "datacenter" || type === "rnd")) return `US export controls bar advanced chip, AI and research work in ${city.name}.`;
   if (city.fossilBan && FOSSIL.includes(type)) return `${city.name} bans new fossil-fuel projects.`;
@@ -230,6 +237,42 @@ export function spreadInState(s: GameState, st: string, type: BuildingTypeId, le
   return out;
 }
 
+/** Which named regions sit on which resources (for placing wells, mines and farms). */
+const RESOURCE_HINT: Partial<Record<string, RegExp>> = {
+  oil: /Permian|Bakken|Basin|West Texas|Panhandle|Uinta|Four Corners|Acadiana|Kenai|Interior|Western Kansas|Western Oklahoma|Central Valley/,
+  gas: /Coal|Northeast Pennsylvania|Southwest Coal|Northern Panhandle|Appalachian|Green Country|East Texas|North Louisiana|Permian/,
+  coal: /Coal|Powder River|Appalachian|Eastern Kentucky|Little Egypt|Southern Indiana/,
+  iron: /Iron Range|Northern Michigan/,
+  copper: /Copper|Northern Arizona|Western Montana|Southern Utah/,
+  farm: /Farm|Central Valley|Plains|Delta|Heartland|Downstate|Eastern Iowa|Western Iowa|Magic Valley|East River|Central|South Georgia|Eastern Carolina/,
+  ranch: /Plains|West|Panhandle|Central|Hill Country|Ozark|Eastern Montana|West River/,
+  timber: /Woods|Piney|Mountains|Willamette|Olympic|North|Pine|Highlands/,
+  cotton: /South Plains|Panhandle|Delta|South Georgia|Black Belt/,
+  dairy: /Fox Valley|Central Valley|Magic Valley|North Country|Western & Northern Wisconsin|Southern Minnesota|Hudson/,
+};
+
+/** Give every pop a home metro or region (and so a county), where its kind of work and community concentrate. */
+export function assignHomes(s: GameState) {
+  const URBAN = new Set(["chinese", "indian", "korean", "vietnamese", "filipino", "asian_other"]);
+  for (const p of s.pops) {
+    const cs = citiesInState(s, p.state);
+    if (!cs.length) continue;
+    let tot = 0;
+    const w = cs.map((c) => {
+      let x = s.labor[laborKey(c.id, p.job)]?.workforce ?? c.share;
+      if (URBAN.has(p.culture)) x *= c.rest ? 0.4 : 1.6;
+      if ((p.culture === "white" || p.culture === "native") && c.rest) x *= 1.25;
+      tot += x;
+      return x;
+    });
+    let r = rand(s) * tot;
+    let pick = cs[0];
+    for (let i = 0; i < cs.length; i++) { r -= w[i]; if (r <= 0) { pick = cs[i]; break; } }
+    p.area = pick.id;
+    p.county = pick.county;
+  }
+}
+
 /** Pick a sensible city in a state for a building (used to place the starting companies). */
 export function defaultCity(s: GameState, st: string, type: BuildingTypeId): string {
   const cs = citiesInState(s, st);
@@ -238,7 +281,7 @@ export function defaultCity(s: GameState, st: string, type: BuildingTypeId): str
   for (const c of cs) {
     let score: number;
     if (type === "datacenter") score = (c.flags.includes("dc+") ? 2 : 0) + c.gridMW / 2000 - c.powerIdx;
-    else if (type === "power" || def.resource) score = c.rest ? 5 : -c.share;
+    else if (type === "power" || def.resource) score = (c.rest ? 5 : -c.share) + (def.resource && c.rest && RESOURCE_HINT[def.resource]?.test(c.name) ? 3 : 0);
     else if (type === "refinery" || type === "chemicals") score = (c.flags.includes("port") ? 3 : 0) + c.mfg - c.col;
     else if (def.industry === "office" || type === "design" || type === "rnd" || type === "hq") score = c.tech * Math.pow(c.share, 0.3);
     else score = c.mfg * Math.pow(c.share, 0.2) / c.col;
@@ -391,5 +434,5 @@ export function buildingsInCity(s: GameState, cityId: string): { c: Company; b: 
 export function cityLabel(s: GameState, cityId: string): string {
   const c = s.cities[cityId];
   if (!c) return cityId;
-  return c.rest || c.foreign ? c.name : `${c.name}, ${c.state}`;
+  return c.foreign ? c.name : `${c.name}, ${c.state}`;
 }

@@ -54,7 +54,7 @@ export function Elections() {
   return (
     <div>
       <div className="grid2">
-        <Panel title={`The ${year} elections`} right={`Election day ${dayLabel(p.nextElectionDay)}`}>
+        <Panel help="elections" title={`The ${year} elections`} right={`Election day ${dayLabel(p.nextElectionDay)}`}>
           <table className="t"><tbody>
             <tr><td>Generic ballot</td><td>Democrats {fmtPct(p.poll, 1)}, Republicans {fmtPct(1 - p.poll, 1)}</td></tr>
             <tr><td>House forecast</td><td><span className="member-d">{Math.round(proj.house.D)} D</span>, <span className="member-r">{435 - Math.round(proj.house.D)} R</span> expected (218 for a majority)</td></tr>
@@ -62,12 +62,9 @@ export function Elections() {
             <tr><td>Next primary</td><td>{nextPrimary ? `${STATE_BY_CODE[nextPrimary.state]?.name}, ${dayLabel(nextPrimary.primaryDay)}` : "Primaries are over; general election season"}</td></tr>
             {p.lastResult && <tr><td>Last result</td><td>{dayLabel(p.lastResult.day)}: House {p.lastResult.houseD}–{p.lastResult.houseR}, Senate {p.lastResult.senateD}–{p.lastResult.senateR}{p.lastResult.ecD ? `, Electoral College ${p.lastResult.ecD}–${p.lastResult.ecR}` : ""}</td></tr>}
           </tbody></table>
-          <p className="hint">Every House seat uses its district's real 2024 presidential result as its lean (2024 lines; the 2025–26 redistricting isn't modeled). Incumbents carry their personal vote: how far they ran ahead of or behind the top of the ticket in 2024. Senate seats use the state's 2024 result. Ratings move with the national mood and PAC money.</p>
         </Panel>
-        <Panel title="How races work">
-          <p className="hint" style={{ marginTop: 0 }}>Primaries run on each state's calendar. Incumbents rarely lose them, but moderates and Blue Dogs in deep-red or deep-blue seats are vulnerable, and money spent against an incumbent in the other column makes an upset likelier. Open seats nominate a candidate whose faction fits the district.</p>
-          <p className="hint">On election night each race lands near its projection, plus a shared national polling miss and race-level noise. Winners you backed remember it: they lean your way on close votes.</p>
-          {me.pac ? <p className="hint">{me.pac.name} has {fmtMoney(me.pac.funds)} on hand. Each click below spends {fmtMoney(unit)} in a {chamber === "senate" ? "Senate" : "House"} race.</p> : <p className="hint">Register a PAC on the Politics tab to spend in these races.</p>}
+        <Panel help="elections" title="Your PAC">
+          {me.pac ? <p className="muted">{me.pac.name}: {fmtMoney(me.pac.funds)} on hand; {fmtMoney(unit)} per click.</p> : <p className="empty">No PAC yet. Register one on the Politics tab.</p>}
         </Panel>
       </div>
       <div style={{ height: 16 }} />

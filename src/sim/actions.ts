@@ -252,7 +252,9 @@ export function processDeals(s: GameState) {
       buyer.marketCap += d.price;
     }
     mergeInto(s, buyer, target);
-    log(s, `${buyer.name} completed its ${fmtMoney(d.price)} acquisition of ${target.name}.`, "deal", buyer.id, buyer.isPlayer || target.isPlayer ? "deal" : undefined);
+    const ceo = (c: typeof buyer) => c.leadership?.execs.find((e) => e.role === "ceo")?.name;
+    log(s, `${buyer.name} completed its ${fmtMoney(d.price)} acquisition of ${target.name}.`, "deal", buyer.id, buyer.isPlayer || target.isPlayer ? "deal" : undefined,
+      buyer.isPlayer ? { cert: { buyer: buyer.name, target: target.name, price: d.price, buyerCeo: ceo(buyer), targetCeo: ceo(target) } } : undefined);
   }
 }
 

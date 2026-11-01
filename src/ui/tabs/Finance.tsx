@@ -53,30 +53,28 @@ export function Finance() {
             </tbody>
           </table>
         </Panel>
-        <Panel title="Earnings">
+        <Panel help="earnings" title="Earnings">
           {me.lastEarnings ? (
             <p style={{ margin: 0 }}>
               {me.lastEarnings.quarter}: revenue {fmtMoney(me.lastEarnings.revenue)} vs {fmtMoney(me.lastEarnings.expected)} expected:{" "}
               <strong className={me.lastEarnings.surprise >= 0 ? "pos" : "neg"}>{me.lastEarnings.surprise >= 0 ? "beat" : "miss"} by {fmtPct(Math.abs(me.lastEarnings.surprise))}</strong>
             </p>
           ) : <div className="hint">You report your first quarter once you have enough history.</div>}
-          <p className="hint">Wall Street expects revenue to keep growing at its recent pace. Beating estimates lifts the stock and investor sentiment; missing knocks them down, up to 8% at a time.</p>
           <div className="row">
             Dividend <input type="range" min={0} max={0.8} step={0.05} value={me.dividendPct} onChange={(e) => act(setDividend(s, me.id, Number(e.target.value)))} style={{ width: 200 }} />
             <strong>{fmtPct(me.dividendPct, 0)}</strong> of quarterly profit
           </div>
           <div className="hint">Trailing dividend yield: {fmtPct(ttm(me, "dividends") / Math.max(1, me.marketCap), 2)}</div>
         </Panel>
-        <Panel title="Marketing">
+        <Panel help="marketing" title="Marketing">
           <div className="row">
             Budget <input type="range" min={0} max={0.2} step={0.005} value={me.marketingPct} onChange={(e) => act(setMarketing(s, me.id, Number(e.target.value)))} style={{ width: 220 }} />
             <strong>{fmtPct(me.marketingPct, 1)}</strong> of revenue
           </div>
-          <p className="hint">Marketing multiplies brand awareness, so buyers choose you over rivals at the same price. Diminishing returns: 4% is typical, 15% is a startup land grab.</p>
         </Panel>
       </div>
       <div>
-        <Panel title="Balance sheet & credit">
+        <Panel help="credit" title="Balance sheet & credit">
           <table className="t"><tbody>
             <tr><td>Cash</td><td className="num">{fmtMoney(me.cash)}</td></tr>
             <tr><td>Plants & equipment (book)</td><td className="num">{fmtMoney(me.ppe)}</td></tr>
@@ -88,9 +86,8 @@ export function Finance() {
             <tr><td>Share price</td><td className="num">{fmtMoney(me.marketCap / me.shares, 2)}</td></tr>
             <tr><td>Investor sentiment</td><td className="num">{me.hype.toFixed(2)}×</td></tr>
           </tbody></table>
-          <p className="hint">If cash runs out, the company draws on its credit line automatically. Debt above the credit limit for six months means default. The limit is 3.5× EBITDA, plus 40% of plant value and 10% of market cap.</p>
         </Panel>
-        <Panel title="Capital markets">
+        <Panel help="shares" title="Capital markets">
           <div className="row">
             Amount <input type="number" min={1} value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value) || 1))} /> {unit === 1e9 ? "billion" : "million"}
           </div>
@@ -106,7 +103,6 @@ export function Finance() {
               </button>
             ))}
           </div>
-          <p className="hint">Issuing shares raises cash without debt, but dilutes your ownership and slightly dents investor sentiment.</p>
         </Panel>
       </div>
     </div>

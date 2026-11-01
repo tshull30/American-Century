@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { offer, build } from "../src/sim/actions";
+import { boardOdds } from "../src/sim/deals";
 import { STATES } from "../src/sim/data/states";
 import { newGame, player, tick, ttm } from "../src/sim/engine";
 import { generatePops, rake } from "../src/sim/pops";
@@ -61,10 +62,10 @@ describe("simulation", () => {
   it("builds, finishes construction and staffs new levels", () => {
     const s = newGame({ kind: "startup", name: "T", ticker: "T", good: "software", hq: "TX" }, 1);
     const me = player(s);
-    expect(build(s, me.id, "software", "sf", 2).ok).toBe(true);
+    expect(build(s, me.id, "software", "sf", 1).ok).toBe(true);
     months(s, 5);
     const b = me.buildings.find((x) => x.type === "software" && x.city === "sf")!;
-    expect(b.level).toBe(2);
+    expect(b.level).toBe(1);
     expect(b.staffRatio).toBeGreaterThan(0.9);
   });
 
@@ -72,8 +73,8 @@ describe("simulation", () => {
     const s = newGame({ kind: "incumbent", key: "windward" }, 2);
     const me = player(s);
     const lattice = s.companies.find((c) => c.kind === "startup" && !c.isPlayer && c.marketCap < 1e9)!;
-    const low = offer(s, me.id, lattice.id, 0.05, "cash");
-    expect(low.ok).toBe(false);
+    expect(boardOdds(s, me, lattice, 0.05)).toBeLessThan(boardOdds(s, me, lattice, 0.9));
+    expect(boardOdds(s, me, lattice, 0.0)).toBeLessThan(0.5);
     let r = offer(s, me.id, lattice.id, 0.9, "cash");
     for (let i = 0; i < 5 && !r.ok; i++) r = offer(s, me.id, lattice.id, 0.9, "cash");
     expect(r.ok).toBe(true);

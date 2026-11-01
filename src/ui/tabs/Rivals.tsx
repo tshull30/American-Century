@@ -43,7 +43,7 @@ export function Rivals() {
               { key: "b", label: "Buyer", render: (d) => s.companies.find((c) => c.id === d.buyerId)?.name },
               { key: "t", label: "Target", render: (d) => s.companies.find((c) => c.id === d.targetId)?.name },
               { key: "p", label: "Price", num: true, render: (d) => fmtMoney(d.price) },
-              { key: "st", label: "Stage", render: (d) => (d.stage === "second_request" ? "In-depth antitrust review" : "Closing") },
+              { key: "st", label: "Stage", render: (d) => (d.stage === "second_request" ? <span className="deal-stamp">Second request</span> : <span className="deal-stamp ok">Cleared to close</span>) },
               { key: "e", label: "Expected", render: (d) => dayLabel(s.day + d.daysLeft) },
             ]} />
           </Panel>
@@ -62,8 +62,8 @@ export function Rivals() {
             {target.id !== me.id && <AcquireBox target={target} onDone={() => setTarget(null)} />}
           </Panel>
         ) : (
-          <Panel title="Mergers and acquisitions">
-            <p className="hint">Click a company to make an offer. Its board wants a premium (more for startups, hot stocks and established companies), regulators may open an in-depth review, and deals take months to close. You get every plant, worker, product, brand and technology the target owns, with its cash and its debt.</p>
+          <Panel help="acquisitions" title="Mergers and acquisitions">
+            <p className="empty">Pick a company in the table to open its file and make an offer.</p>
           </Panel>
         )}
       </div>
@@ -98,9 +98,7 @@ export function Rivals() {
         <div className="row" style={{ marginTop: 8 }}>
           <button className="primary" disabled={!!block} onClick={() => { const r = offer(s, me.id, target.id, premium, payment); act(r); if (r.ok) onDone(); }}>Make the offer</button>
         </div>
-        <div className="hint" style={{ marginTop: 6 }}>
-          Cash and credit available: {fmtMoney(liquidity(me))}; cash deals must still be fundable at closing. Stock deals can't issue more than 30% new shares. Big buyers draw far more scrutiny, and so does a Congress full of populists and progressives.
-        </div>
+        <div className="muted" style={{ marginTop: 6 }}>Cash and credit available: {fmtMoney(liquidity(me))}</div>
       </div>
     );
   }

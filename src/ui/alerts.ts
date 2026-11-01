@@ -17,6 +17,8 @@ export interface Alert {
 /** Things that need the player's attention, most urgent first. */
 export function computeAlerts(s: GameState, me: Company): Alert[] {
   const out: Alert[] = [];
+  const pending = (s.decisions ?? []).filter((d) => d.companyId === me.id);
+  if (pending.length) out.push({ tone: "bad", tab: "front", text: `${pending.length} decision${pending.length > 1 ? "s" : ""} waiting on you: ${pending[0].headline}` });
   const last = me.history[me.history.length - 1];
   if (me.distressMonths > 0) out.push({ tone: "bad", tab: "finance", text: `Net debt is over your credit limit: ${6 - me.distressMonths} month${me.distressMonths === 5 ? "" : "s"} until default` });
   if (last && last.netIncome < 0 && me.cash < -last.netIncome * 6) out.push({ tone: "bad", tab: "finance", text: `Under six months of cash at the current burn (${fmtMoney(-last.netIncome)} a month)` });

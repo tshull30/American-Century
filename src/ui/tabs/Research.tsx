@@ -11,12 +11,7 @@ export function Research() {
   const labs = me.buildings.filter((b) => b.type === "rnd").reduce((a, b) => a + b.level, 0);
   return (
     <div>
-      <Panel title="Research" right={`${fmtNum(pts)} points / month from ${fmtNum(labs)} R&D lab levels`}>
-        <p className="hint">
-          Every tech level above the market baseline makes your products about 8% better, and buyers weigh quality squared.
-          The rest of the market improves by one level a year, so standing still means falling behind. Bigger product lines
-          cost more research per level, and every level of lead costs 40% more. Build R&D labs on the Production tab.
-        </p>
+      <Panel help="research" title="Research" right={`${fmtNum(pts)} points / month from ${fmtNum(labs)} R&D lab levels`}>
         <Table
           rows={TECHS}
           rowKey={(t) => t.id}

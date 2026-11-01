@@ -467,6 +467,42 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     produce: [{ good: "crude_oil", annualRevenue: 350e6, method: "shale", states: { ND: 1 } }],
     rndIntensity: 0, rndLevels: 1, rndStates: { ND: 1 }, marketingPct: 0.002, wagePolicy: 1.05, tier: "startup",
   },
+  {
+    key: "redbrick", name: "Redbrick Burger Co.", ticker: "RBRK", color: "#a33a2a", inspiredBy: "McDonald's",
+    tagline: "Forty thousand drive-throughs and a breakfast menu that never changes.",
+    hq: "IL", marketCap: 210e9, cash: 4e9, debt: 50e9, shares: 0.72e9,
+    priceMult: { meals_fast: 1.0 },
+    brand: { meals_fast: 2.6 },
+    techEdge: { consumer: 1 },
+    produce: [{ good: "meals_fast", annualRevenue: 26e9, states: { IL: 0.15, TX: 0.2, CA: 0.2, FL: 0.15, OH: 0.15, GA: 0.15 } }],
+    rndIntensity: 0.002, rndStates: { IL: 1 }, marketingPct: 0.05, wagePolicy: 0.98, tier: "incumbent",
+  },
+  {
+    key: "roadhouse", name: "Lone Star Grill Group", ticker: "LSGG", color: "#7a4a2a", inspiredBy: "Darden & Texas Roadhouse",
+    tagline: "Steaks, bottomless bread and a waitlist every Friday night.",
+    hq: "TX", marketCap: 22e9, cash: 0.5e9, debt: 4e9, shares: 0.12e9,
+    priceMult: { meals_casual: 1.0, meals_fine: 1.0 },
+    brand: { meals_casual: 1.8, meals_fine: 1.2 },
+    techEdge: { consumer: 0.5 },
+    produce: [
+      { good: "meals_casual", annualRevenue: 11e9, method: "casual", states: { TX: 0.3, FL: 0.2, GA: 0.15, OH: 0.15, NC: 0.2 } },
+      { good: "meals_fine", annualRevenue: 1.5e9, method: "fine", states: { TX: 0.4, NY: 0.3, IL: 0.3 } },
+    ],
+    rndIntensity: 0.001, rndStates: { TX: 1 }, marketingPct: 0.03, wagePolicy: 1.0, tier: "challenger",
+  },
+  {
+    key: "whitmore", name: "Whitmore & Lane", ticker: "WMLN", color: "#3a3a5a", inspiredBy: "Ralph Lauren & Tapestry",
+    tagline: "Polo shirts, leather handbags and an idea of old-money America.",
+    hq: "NY", marketCap: 18e9, cash: 2e9, debt: 1.5e9, shares: 0.065e9,
+    priceMult: { luxury_fashion: 1.1, apparel: 1.4 },
+    brand: { luxury_fashion: 2.2, apparel: 1.6 },
+    techEdge: { consumer: 1.5 },
+    produce: [
+      { good: "luxury_fashion", annualRevenue: 5e9, method: "luxury", states: { NY: 0.4, NJ: 0.2, CHN: 0.2, VNM: 0.2 } },
+      { good: "apparel", annualRevenue: 2e9, states: { VNM: 0.5, NC: 0.5 } },
+    ],
+    rndIntensity: 0.005, rndStates: { NY: 1 }, marketingPct: 0.08, wagePolicy: 1.05, tier: "challenger",
+  },
 ];
 
 /** Name parts for startups founded during the game. */

@@ -201,7 +201,7 @@ export function Pops() {
             initialSort="w"
             maxRows={400}
             cols={[
-              { key: "l", label: "Pop", render: (p) => <><span className="swatch" style={{ background: CULTURE_BY_ID[p.culture].color }} /> {CULTURE_BY_ID[p.culture].adjective} {JOB_BY_ID[p.job].plural.toLowerCase()}{sel ? "" : ` from ${STATE_BY_CODE[p.state].name}`}</>, sort: (p) => p.culture + p.job },
+              { key: "l", label: "Pop", render: (p) => <><span className="swatch" style={{ background: CULTURE_BY_ID[p.culture].color }} /> {CULTURE_BY_ID[p.culture].adjective} {JOB_BY_ID[p.job].plural.toLowerCase()} from {p.county ?? ""}{sel ? "" : `${p.county ? ", " : ""}${STATE_BY_CODE[p.state].name}`}</>, sort: (p) => p.culture + p.job },
               { key: "w", label: "Workers", num: true, render: (p) => fmtNum(p.workers), sort: (p) => p.workers },
               { key: "d", label: "Dependents", num: true, render: (p) => fmtNum(p.dependents), sort: (p) => p.dependents },
               { key: "sol", label: "Living std.", num: true, title: "Standard of living (100 = 2026 average). Hover for need satisfaction.", render: (p) => <span title={NEEDS.map((n, i) => `${n.name}: ${(p.sat[i] ?? 0).toFixed(2)}`).join("\n")}>{p.sol} <span className="muted">{solTier(p.sol)}</span></span>, sort: (p) => p.sol },
@@ -260,7 +260,7 @@ function Delegation({ code }: { code: string }) {
     { key: "a", label: "", render: (m: Politician) => <PacButtons m={m} /> },
   ];
   return (
-    <Panel title={`${st.name} in Congress`} right={`${reps.length + vac.length} House seats`}>
+    <Panel help="pac" title={`${st.name} in Congress`} right={`${reps.length + vac.length} House seats`}>
       <div className="scroll" style={{ maxHeight: 380 }}>
         <Table rows={[...senators, ...reps]} rowKey={(m) => m.id} cols={cols} />
       </div>
@@ -271,7 +271,6 @@ function Delegation({ code }: { code: string }) {
           {code !== "NE" && <tr><td>State house</td><td>{legBar(leg.houseD, leg.houseR)}</td></tr>}
         </tbody></table>
       )}
-      {!me.pac && <p className="hint">Register a PAC on the Politics tab to back or oppose these members.</p>}
     </Panel>
   );
 }
@@ -283,7 +282,7 @@ function CityPanel({ id, onClose }: { id: string; onClose: () => void }) {
   const here = buildingsInCity(s, id);
   const fans = s.companies.filter((x) => x.alive && c.opinion[x.id] !== undefined && here.some((h) => h.c.id === x.id)).sort((a, b) => (c.opinion[b.id] ?? 0) - (c.opinion[a.id] ?? 0));
   return (
-    <Panel title={cityLabel(s, id)} right={<button className="small" onClick={onClose}>Close</button>}>
+    <Panel help="cities" title={cityLabel(s, id)} right={<button className="small" onClick={onClose}>Close</button>}>
       <table className="t wrap"><tbody>
         <tr><td>Population</td><td className="num">{fmtNum(c.share * STATE_BY_CODE[c.state].population)}</td></tr>
         <tr><td>Residents</td><td className="num">{cityPolitics(c)}</td></tr>
@@ -308,7 +307,6 @@ function CityPanel({ id, onClose }: { id: string; onClose: () => void }) {
           ]} />
         </>
       )}
-      <p className="hint">What residents believe matters: left-leaning towns reward companies that lobby and give like Democrats and that build solar and EVs, and punish oil and gas; right-leaning towns like factories and fields and companies on their side; libertarian towns dislike subsidy hunters. Locals also warm to employers who hire many of them and pay well, and to HQ perks like plazas and childcare. They sour on layoffs, price gouging, and data centers that strain the grid or the water supply. Hostile towns slow your permits and eventually refuse them.</p>
     </Panel>
   );
 }

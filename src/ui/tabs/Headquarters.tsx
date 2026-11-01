@@ -63,7 +63,7 @@ export function Headquarters() {
   return (
     <div className="grid2">
       <div>
-        <Panel title="Headquarters" right={cityLabel(s, me.hqSite.city)}>
+        <Panel help="headquarters" title="Headquarters" right={cityLabel(s, me.hqSite.city)}>
           <HqDrawing c={me} label={cityLabel(s, me.hqSite.city)} />
           <table className="t" style={{ marginTop: 10 }}><tbody>
             <tr><td>Form</td><td>{form.name}</td></tr>
@@ -72,7 +72,6 @@ export function Headquarters() {
             <tr><td>Locals' opinion</td><td>{fmtPct(opinionOf(s, me.hqSite.city, me), 0)}</td></tr>
             <tr><td>State corporate tax</td><td>{me.hq}: {STATES.find((x) => x.code === me.hq)?.corpTax ?? 0}%</td></tr>
           </tbody></table>
-          <p className="hint">Headquarters houses executives, finance, legal and HR. Each level supports 15 levels of plants and offices; add levels on the Production tab. The form and amenities here shape who wants to work for you and how your city feels about you.</p>
         </Panel>
         <Panel title="Rebuild">
           <div className="row">
@@ -87,17 +86,16 @@ export function Headquarters() {
           </div>
           <p className="hint">{form.blurb}</p>
         </Panel>
-        <Panel title="Relocate">
+        <Panel help="headquarters" title="Relocate">
           <div className="row">
             <select value={dest} onChange={(e) => setDest(e.target.value)} aria-label="New HQ city">
               {STATES.map((st) => <optgroup key={st.code} label={st.name}>{citiesInState(s, st.code).filter((c) => !c.rest).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</optgroup>)}
             </select>
             <button disabled={dest === me.hqSite.city} onClick={() => ask(`Move headquarters to ${cityLabel(s, dest)} for ${fmtMoney(moveCost)}? Your old city won't forgive you quickly.`, () => act(relocateHq(s, me.id, dest)))}>Move for {fmtMoney(moveCost)}</button>
           </div>
-          <p className="hint">Moving changes which state taxes your profits and gives you a honeymoon in the new city. Staff who don't move are laid off and rehired there.</p>
         </Panel>
       </div>
-      <Panel title="Amenities" right={`${me.hqSite.amenities.length} of ${form.slots} slots used`}>
+      <Panel help="headquarters" title="Amenities" right={`${me.hqSite.amenities.length} of ${form.slots} slots used`}>
         <Table
           rows={AMENITIES}
           rowKey={(a) => a.id}
@@ -112,7 +110,6 @@ export function Headquarters() {
             } },
           ]}
         />
-        <p className="hint">Amenity costs scale with the size of your headquarters. Closing one recovers nothing.</p>
       </Panel>
     </div>
   );

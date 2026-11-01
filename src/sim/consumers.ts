@@ -83,6 +83,7 @@ export function updateConsumers(s: GameState) {
     priceIndex[n.id] = pi;
   }
 
+  const tilted = NEEDS.map((n) => n.goods.some((g) => GOOD_BY_ID[g].tilt));
   const order = s.pops.map((_, i) => i).sort((a, b) => inc[a] - inc[b]);
   const totalPeople = s.pops.reduce((a, p) => a + p.workers + p.dependents, 0);
   const quint: { sat: number[]; n: number }[] = Array.from({ length: 5 }, () => ({ sat: NEEDS.map(() => 0), n: 0 }));
@@ -101,7 +102,13 @@ export function updateConsumers(s: GameState) {
       const perPerson = inc[i] * share * rel * macro;
       const spend = perPerson * people;
       spending[n.id] = (spending[n.id] ?? 0) + spend;
-      for (const g of n.goods) usDemand[g] = (usDemand[g] ?? 0) + (spend * split[g]!) / GOOD_BY_ID[g].refPrice;
+      if (tilted[k]) {
+        // Segments: richer pops lean toward premium goods within the need, poorer ones toward budget goods.
+        const r = inc[i] / avg;
+        let tw = 0;
+        for (const g of n.goods) tw += split[g]! * Math.pow(r, GOOD_BY_ID[g].tilt ?? 0);
+        for (const g of n.goods) usDemand[g] = (usDemand[g] ?? 0) + (spend * split[g]! * Math.pow(r, GOOD_BY_ID[g].tilt ?? 0)) / tw / GOOD_BY_ID[g].refPrice;
+      } else for (const g of n.goods) usDemand[g] = (usDemand[g] ?? 0) + (spend * split[g]!) / GOOD_BY_ID[g].refPrice;
       const standard = share * avg;
       const sat = clamp(perPerson / (priceIndex[n.id]! * standard), 0, 2);
       quint[q].sat[k] += sat * people;

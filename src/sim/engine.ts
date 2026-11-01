@@ -12,23 +12,25 @@ import {
   maybeHoldElection, minWageFloor, subsidyRate, unionPressure, unionWageMult, updatePolitics,
 } from "./politics";
 import { generatePops } from "./pops";
-import { cityIncentive, cityLabel, computeStateWages, initCities, defaultCity, spreadInState, distributeWorkforce, dcPowerCost, permitMult, setHqOpinionHook, updateCities } from "./geo";
+import { assignHomes, cityIncentive, cityLabel, computeStateWages, initCities, defaultCity, spreadInState, distributeWorkforce, dcPowerCost, permitMult, setHqOpinionHook, updateCities } from "./geo";
 import { hqAdminMult, hqCityOpinion, hqHireRateMult, hqHiringMult, hqImageBonus, hqReputationMult, hqResearchMult, hqUpkeep, HQ_FORMS } from "./hq";
 import { updateJobOpinion, updatePopulation } from "./population";
 import { initElectionData, runPrimaries, updateProjections } from "./elections";
 import { homeCostShare, initWorld, updateWorld } from "./intl";
+import { rollStories } from "./stories";
+import { headlineFor } from "./headlines";
 import { initLeadership, leadEffects, leadershipCost, updateLeadership } from "./leadership";
 import { complexityMult, conglomerateDiscount, industryMult, learningOverhead, noteEntry, sectorLevels, siteMult, siteMultFor, updateKnowhow } from "./sectors";
 import { RESOURCES, resourceMult, type ResourceId } from "./data/resources";
 import { processDeals } from "./actions";
 import { tierOf } from "./tiers";
-import type { Building, Company, EventTag, GameState, GoodMap, MarketSnapshot, MonthReport } from "./types";
+import type { Building, Company, EventTag, GameEvent, GameState, GoodMap, MarketSnapshot, MonthReport } from "./types";
 import {
   clamp, dateLabel, dayLabel, dayOfMonthStart, DAYS_PER_MONTH, fmtMoney, fmtPct, laborKey, monthOfDay, pick, rand, randNormal, shuffle,
 } from "./util";
 import { runAI, autoPrice, maintainHQ } from "./ai";
 
-export const SAVE_VERSION = 6;
+export const SAVE_VERSION = 7;
 export const BASELINE_TECH_START = 10;
 const DT = 1 / DAYS_PER_MONTH;
 const DEPRECIATION = 0.006;
@@ -65,6 +67,7 @@ export function newGame(choice: PlayerChoice, seed = Math.floor(Math.random() * 
   s.politics = initPolitics(s);
   initElectionData(s);
   refreshWorkforce(s);
+  assignHomes(s);
   for (const cell of Object.values(s.labor)) cell.wage = JOB_BY_ID[cell.job].baseWage * (s.cities[cell.city]?.col ?? 1);
   computeStateWages(s);
   for (const p of s.pops) s.statePopStart[p.state] = (s.statePopStart[p.state] ?? 0) + p.workers + p.dependents;
@@ -659,7 +662,7 @@ function monthly(s: GameState) {
     if (!warmup) log(s, t, k ?? "info", undefined, tag ?? (/^Recession/.test(t) ? "macro" : undefined));
   };
   updateMacro(s, say);
-  updateWorldEvents(s, say);
+  updateWorldEvents(s, (t, k, extra) => { if (!warmup) log(s, t, k ?? "info", undefined, extra ? "macro" : undefined, extra); });
   if (s.month % 12 === 0) s.immigrantsThisYear = 0;
   if (!warmup) { updatePopulation(s); updateWorld(s); }
   refreshWorkforce(s);
@@ -678,6 +681,7 @@ function monthly(s: GameState) {
   updateOthersPrices(s);
   for (const c of alive) updateBrand(s, c);
   updateCities(s, say);
+  if (!warmup) rollStories(s, (c) => (t, k, extra) => log(s, t, k, c.id, c.isPlayer ? (extra?.headline && s.decisions?.some((d) => d.headline === extra.headline) ? "decision" : "news") : undefined, extra));
   const peer = peerReturns(alive);
   for (const c of alive) {
     updateJobOpinion(s, c);
@@ -755,7 +759,7 @@ function produce(s: GameState, c: Company, acc: Map<number, DayAcc>, alive: Comp
     a.cost += running;
     b.profitMTD -= running;
     employees += haveSum;
-    const scale = b.level * b.efficiency * siteMult(b, s.worldEvents);
+    const scale = b.level * b.efficiency * siteMult(b, s.worldEvents) * (b.disruptedUntil && b.disruptedUntil > s.day ? 0.5 : 1);
     plans.push({ b, m, scale });
     for (const g in m.output) {
       const out = m.output[g as GoodId]! * scale * DT;
@@ -1126,8 +1130,10 @@ function updateBrand(s: GameState, c: Company) {
 
 // ---------------------------------------------------------------- events
 
-export function log(s: GameState, text: string, kind: "info" | "good" | "bad" | "deal" | "politics" = "info", companyId?: number, tag?: EventTag) {
-  s.events.push({ day: s.day, text, kind, companyId, ...(tag ? { tag } : {}) });
+export function log(s: GameState, text: string, kind: "info" | "good" | "bad" | "deal" | "politics" = "info", companyId?: number, tag?: EventTag,
+  extra?: Pick<GameEvent, "headline" | "deck" | "cert">) {
+  const auto = extra?.headline ? undefined : headlineFor(text, tag);
+  s.events.push({ day: s.day, text, kind, companyId, ...(tag ? { tag } : {}), ...(auto ?? {}), ...(extra ?? {}) });
   if (s.events.length > 400) s.events.shift();
 }
 
@@ -1146,7 +1152,7 @@ function maybeSpawnStartup(s: GameState) {
   if (rand(s) > 1 / 7) return;
   const goods: GoodId[] = ["software", "software", "data_platforms", "cloud", "evs", "batteries", "chips", "ai_accelerators", "smartphones",
     "digital_ads", "groceries", "apparel", "streaming", "pharmaceuticals", "pharmaceuticals", "electricity",
-    "crude_oil", "natural_gas", "steel", "crops", "solar_panels", "household_goods", "video_games", "meals", "beverages", "homes",
+    "crude_oil", "natural_gas", "steel", "crops", "solar_panels", "household_goods", "video_games", "meals_fast", "meals_casual", "beverages", "homes",
     "medical_devices", "lithium", "rare_earths", "furniture", "logistics", "defense"];
   const good = pick(s, goods);
   const techy = ["software", "data_platforms", "cloud", "ai_accelerators", "digital_ads", "streaming", "pharmaceuticals"].includes(good);

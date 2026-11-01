@@ -107,6 +107,6 @@ export function siteMultFor(type: BuildingTypeId, method: string, state: string)
 
 export function siteMult(b: Building, events?: WorldEvent[]): number {
   let m = siteMultFor(b.type, b.method, b.state);
-  if (events) for (const e of events) m *= e.countryOutput?.[b.state] ?? 1;
+  if (events) for (const e of events) if (!e.siteTypes || e.siteTypes.includes(b.type)) m *= e.countryOutput?.[b.state] ?? 1;
   return m;
 }

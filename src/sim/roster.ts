@@ -19,7 +19,7 @@ function mulberry(seed: number) {
 }
 
 /** Hand-written companies that almost always appear (the household names). */
-const ANCHORS = new Set(["orchard", "windward", "verdant", "kestrel", "summit", "atlas", "lumiverse", "gulfstar", "cascade", "motorcity"]);
+const ANCHORS = new Set(["orchard", "windward", "verdant", "kestrel", "summit", "atlas", "lumiverse", "gulfstar", "cascade", "motorcity", "redbrick"]);
 
 const PREFIX = [
   "Aster", "Basalt", "Cobalt", "Delta", "Ember", "Fathom", "Granite", "Halcyon", "Iris", "Juniper", "Keystone", "Lumen", "Meridian", "Nimbus", "Onyx",
@@ -43,7 +43,7 @@ const SUFFIX: Partial<Record<GoodId, string[]>> = {
   aluminum: ["Aluminum", "Alloys"], lumber: ["Lumber", "Wood Products"], paper: ["Paper", "Packaging"], textiles: ["Mills", "Textiles"], cement: ["Cement", "Aggregates"],
   fertilizer: ["Nitrogen", "Fertilizer", "Ag Inputs"], auto_parts: ["Components", "Automotive Systems"], displays: ["Display", "Optronics"], meat: ["Meats", "Packing"],
   wind_turbines: ["Wind", "Turbine"], homes: ["Homes", "Builders", "Communities"], furniture: ["Furniture", "Home Furnishings"], appliances: ["Appliance", "Home Systems"],
-  beverages: ["Beverage", "Brewing", "Bottling"], meals: ["Restaurants", "Grill", "Eateries"], video_games: ["Games", "Interactive", "Studios"],
+  beverages: ["Beverage", "Brewing", "Bottling"], meals_fast: ["Burgers", "Chicken", "Tacos"], meals_casual: ["Grill", "Roadhouse", "Kitchen & Bar"], meals_fine: ["Steakhouse", "Restaurant Group", "Hospitality"], luxury_fashion: ["Maison", "Atelier", "Couture"], luxury_cars: ["Motorcars", "Coachworks"], video_games: ["Games", "Interactive", "Studios"],
   aircraft: ["Aerospace", "Aviation"], defense: ["Defense", "Dynamics", "Systems"], medical_devices: ["Medical", "Surgical", "Health"], telecom: ["Wireless", "Telecom"],
   air_travel: ["Airlines", "Air"], logistics: ["Freight", "Logistics", "Express"],
 };
@@ -54,7 +54,7 @@ const PS: Partial<Record<TechId, number>> = {
   extraction: 1.5, materials: 1, agri: 0.8, aero: 1.8, telecom: 2,
 };
 const RND: Partial<Record<TechId, number>> = { software: 0.12, cloud: 0.06, ai: 0.15, semis: 0.12, media: 0.06, devices: 0.05, biotech: 0.15, medtech: 0.08, aero: 0.04, telecom: 0.02 };
-const CONSUMER = new Set(["groceries", "apparel", "household_goods", "smartphones", "computers", "evs", "gas_cars", "streaming", "beverages", "meals", "video_games", "furniture", "appliances", "homes", "telecom", "air_travel", "pharmaceuticals", "medical_devices"]);
+const CONSUMER = new Set(["groceries", "apparel", "household_goods", "smartphones", "computers", "evs", "gas_cars", "streaming", "beverages", "meals_fast", "meals_casual", "meals_fine", "luxury_fashion", "luxury_cars", "video_games", "furniture", "appliances", "homes", "telecom", "air_travel", "pharmaceuticals", "medical_devices"]);
 
 const TAG_SIZE: Record<string, string[]> = {
   startup: ["A venture-backed upstart in {good}.", "Two years old, burning cash, sure it can take on the giants in {good}.", "A scrappy {good} company out of {place}."],

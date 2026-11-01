@@ -11,6 +11,8 @@ export interface GameCtxValue {
   act: (r: Result) => void;
   /** In-page confirmation dialog (browser confirm() is blocked in sandboxed hosts). */
   ask: (message: string, onYes: () => void) => void;
+  /** Open the encyclopedia at a topic. */
+  help: (topic: string) => void;
 }
 
 const sticky = new Map<string, unknown>();
@@ -28,17 +30,18 @@ export function useGame(): GameCtxValue {
   return v;
 }
 
-export function makeCtx(s: GameState, refresh: () => void, toast: (m: string, err?: boolean) => void, ask: GameCtxValue["ask"]): GameCtxValue {
+export function makeCtx(s: GameState, refresh: () => void, toast: (m: string, err?: boolean) => void, ask: GameCtxValue["ask"], help: GameCtxValue["help"]): GameCtxValue {
   return {
-    s, me: player(s), refresh, ask,
+    s, me: player(s), refresh, ask, help,
     act: (r) => { toast(r.message, !r.ok); refresh(); },
   };
 }
 
-export function Panel(p: { title: React.ReactNode; right?: React.ReactNode; children: React.ReactNode; className?: string }) {
+export function Panel(p: { title: React.ReactNode; right?: React.ReactNode; children: React.ReactNode; className?: string; help?: string }) {
+  const ctx = useContext(GameCtx);
   return (
     <section className={`panel ${p.className ?? ""}`}>
-      <h2>{p.title}{p.right && <span className="right">{p.right}</span>}</h2>
+      <h2>{p.title}{p.help && ctx && <button className="help" onClick={() => ctx.help(p.help!)} title="Open the encyclopedia" aria-label="Help">?</button>}{p.right && <span className="right">{p.right}</span>}</h2>
       {p.children}
     </section>
   );
@@ -77,7 +80,7 @@ export interface Column<T> {
 }
 
 /** A sortable table. Click a header to sort; click again to flip. */
-export function Table<T>(p: { rows: T[]; cols: Column<T>[]; rowKey: (r: T) => string | number; rowClass?: (r: T) => string; initialSort?: string; desc?: boolean; maxRows?: number }) {
+export function Table<T>(p: { rows: T[]; cols: Column<T>[]; rowKey: (r: T) => string | number; rowClass?: (r: T) => string; initialSort?: string; desc?: boolean; maxRows?: number; onRowClick?: (r: T) => void }) {
   const [sortKey, setSortKey] = useState<string | undefined>(p.initialSort);
   const [desc, setDesc] = useState(p.desc ?? true);
   const rows = useMemo(() => {
@@ -109,7 +112,7 @@ export function Table<T>(p: { rows: T[]; cols: Column<T>[]; rowKey: (r: T) => st
       </thead>
       <tbody>
         {shown.map((r) => (
-          <tr key={p.rowKey(r)} className={p.rowClass?.(r)}>
+          <tr key={p.rowKey(r)} className={p.rowClass?.(r)} onClick={p.onRowClick ? () => p.onRowClick!(r) : undefined}>
             {p.cols.map((c) => <td key={c.key} className={c.num ? "num" : ""}>{c.render(r)}</td>)}
           </tr>
         ))}

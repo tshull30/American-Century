@@ -173,6 +173,7 @@ export const BUILDINGS: BuildingDef[] = [
       { id: "auto", name: "EV Assembly Line", staff: { assembler: 120, laborer: 30, technician: 40, engineer: 8, manager: 6 }, output: { evs: 300 }, retoolCost: 0.15 },
       { id: "auto_robot", name: "EV Robotic Line", staff: { assembler: 45, laborer: 15, technician: 65, engineer: 16, manager: 6 }, output: { evs: 350 }, retoolCost: 0.5, costMult: 1.3 },
       { id: "gas", name: "Gasoline Line", staff: { assembler: 120, laborer: 30, technician: 35, engineer: 7, manager: 6 }, output: { gas_cars: 330 }, retoolCost: 0.2 },
+      { id: "luxury", name: "Luxury Line", staff: { assembler: 100, technician: 50, engineer: 15, designer: 5, manager: 8 }, output: { luxury_cars: 160 }, costMult: 1.4, retoolCost: 0.5 },
     ],
   },
   {
@@ -203,7 +204,10 @@ export const BUILDINGS: BuildingDef[] = [
   {
     id: "apparel", sector: "consumer", name: "Apparel Factory", short: "Apparel", cost: 10e6, buildTime: 3, usesAdmin: true, industry: "factory",
     description: "Clothing and footwear. Most of the world's apparel is imported, so tariffs matter here.",
-    methods: [{ id: "apparel", name: "Cut & Sew", staff: { assembler: 65, laborer: 10, designer: 8, technician: 8, manager: 4 }, output: { apparel: 45000 } }],
+    methods: [
+      { id: "apparel", name: "Mass Market", staff: { assembler: 65, laborer: 10, designer: 8, technician: 8, manager: 4 }, output: { apparel: 45000 }, retoolCost: 0.3 },
+      { id: "luxury", name: "Luxury Atelier", staff: { assembler: 40, designer: 20, technician: 5, sales: 5, manager: 5 }, output: { luxury_fashion: 6000 }, upkeep: 600_000, costMult: 1.5, retoolCost: 0.5 },
+    ],
   },
   {
     id: "media", sector: "media", name: "Media Studio", short: "Media", cost: 20e6, buildTime: 4, usesAdmin: true, industry: "office",
@@ -448,9 +452,11 @@ export const BUILDINGS: BuildingDef[] = [
   },
   {
     id: "restaurant", sector: "hospitality", name: "Restaurant Chain", short: "Restaurants", cost: 8000000.0, buildTime: 2, usesAdmin: true, industry: "office",
-    description: "A region's worth of restaurants. Service-worker heavy; local minimum wages bite.",
+    description: "A region's worth of restaurants: drive-throughs, a family grill chain or white-tablecloth dining rooms. Service-worker heavy; local minimum wages bite.",
     methods: [
-      { id: "restaurant", name: "Fast Casual", staff: { service: 80, manager: 8, clerk: 4 }, output: { meals: 70000 }, upkeep: 150000 },
+      { id: "fast", name: "Fast Food", staff: { service: 70, manager: 5, clerk: 3 }, output: { meals_fast: 110000 }, upkeep: 150000, retoolCost: 0.3 },
+      { id: "casual", name: "Casual Dining", staff: { service: 85, manager: 6, clerk: 4 }, output: { meals_casual: 50000 }, upkeep: 220000, retoolCost: 0.4, costMult: 1.3 },
+      { id: "fine", name: "Fine Dining", staff: { service: 80, designer: 4, professional: 6, manager: 6 }, output: { meals_fine: 14000 }, upkeep: 300000, retoolCost: 0.6, costMult: 1.8 },
     ],
   },
   {

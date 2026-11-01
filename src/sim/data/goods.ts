@@ -50,7 +50,11 @@ export type GoodId =
   | "furniture"
   | "appliances"
   | "beverages"
-  | "meals"
+  | "meals_fast"
+  | "meals_casual"
+  | "meals_fine"
+  | "luxury_fashion"
+  | "luxury_cars"
   | "video_games"
   | "aircraft"
   | "defense"
@@ -93,6 +97,8 @@ export interface GoodDef {
   intermediate?: boolean;
   /** Share of the US market normally supplied by imports (what tariffs bite on). */
   importShare: number;
+  /** Market segment: how strongly richer pops favor it within its need (negative = budget, positive = premium). */
+  tilt?: number;
   /** Annual drift in consumer preference within its need (e.g. EVs gaining on gas cars). */
   prefDrift?: number;
   color: string;
@@ -113,7 +119,7 @@ export const GOODS: GoodDef[] = [
     marketUS: 90e9, marketWorld: 260e9, growth: 0.01, incomeElasticity: 1.1, priceSensitivity: 3, decay: 0.03, importShare: 0.75, color: "#ab47bc" },
   { id: "evs", name: "Electric Vehicles", unit: "vehicles", refPrice: 48000, recipe: { batteries: 1, chips: 30, steel: 0.8, aluminum: 0.2, copper: 0.05, auto_parts: 120, components: 120 }, tech: "auto",
     marketUS: 95e9, marketWorld: 420e9, growth: 0.1, incomeElasticity: 1.4, priceSensitivity: 3, decay: 0.01, importShare: 0.25, prefDrift: 0.07, color: "#ffa726" },
-  { id: "gas_cars", name: "Gasoline Vehicles", unit: "vehicles", refPrice: 42000, recipe: { chips: 12, steel: 1.1, aluminum: 0.15, auto_parts: 150, components: 165 }, tech: "auto",
+  { id: "gas_cars", name: "Gasoline Vehicles", unit: "vehicles", refPrice: 42000, tilt: -0.1, recipe: { chips: 12, steel: 1.1, aluminum: 0.15, auto_parts: 150, components: 165 }, tech: "auto",
     marketUS: 480e9, marketWorld: 1.6e12, growth: 0.0, incomeElasticity: 1.1, priceSensitivity: 3, decay: 0.01, importShare: 0.4, prefDrift: -0.02, color: "#a1887f" },
   { id: "software", name: "Software", unit: "seat-months", refPrice: 100, recipe: { cloud: 0.01 }, tech: "software",
     marketUS: 420e9, marketWorld: 480e9, growth: 0.1, incomeElasticity: 1, priceSensitivity: 2, decay: 1, importShare: 0.05,
@@ -129,7 +135,7 @@ export const GOODS: GoodDef[] = [
     buyerJobs: ["manager", "professional", "clerk", "service", "retail", "sales"], color: "#ec407a" },
   { id: "groceries", name: "Groceries", unit: "baskets", refPrice: 50, recipe: { meat: 0.0015, crops: 0.03, milk: 0.15, components: 0.08 }, tech: "consumer",
     marketUS: 900e9, marketWorld: 150e9, growth: 0.02, incomeElasticity: 1, priceSensitivity: 3, decay: 0.05, importShare: 0.15, color: "#9ccc65" },
-  { id: "apparel", name: "Apparel", unit: "items", refPrice: 40, recipe: { textiles: 0.05, components: 0.05 }, tech: "consumer",
+  { id: "apparel", name: "Apparel", unit: "items", refPrice: 40, recipe: { textiles: 0.05, components: 0.05 }, tech: "consumer", tilt: -0.2,
     marketUS: 380e9, marketWorld: 500e9, growth: 0.03, incomeElasticity: 1, priceSensitivity: 3, decay: 0.02, importShare: 0.9, color: "#ffb74d" },
   { id: "streaming", name: "Streaming", unit: "subscriber-months", refPrice: 15, recipe: { cloud: 0.0004 }, tech: "media",
     marketUS: 60e9, marketWorld: 90e9, growth: 0.08, incomeElasticity: 1, priceSensitivity: 2, decay: 1, importShare: 0.05, prefDrift: 0.02, color: "#e57373" },
@@ -205,8 +211,16 @@ export const GOODS: GoodDef[] = [
     marketUS: 90e9, marketWorld: 250e9, growth: 0.02, incomeElasticity: 1, priceSensitivity: 2.5, decay: 0.01, importShare: 0.5, color: "#90a4ae" },
   { id: "beverages", name: "Beverages", unit: "cases", refPrice: 15, recipe: { crops: 0.003, aluminum: 0.0004, chemicals: 0.0005, components: 0.04 }, tech: "consumer",
     marketUS: 250e9, marketWorld: 400e9, growth: 0.02, incomeElasticity: 1, priceSensitivity: 2, decay: 0.01, importShare: 0.1, color: "#e53935" },
-  { id: "meals", name: "Restaurant Meals", unit: "meals", refPrice: 14, recipe: { meat: 0.0002, crops: 0.001, milk: 0.02, beverages: 0.03, components: 0.015 }, tech: "consumer",
-    marketUS: 1.0e12, marketWorld: 0, growth: 0.025, incomeElasticity: 1, priceSensitivity: 2.5, decay: 1, importShare: 0, color: "#ff7043" },
+  { id: "meals_fast", name: "Fast Food", unit: "meals", refPrice: 9, recipe: { meat: 0.00015, crops: 0.0008, milk: 0.01, beverages: 0.03, components: 0.01 }, tech: "consumer", tilt: -0.4,
+    marketUS: 400e9, marketWorld: 0, growth: 0.025, incomeElasticity: 1, priceSensitivity: 3, decay: 1, importShare: 0, color: "#ff8a65" },
+  { id: "meals_casual", name: "Casual Dining", unit: "meals", refPrice: 22, recipe: { meat: 0.0003, crops: 0.0015, milk: 0.03, beverages: 0.06, components: 0.025 }, tech: "consumer", tilt: 0.2,
+    marketUS: 450e9, marketWorld: 0, growth: 0.02, incomeElasticity: 1, priceSensitivity: 2.5, decay: 1, importShare: 0, color: "#ff7043" },
+  { id: "meals_fine", name: "Fine Dining", unit: "meals", refPrice: 90, recipe: { meat: 0.0006, crops: 0.003, milk: 0.05, beverages: 0.3, components: 0.12 }, tech: "consumer", tilt: 1.0,
+    marketUS: 150e9, marketWorld: 0, growth: 0.03, incomeElasticity: 1, priceSensitivity: 1.8, decay: 1, importShare: 0, color: "#bf360c" },
+  { id: "luxury_fashion", name: "Luxury Fashion", unit: "items", refPrice: 400, recipe: { textiles: 0.3, components: 0.5 }, tech: "consumer", tilt: 1.2,
+    marketUS: 60e9, marketWorld: 300e9, growth: 0.05, incomeElasticity: 1, priceSensitivity: 1.5, decay: 0.02, importShare: 0.7, color: "#6a1b9a" },
+  { id: "luxury_cars", name: "Luxury Vehicles", unit: "vehicles", refPrice: 95000, recipe: { chips: 25, steel: 1.3, aluminum: 0.5, auto_parts: 250, components: 300 }, tech: "auto", tilt: 1.3,
+    marketUS: 120e9, marketWorld: 400e9, growth: 0.03, incomeElasticity: 1, priceSensitivity: 2, decay: 0.01, importShare: 0.6, color: "#4e342e" },
   { id: "video_games", name: "Video Games", unit: "player-months", refPrice: 20, recipe: { cloud: 0.002 }, tech: "media",
     marketUS: 60e9, marketWorld: 140e9, growth: 0.06, incomeElasticity: 1, priceSensitivity: 2, decay: 1, importShare: 0.3, color: "#ab47bc" },
   { id: "aircraft", name: "Aircraft", unit: "aircraft", refPrice: 90_000_000, recipe: { aluminum: 30, steel: 20, chips: 3000, chemicals: 20, components: 400000 }, tech: "aero",
@@ -231,12 +245,12 @@ export const TECHS: { id: TechId; name: string; goods: GoodId[] }[] = [
   { id: "semis", name: "Semiconductor Process", goods: ["chips"] },
   { id: "ai", name: "AI Hardware", goods: ["ai_accelerators"] },
   { id: "devices", name: "Consumer Devices", goods: ["smartphones", "computers", "displays"] },
-  { id: "auto", name: "Automotive", goods: ["evs", "gas_cars", "auto_parts"] },
+  { id: "auto", name: "Automotive", goods: ["evs", "gas_cars", "auto_parts", "luxury_cars"] },
   { id: "battery", name: "Battery Chemistry", goods: ["batteries"] },
   { id: "software", name: "Software Engineering", goods: ["software", "data_platforms"] },
   { id: "cloud", name: "Cloud Infrastructure", goods: ["cloud"] },
   { id: "media", name: "Media & Advertising", goods: ["streaming", "digital_ads", "video_games"] },
-  { id: "consumer", name: "Consumer Products", goods: ["groceries", "apparel", "household_goods", "textiles", "meat", "furniture", "appliances", "beverages", "meals"] },
+  { id: "consumer", name: "Consumer Products", goods: ["groceries", "apparel", "household_goods", "textiles", "meat", "furniture", "appliances", "beverages", "meals_fast", "meals_casual", "meals_fine", "luxury_fashion"] },
   { id: "biotech", name: "Biotechnology", goods: ["pharmaceuticals"] },
   { id: "energy", name: "Energy Systems", goods: ["electricity", "fuel", "solar_panels", "wind_turbines"] },
   { id: "extraction", name: "Drilling & Mining", goods: ["crude_oil", "natural_gas", "coal", "iron_ore", "copper", "lithium", "uranium", "rare_earths"] },

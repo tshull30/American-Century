@@ -39,7 +39,7 @@ export function Markets() {
         {myGoods.length === 0 && <div className="hint">You don't sell anything yet. Build a production building.</div>}
       </Panel>
 
-      <Panel title="Market detail" right={
+      <Panel help="markets" title="Market detail" right={
         <select value={view} onChange={(e) => setView(e.target.value as GoodId)}>
           {GOODS.filter((x) => x.marketUS + x.marketWorld > 0).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
         </select>
@@ -53,11 +53,6 @@ export function Markets() {
               <div className="stat"><div className="label">Everyone else</div><div className="value">{fmtPct(snap.othersShare, 0)}</div><div className="sub">at {fmtPrice(snap.othersPrice)}</div></div>
               {g.importPrice && <div className="stat"><div className="label">Imports / month</div><div className="value">{fmtNum(snap.importsUnits)}</div><div className="sub">at {fmtPrice(g.importPrice)}</div></div>}
             </div>
-            <p className="hint">
-              {g.intermediate
-                ? "US companies buy from the cheapest American seller priced below the import price, then import the rest. Any surplus is exported to the world market."
-                : `${g.buyerJobs ? "US demand comes from businesses (sized by the workers they employ and their pay)" : g.marketUS > 0 ? "US demand comes from pops meeting their needs, spending out of their income" : "Demand comes from US businesses and buyers worldwide"}, plus the world market. Buyers weigh quality, brand, reputation and price.`}
-            </p>
             {snap.priceHistory.length > 2 && (
               <div style={{ marginBottom: 10 }}>
                 <div className="hint">Average market price, monthly</div>
