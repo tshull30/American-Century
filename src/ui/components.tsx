@@ -9,6 +9,8 @@ export interface GameCtxValue {
   refresh: () => void;
   /** Run an action, refresh the UI and show its message. */
   act: (r: Result) => void;
+  /** In-page confirmation dialog (browser confirm() is blocked in sandboxed hosts). */
+  ask: (message: string, onYes: () => void) => void;
 }
 
 export const GameCtx = createContext<GameCtxValue | null>(null);
@@ -19,9 +21,9 @@ export function useGame(): GameCtxValue {
   return v;
 }
 
-export function makeCtx(s: GameState, refresh: () => void, toast: (m: string, err?: boolean) => void): GameCtxValue {
+export function makeCtx(s: GameState, refresh: () => void, toast: (m: string, err?: boolean) => void, ask: GameCtxValue["ask"]): GameCtxValue {
   return {
-    s, me: player(s), refresh,
+    s, me: player(s), refresh, ask,
     act: (r) => { toast(r.message, !r.ok); refresh(); },
   };
 }
@@ -160,6 +162,20 @@ export function LineChart(p: { data: { x: string; y: number }[]; fmt: (v: number
           <span className="muted">{p.data[hover].x}</span> {p.fmt(p.data[hover].y)}
         </div>
       )}
+    </div>
+  );
+}
+
+export function ConfirmDialog(p: { message: string; onYes: () => void; onNo: () => void }) {
+  return (
+    <div className="modal-back" onClick={p.onNo}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <p>{p.message}</p>
+        <div className="row" style={{ justifyContent: "flex-end" }}>
+          <button onClick={p.onNo}>Cancel</button>
+          <button className="primary" autoFocus onClick={p.onYes}>Confirm</button>
+        </div>
+      </div>
     </div>
   );
 }

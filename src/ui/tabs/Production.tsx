@@ -10,7 +10,7 @@ import { fmtMoney, fmtNum, fmtPct, laborKey } from "../../sim/util";
 import { Bar, Panel, Table, useGame } from "../components";
 
 export function Production() {
-  const { s, me, act } = useGame();
+  const { s, me, act, ask } = useGame();
   const load = adminLoad(me), cap = adminCapacity(me);
   const rows = me.buildings.slice().sort((a, b) => a.type.localeCompare(b.type) || b.level - a.level);
   const [step, setStep] = useState(1);
@@ -39,7 +39,7 @@ export function Production() {
               { key: "act", label: "", render: (b) => (
                 <span className="row" style={{ flexWrap: "nowrap" }}>
                   <button className="small" onClick={() => act(expand(s, me.id, b.id, step))} title={`Build ${step} more level(s): ${fmtMoney(buildQuote(b.type, b.state, step).total)}`}>+{step}</button>
-                  <button className="small" disabled={b.level <= 0} onClick={() => { if (confirm(`Close ${Math.min(step, b.level)} level(s)? Workers are laid off and only 20% of book value is recovered.`)) act(downsize(s, me.id, b.id, step)); }}>−{step}</button>
+                  <button className="small" disabled={b.level <= 0} onClick={() => ask(`Close ${Math.min(step, b.level)} level(s) of ${BUILDING_BY_ID[b.type].name} in ${STATE_BY_CODE[b.state].name}? Workers are laid off and only 20% of book value is recovered.`, () => act(downsize(s, me.id, b.id, step)))}>−{step}</button>
                 </span>
               ) },
             ]}
@@ -59,13 +59,13 @@ function outputLabel(b: Building) {
 }
 
 function MethodPicker({ b }: { b: Building }) {
-  const { s, me, act } = useGame();
+  const { s, me, act, ask } = useGame();
   const def = BUILDING_BY_ID[b.type];
   if (def.methods.length < 2) return <span className="muted">{methodOf(b.type, b.method).name}</span>;
   return (
     <select value={b.method} onChange={(e) => {
       const m = methodOf(b.type, e.target.value);
-      if (confirm(`Retool to ${m.name}? Costs ${Math.round((m.retoolCost ?? 0.2) * 100)}% of the build cost of every level.`)) act(setMethod(s, me.id, b.id, m.id));
+      ask(`Retool to ${m.name}? Costs ${Math.round((m.retoolCost ?? 0.2) * 100)}% of the build cost of every level.`, () => act(setMethod(s, me.id, b.id, m.id)));
     }}>
       {def.methods.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
     </select>

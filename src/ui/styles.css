@@ -133,3 +133,7 @@ table.t .num { text-align: right; font-family: var(--mono); font-variant-numeric
 .section-title { font: 600 12px var(--sans); text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin: 26px 0 10px; }
 .gameover { padding: 10px 14px; background: #3a1f1f; border-bottom: 1px solid var(--bad); display: flex; gap: 12px; align-items: center; }
 kbd { font-family: var(--mono); font-size: 11px; background: var(--surface-3); border: 1px solid var(--border); border-radius: 3px; padding: 0 4px; }
+
+.modal-back { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); display: flex; align-items: center; justify-content: center; z-index: 60; }
+.modal { background: var(--surface-2); border: 1px solid var(--accent); border-radius: 8px; padding: 16px 18px; max-width: 460px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); }
+.modal p { margin: 0 0 14px; font-size: 14px; }

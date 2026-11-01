@@ -3,7 +3,7 @@ import { tick, player } from "../sim/engine";
 import { tierOf, TIERS } from "../sim/tiers";
 import type { GameState } from "../sim/types";
 import { dateLabel, fmtMoney, fmtPct } from "../sim/util";
-import { GameCtx, makeCtx } from "./components";
+import { ConfirmDialog, GameCtx, makeCtx } from "./components";
 import { NewGame } from "./NewGame";
 import { exportFile, importFile, saveLocal } from "./save";
 import { Overview } from "./tabs/Overview";
@@ -68,7 +68,9 @@ function Game({ initial, onQuit }: { initial: GameState; onQuit: () => void }) {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const ctx = makeCtx(s, refresh, showToast);
+  const [pending, setPending] = useState<{ message: string; onYes: () => void } | null>(null);
+  const ask = useCallback((message: string, onYes: () => void) => setPending({ message, onYes }), []);
+  const ctx = makeCtx(s, refresh, showToast, ask);
   const me = player(s);
   const tier = tierOf(me.marketCap);
   const peers = useMemo(
@@ -104,7 +106,7 @@ function Game({ initial, onQuit }: { initial: GameState; onQuit: () => void }) {
             <span className="date">{dateLabel(s.month)}</span>
             <button onClick={() => showToast(saveLocal(s) ? "Game saved in this browser." : "Couldn't save in this browser; use Export.", false)}>Save</button>
             <button onClick={() => exportFile(s)} title="Download the save file">Export</button>
-            <button onClick={() => { if (confirm("Quit to the main menu? Unsaved progress is lost.")) onQuit(); }}>Menu</button>
+            <button onClick={() => ask("Quit to the main menu? Progress since your last save is lost.", onQuit)}>Menu</button>
           </div>
           {s.gameOver && (
             <div className="gameover"><strong>Game over.</strong> {s.gameOver}<button onClick={onQuit}>New game</button></div>
@@ -126,6 +128,7 @@ function Game({ initial, onQuit }: { initial: GameState; onQuit: () => void }) {
         </main>
       </div>
       {toast && <div className={`toast ${toast.err ? "err" : ""}`}>{toast.m}</div>}
+      {pending && <ConfirmDialog message={pending.message} onNo={() => setPending(null)} onYes={() => { const f = pending.onYes; setPending(null); f(); }} />}
     </GameCtx.Provider>
   );
 }

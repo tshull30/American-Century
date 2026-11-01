@@ -19,14 +19,12 @@ const LINES: [keyof MonthReport, string, number][] = [
 ];
 
 export function Finance() {
-  const { s, me, act } = useGame();
+  const { s, me, act, ask } = useGame();
   const last = me.history[me.history.length - 1];
   const limit = creditLimit(me);
   const [amount, setAmount] = useState(100);
   const unit = me.marketCap > 50e9 ? 1e9 : 1e6;
   const amt = amount * unit;
-  const invValue = Object.entries(me.inventory).reduce((a, [, q]) => a + (q ?? 0), 0);
-  void invValue;
 
   return (
     <div className="grid2">
@@ -85,7 +83,7 @@ export function Finance() {
           </div>
           <div className="row">
             {[0.05, 0.1, 0.2].map((f) => (
-              <button key={f} onClick={() => { if (confirm(`Sell ${f * 100}% new shares at an 8% discount (about ${fmtMoney(me.marketCap * f * 0.92)})?`)) act(issueShares(s, me.id, f)); }}>
+              <button key={f} onClick={() => ask(`Sell ${f * 100}% new shares at an 8% discount (about ${fmtMoney(me.marketCap * f * 0.92)})?`, () => act(issueShares(s, me.id, f)))}>
                 Issue {f * 100}% new shares
               </button>
             ))}
