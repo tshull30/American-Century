@@ -202,7 +202,7 @@ function makeCompany(r: () => number, i: number, used: Set<string>, tickers: Set
   tickers.add(ticker);
   const place = STATE_BY_CODE[hq]?.name ?? hq;
   const tags = TAG_SIZE[tier];
-  const goodLabel = g.name.toLowerCase();
+  const goodLabel = g.name.split(" ").map((w) => (/^[A-Z]{2,}$/.test(w) ? w : w.toLowerCase())).join(" ");
   const consumer = CONSUMER.has(g.id);
   const debtHeavy = ["extraction", "materials", "energy", "auto", "telecom", "agri"].includes(tech ?? "");
   return {

@@ -8,7 +8,7 @@ import { addBuilding, log, quality } from "./engine";
 import { ROLE_SHORT, roleFactor, hasTrait } from "./leadership";
 import { relationWith, type Result } from "./people";
 import type { Company, GameEvent, GameState } from "./types";
-import { clamp, fmtMoney, rand } from "./util";
+import { clamp, fmtMoney, lowerName, rand } from "./util";
 
 type Log = (text: string, kind: GameEvent["kind"], extra?: Pick<GameEvent, "headline" | "deck">) => void;
 
@@ -123,7 +123,7 @@ export function launchCost(c: Company, g: GoodId): number {
 
 export function holdLaunch(s: GameState, c: Company, g: GoodId, bold: boolean): Result & { headline?: string } {
   c.launches ??= {};
-  if (c.launches[g] !== undefined && s.month - c.launches[g]! < 9) return { ok: false, message: `You launched ${GOOD_BY_ID[g].name.toLowerCase()} ${s.month - c.launches[g]!} months ago. Give it time.` };
+  if (c.launches[g] !== undefined && s.month - c.launches[g]! < 9) return { ok: false, message: `You launched ${lowerName(GOOD_BY_ID[g].name)} ${s.month - c.launches[g]!} months ago. Give it time.` };
   const cost = launchCost(c, g);
   if (c.cash < cost) return { ok: false, message: `A launch event costs ${fmtMoney(cost)}.` };
   c.cash -= cost;
@@ -131,7 +131,7 @@ export function holdLaunch(s: GameState, c: Company, g: GoodId, bold: boolean): 
   c.launches[g] = s.month;
   const q = quality(s, c, g);
   const score = Math.log(q) * 8 + 0.25 * roleFactor(c, "cmo") + 0.2 * roleFactor(c, "ceo") + (hasTrait(c, "celebrity") ? 0.25 : 0) + (rand(s) - 0.5) * (bold ? 1.6 : 0.9) + 0.1;
-  const name = GOOD_BY_ID[g].name.toLowerCase();
+  const name = lowerName(GOOD_BY_ID[g].name);
   const ceo = ceoOf(c);
   if (score > 0) {
     const k = bold ? 1.7 : 1.35;

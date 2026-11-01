@@ -8,6 +8,7 @@ import { STATES, STATE_BY_CODE } from "./data/states";
 import { activePartners, updatePeople } from "./people";
 import { checkMilestones } from "./milestones";
 import { updateFun } from "./fun";
+import { applySetup, checkGoal, difficultyShade, type Setup } from "./setup";
 import { calibrateConsumers, driftPreferences, updateConsumers } from "./consumers";
 import { initMacro, updateMacro, updateWorldEvents } from "./macro";
 import {
@@ -33,7 +34,7 @@ import {
 } from "./util";
 import { runAI, autoPrice, maintainHQ } from "./ai";
 
-export const SAVE_VERSION = 10;
+export const SAVE_VERSION = 11;
 export const BASELINE_TECH_START = 10;
 const DT = 1 / DAYS_PER_MONTH;
 const DEPRECIATION = 0.006;
@@ -49,7 +50,7 @@ export type PlayerChoice =
   | { kind: "incumbent"; key: string }
   | { kind: "startup"; name: string; ticker: string; good: GoodId; hq: string; city?: string };
 
-export function newGame(choice: PlayerChoice, seed = Math.floor(Math.random() * 1e9), roster?: CompanySeed[]): GameState {
+export function newGame(choice: PlayerChoice, seed = Math.floor(Math.random() * 1e9), roster?: CompanySeed[], setup?: Setup): GameState {
   const seeds = [...(roster ?? rollRoster(seed).companies)];
   if (choice.kind === "incumbent" && !seeds.some((d) => d.key === choice.key)) {
     const d = COMPANY_SEEDS.find((x) => x.key === choice.key);
@@ -152,6 +153,7 @@ export function newGame(choice: PlayerChoice, seed = Math.floor(Math.random() * 
   for (const c of s.companies) if (c.leadership) c.leadership.board.nextMeeting = 3 + (c.id % 3);
   s.macro.history = [];
   s.events = [];
+  applySetup(s, setup ?? { scenario: "standard", difficulty: "normal", goal: "sandbox" });
   log(s, `Welcome to ${dayLabel(0)}. You are running ${player(s).name}.`, "info", s.playerId);
   return s;
 }
@@ -692,6 +694,7 @@ function monthly(s: GameState) {
     const partners = activePartners(s);
     for (const c of alive) c.allyBoost = c.isPlayer ? 1 + 0.05 * partners.length : partners.includes(c.id) ? 1.05 : 1;
     updateFun(s, (c) => (t, k, extra) => { if (!warmup) log(s, t, k, c.id, c.isPlayer ? (extra?.headline && s.decisions?.some((d) => d.headline === extra.headline) ? "decision" : "news") : undefined, extra); }, warmup);
+    if (!warmup && me) checkGoal(s, me, (t, k, extra) => log(s, t, k, me.id, "decision", extra));
     if (!warmup && me) checkMilestones(s, me, (t, extra) => log(s, t, "good", me.id, "news", extra));
   }
   const peer = peerReturns(alive);
@@ -1098,7 +1101,7 @@ function earnings(s: GameState, c: Company, r: MonthReport) {
   const gExp = c.growthHint;
   // Guidance: what the CFO told Wall Street to expect.
   const guide = c.guidance === "low" ? 0.97 : c.guidance === "high" ? 1.03 : 1;
-  const shade = 0.985 * leadEffects.expectations(c) * guide;
+  const shade = 0.985 * leadEffects.expectations(c) * guide * difficultyShade(s, c);
   const expected = base * Math.pow(1 + gExp, years) * shade;
   // Margin: what the last two quarters before this one showed (fresher than a year ago).
   const recent = c.history.slice(-8, -2);
@@ -1193,6 +1196,11 @@ export function log(s: GameState, text: string, kind: "info" | "good" | "bad" | 
   const auto = extra?.headline ? undefined : headlineFor(text, tag);
   s.events.push({ day: s.day, text, kind, companyId, ...(tag ? { tag } : {}), ...(auto ?? {}), ...(extra ?? {}) });
   if (s.events.length > 400) s.events.shift();
+  const headline = extra?.headline ?? auto?.headline;
+  if (headline && !warmup) {
+    (s.archive ??= []).push({ day: s.day, headline, deck: extra?.deck ?? auto?.deck, kind, mine: companyId !== undefined && companyId === s.playerId });
+    if (s.archive.length > 1500) s.archive.shift();
+  }
 }
 
 export function player(s: GameState): Company {

@@ -4,6 +4,7 @@ import type { GameState } from "../sim/types";
 const KEY = "american-century-save";
 
 export function saveLocal(s: GameState): boolean {
+  recordRun(s);
   try {
     localStorage.setItem(KEY, JSON.stringify(s));
     return true;
@@ -52,4 +53,41 @@ export function importFile(): Promise<GameState> {
     };
     input.click();
   });
+}
+
+// ---------------------------------------------------------------- past runs
+
+const RUNS = "american-century-runs";
+export interface RunRecord {
+  id: string; name: string; ticker: string; color: string; startedAs: "startup" | "incumbent" | "challenger";
+  scenario: string; difficulty: string; goal: string; result?: "won" | "lost";
+  startCap: number; peakCap: number; lastCap: number; month: number; updated: number;
+}
+
+export function loadRuns(): RunRecord[] {
+  try { return JSON.parse(localStorage.getItem(RUNS) ?? "[]") as RunRecord[]; } catch { return []; }
+}
+
+/** Keep a short record of each company the player has run (best ten by peak value). */
+export function recordRun(s: GameState) {
+  try {
+    const me = s.companies.find((c) => c.id === s.playerId);
+    if (!me) return;
+    const runs = loadRuns();
+    const id = `${s.seed}:${s.playerId}`;
+    let r = runs.find((x) => x.id === id);
+    if (!r) {
+      r = { id, name: me.name, ticker: me.ticker, color: me.color, startedAs: me.kind, scenario: s.setup?.scenario ?? "standard", difficulty: s.setup?.difficulty ?? "normal", goal: s.setup?.goal ?? "sandbox",
+        startCap: me.history.find((h) => h.month >= 0)?.marketCap ?? me.marketCap, peakCap: 0, lastCap: 0, month: 0, updated: 0 };
+      runs.push(r);
+    }
+    r.name = me.name;
+    r.peakCap = Math.max(r.peakCap, me.marketCap);
+    r.lastCap = me.alive ? me.marketCap : 0;
+    r.month = s.month;
+    r.result = s.setup?.result;
+    r.updated = Date.now();
+    runs.sort((a, b) => b.updated - a.updated);
+    localStorage.setItem(RUNS, JSON.stringify(runs.slice(0, 12)));
+  } catch { /* storage unavailable */ }
 }

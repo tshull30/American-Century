@@ -104,3 +104,8 @@ export const laborKey = (place: string, job: string): string => {
   if (k === undefined) { k = `${place}:${job}`; m.set(job, k); }
   return k;
 };
+
+/** Lowercase for mid-sentence use, keeping acronyms ("AI accelerators", "EV"). */
+export function lowerName(name: string): string {
+  return name.split(" ").map((w) => (/^[A-Z]{2,}s?$/.test(w) ? w : w.toLowerCase())).join(" ");
+}

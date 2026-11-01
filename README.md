@@ -24,6 +24,8 @@ Deep and spreadsheet-y, but fast: daily ticks, five game speeds, and everything 
 
 **New in v0.10:** moonshots (fusion, self-driving, quantum computing, humanoid robots, an Alzheimer's cure, general AI and a crewed Mars mission: multi-year bets with permanent payoffs, which the richest rivals chase too), keynote launch events (a careful reveal or promise the moon), a Super Bowl ad every January, a second-headquarters contest where cities bid billions, corporate espionage, your CEO's social feed (hype, thank the workers, or dunk on a rival), and meme-stock manias that lift small companies and then crash them.
 
+**New in v0.11:** a new start screen styled as a prospectus, with a live stock-certificate preview for your startup, products grouped by industry, filterable company cards and a record of your past companies. Seven scenarios (business as usual, the chip war, hard landing, the green rush, the trust-busters, AI gold rush, tariff wall), three difficulty levels, five goals with a win or a miss, and a searchable archive of every front page.
+
 ## Play
 
 ```bash

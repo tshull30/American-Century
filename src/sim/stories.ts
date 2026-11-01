@@ -8,7 +8,7 @@ import { hasTrait } from "./leadership";
 import { applyPeopleDecision, noteUnion } from "./people";
 import { applyFunDecision } from "./fun";
 import type { Building, Company, GameEvent, GameState } from "./types";
-import { clamp, fmtMoney, rand } from "./util";
+import { clamp, fmtMoney, lowerName, rand } from "./util";
 
 export interface DecisionOption { id: string; label: string; detail: string }
 export interface Decision {
@@ -50,7 +50,7 @@ export function rollStories(s: GameState, log: (c: Company) => Log) {
     if (made.length && rand(s) < 0.004) {
       const g = pick(s, made);
       const cost = revOf(c, g) * 0.03;
-      decide(s, c, "recall", `${c.name} finds a defect in its ${GOOD_BY_ID[g].name.toLowerCase()}`, "Engineers say the fault is rare but real. A full recall is expensive; a quiet fix might never come out.",
+      decide(s, c, "recall", `${c.name} finds a defect in its ${lowerName(GOOD_BY_ID[g].name)}`, "Engineers say the fault is rare but real. A full recall is expensive; a quiet fix might never come out.",
         [{ id: "recall", label: "Full recall", detail: `Costs ${fmtMoney(cost)}; reputation dips a little` }, { id: "quiet", label: "Quiet fix", detail: `Costs ${fmtMoney(cost * 0.15)}; if it leaks, much worse` }],
         { good: g, cost }, L, big);
     }
@@ -124,8 +124,8 @@ export function rollStories(s: GameState, log: (c: Company) => Log) {
       const g = pick(s, hits);
       c.brand[g] = (c.brand[g] ?? 0) * 1.5;
       c.reputation[g] = (c.reputation[g] ?? 1) + 0.1;
-      if (big) L(`${poss(c.name)} ${GOOD_BY_ID[g].name.toLowerCase()} went viral; demand is running ahead of supply.`, "good",
-        { headline: `Everyone wants ${poss(c.name)} new ${GOOD_BY_ID[g].name.toLowerCase()}`, deck: "A viral hit leaves shelves empty and the brand on everyone's lips" });
+      if (big) L(`${poss(c.name)} ${lowerName(GOOD_BY_ID[g].name)} went viral; demand is running ahead of supply.`, "good",
+        { headline: `Everyone wants ${poss(c.name)} new ${lowerName(GOOD_BY_ID[g].name)}`, deck: "A viral hit leaves shelves empty and the brand on everyone's lips" });
     }
     // Drug approvals.
     if (goods.includes("pharmaceuticals") && rand(s) < 0.006) {
@@ -173,7 +173,7 @@ export function rollStories(s: GameState, log: (c: Company) => Log) {
       c.image = clamp(c.image - 0.1, 0, 1);
       c.cash -= Number(f.data.cost) * 2;
       if (c.leadership) c.leadership.board.confidence = clamp(c.leadership.board.confidence - 0.15, 0, 1);
-      if (big) L(`Internal memos show ${c.name} knew about the ${GOOD_BY_ID[g].name.toLowerCase()} defect and fixed it quietly.`, "bad",
+      if (big) L(`Internal memos show ${c.name} knew about the ${lowerName(GOOD_BY_ID[g].name)} defect and fixed it quietly.`, "bad",
         { headline: `${c.name} hid defect, documents show`, deck: "A forced recall, a fine, and a brand in trouble" });
     } else if (f.kind === "breach_fine") {
       const fine = Number(f.data.cost) * 4;

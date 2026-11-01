@@ -1,4 +1,4 @@
-import { dayLabel } from "../../sim/util";
+import { dateLabel, dayLabel, monthOfDay } from "../../sim/util";
 import type { GameEvent } from "../../sim/types";
 import { Panel, useGame, useSticky } from "../components";
 
@@ -12,6 +12,57 @@ const FILTERS: [string, string, (e: GameEvent, me: number) => boolean][] = [
 ];
 
 export function Events() {
+  const [view, setView] = useSticky<"log" | "archive">("events.view", "log");
+  return (
+    <div>
+      <div className="tabs-inline" style={{ marginBottom: 10 }}>
+        <button className={view === "log" ? "on" : ""} onClick={() => setView("log")}>Event log</button>
+        <button className={view === "archive" ? "on" : ""} onClick={() => setView("archive")}>Front-page archive</button>
+      </div>
+      {view === "log" ? <EventLog /> : <Archive />}
+    </div>
+  );
+}
+
+function Archive() {
+  const { s } = useGame();
+  const [mine, setMine] = useSticky("archive.mine", false);
+  const [q, setQ] = useSticky("archive.q", "");
+  const needle = q.trim().toLowerCase();
+  const items = (s.archive ?? []).filter((a) => (!mine || a.mine) && (!needle || (a.headline + " " + (a.deck ?? "")).toLowerCase().includes(needle)));
+  const byMonth = new Map<number, typeof items>();
+  for (const a of items) { const m = monthOfDay(a.day); if (!byMonth.has(m)) byMonth.set(m, []); byMonth.get(m)!.push(a); }
+  const months = [...byMonth.keys()].sort((a, b) => b - a);
+  return (
+    <div className="archive">
+      <header className="archive-head">
+        <div className="archive-title">The American Ledger</div>
+        <div className="archive-sub">Bound volumes, {months.length ? `${dateLabel(months[months.length - 1])} to ${dateLabel(months[0])}` : "no issues yet"}</div>
+        <div className="row" style={{ justifyContent: "center", marginTop: 8 }}>
+          <label className="row" style={{ gap: 6 }}><input type="checkbox" checked={mine} onChange={(e) => setMine(e.target.checked)} /> Only stories about you</label>
+          <input type="search" placeholder="Search headlines" value={q} onChange={(e) => setQ(e.target.value)} style={{ width: 220 }} />
+        </div>
+      </header>
+      {months.length === 0 && <p className="empty" style={{ textAlign: "center" }}>No front pages yet. Big news ends up here.</p>}
+      {months.map((m) => (
+        <section key={m} className="archive-month">
+          <h3>{dateLabel(m)}</h3>
+          <div className="clippings">
+            {byMonth.get(m)!.slice().reverse().map((a, i) => (
+              <article key={i} className={`clipping ${a.mine ? "mine" : ""} ${a.kind}`}>
+                <h4>{a.headline}</h4>
+                {a.deck && <p>{a.deck}</p>}
+                <span className="when">{dayLabel(a.day)}</span>
+              </article>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function EventLog() {
   const { s, me } = useGame();
   const [filter, setFilter] = useSticky("events.filter", "all");
   const [q, setQ] = useSticky("events.q", "");

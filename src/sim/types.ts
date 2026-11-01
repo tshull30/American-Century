@@ -233,6 +233,8 @@ export interface Company {
   hq2?: import("./fun").Hq2;
   lastSpy?: number;
   meme?: { until: number; mult: number };
+  /** Hard difficulty: rivals' running-cost multiplier. */
+  costEdge?: number;
   /** Earnings guidance the CFO gave Wall Street. */
   guidance?: "low" | "mid" | "high";
   guidanceQuarter?: number;
@@ -513,4 +515,7 @@ export interface GameState {
   record?: import("./people").Record_;
   relations?: Record<number, import("./people").Relation>;
   milestones?: Record<string, number>;
+  setup?: import("./setup").Setup;
+  /** Every front page, for the archive. */
+  archive?: { day: number; headline: string; deck?: string; kind: GameEvent["kind"]; mine?: boolean }[];
 }

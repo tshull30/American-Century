@@ -5,7 +5,7 @@ import type { GameEvent, GameState } from "../sim/types";
 import { dayLabel, fmtMoney, fmtPct } from "../sim/util";
 import { ConfirmDialog, GameCtx, Guilloche, makeCtx } from "./components";
 import { NewGame } from "./NewGame";
-import { exportFile, importFile, saveLocal } from "./save";
+import { exportFile, importFile, recordRun, saveLocal } from "./save";
 import { autosaveDue, loadSettings, loadUi, saveSettings, saveUi, type Settings } from "./settings";
 import { SettingsDialog } from "./SettingsDialog";
 import { Encyclopedia } from "./Encyclopedia";
@@ -58,7 +58,7 @@ function Game({ initial, onQuit }: { initial: GameState; onQuit: () => void }) {
   const setSettings = useCallback((x: Settings) => { setSettingsRaw(x); saveSettings(x); }, []);
   const [showSettings, setShowSettings] = useState(false);
   const [pausedBy, setPausedBy] = useState<GameEvent[] | null>(null);
-  const [front, setFront] = useState<GameEvent[] | null>(null);
+  const [front, setFront] = useState<GameEvent[] | null>(() => (initial.day === 0 && initial.events.some((e) => e.headline && e.tag === "macro") ? initial.events.filter((e) => e.headline && e.tag === "macro") : null));
   const [report, setReport] = useState<number | null>(null);
   const [toast, setToast] = useState<{ m: string; err?: boolean } | null>(null);
   const showToast = useCallback((m: string, err?: boolean) => {
@@ -78,6 +78,7 @@ function Game({ initial, onQuit }: { initial: GameState; onQuit: () => void }) {
         const lastEvent = s.events[before - 1];
         tick(s);
         if (s.month !== m && autosaveDue(settingsRef.current.autosave, s.month)) saveLocal(s);
+        else if (s.month !== m && s.month % 6 === 0) recordRun(s);
         // Pause on anything the player asked to be stopped for.
         const start = lastEvent ? s.events.lastIndexOf(lastEvent) + 1 : 0;
         const fresh = s.events.slice(start);
@@ -172,7 +173,7 @@ function Game({ initial, onQuit }: { initial: GameState; onQuit: () => void }) {
             <button onClick={() => exportFile(s)} title="Download the save file">Export</button>
             <button onClick={() => setHelpTopic("basics")} title="Encyclopedia (F1)">Encyclopedia</button>
             <button onClick={() => setShowSettings(true)} title="Settings and keyboard shortcuts (?)">Settings</button>
-            <button onClick={() => ask("Quit to the main menu? Progress since your last save is lost.", onQuit)}>Menu</button>
+            <button onClick={() => ask("Quit to the main menu? Progress since your last save is lost.", () => { recordRun(s); onQuit(); })}>Menu</button>
           </div>
           {s.gameOver && (
             <div className="gameover"><strong>Game over.</strong> {s.gameOver}<button onClick={onQuit}>New game</button></div>

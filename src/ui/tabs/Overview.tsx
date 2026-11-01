@@ -5,6 +5,7 @@ import { dateLabel, dayLabel, dayOfMonthStart, fmtMoney, fmtNum, fmtPct } from "
 import { computeAlerts } from "../alerts";
 import { MILESTONES } from "../../sim/milestones";
 import { ceoPost } from "../../sim/fun";
+import { DIFFICULTIES, GOAL_BY_ID, SCENARIO_BY_ID } from "../../sim/setup";
 import { LineChart, Panel, Signed, Stat, Table, useGame } from "../components";
 
 export function Overview() {
@@ -38,6 +39,7 @@ export function Overview() {
           </div>
           {alerts.length > 0 && <ul style={{ margin: "10px 0 0", paddingLeft: 18 }}>{alerts.map((a) => <li key={a.text} className={a.tone === "bad" ? "neg" : a.tone === "warn" ? "warn" : ""}>{a.text}</li>)}</ul>}
         </Panel>
+        <GoalPanel />
         <Panel title="Market cap">
           <LineChart data={hist.map((h) => ({ x: dateLabel(h.month), y: h.marketCap }))} fmt={(v) => fmtMoney(v, 1)} />
         </Panel>
@@ -130,6 +132,29 @@ function CeoFeed() {
         <button disabled={!ceo || used} className="danger" onClick={() => act(ceoPost(s, me, "dunk"))} title="Dunk on your biggest rival. Viral or petty.">Dunk on a rival</button>
         {used && <span className="muted small">One post a month.</span>}
       </div>
+    </Panel>
+  );
+}
+
+function GoalPanel() {
+  const { s, me } = useGame();
+  const st = s.setup;
+  if (!st) return null;
+  const g = GOAL_BY_ID[st.goal];
+  const sc = SCENARIO_BY_ID[st.scenario];
+  const diff = DIFFICULTIES.find((d) => d.id === st.difficulty);
+  return (
+    <Panel title={st.goal === "sandbox" ? "Your game" : `Goal: ${g.name}`} right={`${sc.name}, ${diff?.name ?? ""}`}>
+      {st.goal === "sandbox" ? <p className="muted" style={{ margin: 0 }}>No goal: play as long as you like.</p> : (
+        <div className="goal">
+          <p style={{ margin: 0 }}>{g.detail}.</p>
+          <p style={{ margin: "4px 0 0" }}>
+            {st.result === "won" ? <span className="deal-stamp ok">Achieved {dateLabel(st.resultMonth ?? s.month)}</span>
+              : st.result === "lost" ? <span className="deal-stamp">Missed</span>
+              : <span className="muted">{g.progress?.(s, me)}{g.deadline !== undefined ? `; ${Math.max(0, g.deadline - s.month)} months left` : ""}</span>}
+          </p>
+        </div>
+      )}
     </Panel>
   );
 }

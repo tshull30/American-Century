@@ -103,7 +103,14 @@ export function updateWorldEvents(s: GameState, log: (text: string, kind?: "info
   const options = EVENTS.filter((t) => !s.worldEvents.some((e) => e.id === t.id));
   if (!options.length) return;
   const t = options[Math.floor(rand(s) * options.length)];
-  const months = t.months[0] + Math.floor(rand(s) * (t.months[1] - t.months[0] + 1));
+  beginEvent(s, t.id, log);
+}
+
+/** Start a world event now (random events, scenarios). */
+export function beginEvent(s: GameState, id: string, log?: (text: string, kind?: "info", extra?: { headline: string; deck: string }) => void, monthsOverride?: number) {
+  const t = EVENTS.find((x) => x.id === id);
+  if (!t || s.worldEvents.some((e) => e.id === id)) return;
+  const months = monthsOverride ?? t.months[0] + Math.floor(rand(s) * (t.months[1] - t.months[0] + 1));
   const e: WorldEvent = {
     id: t.id, name: t.name, description: t.description, untilDay: s.day + Math.round(months * DAYS_PER_MONTH),
     importMult: t.importMult, demandMult: t.demandMult, prefMult: t.prefMult, countryOutput: t.countryOutput, siteTypes: t.siteTypes,
@@ -112,7 +119,7 @@ export function updateWorldEvents(s: GameState, log: (text: string, kind?: "info
   if (t.onStart === "crash") for (const c of s.companies) { c.hype *= 0.82; c.marketCap *= 0.85; }
   if (t.onStart === "rally") for (const c of s.companies) { c.hype *= 1.1; c.marketCap *= 1.06; }
   if (t.onStart === "rate_shock") { s.baseRate += 0.0075; s.macro.fedRate += 0.0075; for (const c of s.companies) c.hype *= 0.95; }
-  log(`${t.name}: ${t.description}`, "info", { headline: t.headline ?? t.name, deck: t.description });
+  log?.(`${t.name}: ${t.description}`, "info", { headline: t.headline ?? t.name, deck: t.description });
 }
 
 export function eventDemandMult(s: GameState, g: string): number {

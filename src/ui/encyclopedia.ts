@@ -79,6 +79,12 @@ export const TOPICS: Topic[] = [
   { id: "hq2", title: "Second headquarters", group: "Company", body: [
     "Companies worth $150 billion or more can announce a search for a second headquarters. Cities bid cash and tax breaks for three months; then you pick from the four best offers. The winner gets five headquarters levels and a lot of goodwill; the losing finalists sulk a little.",
   ] },
+  { id: "setup", title: "Scenarios, difficulty and goals", group: "Basics", body: [
+    "Scenarios change the world you start in: a blockade of Taiwan, a market crash and recession, a climate law, aggressive antitrust, an AI spending boom or a tariff wall.",
+    "Chairman difficulty gives you more money, a patient board and kinder analysts; Activist season gives you less money, analysts who expect more, a twitchy board and rivals that run 4% leaner.",
+    "Goals give the game a finish line, such as becoming a Titan or America's most valuable company by 2036. Win or miss, you can keep playing. The start screen keeps a record of the companies you've run.",
+    "Every front page is kept in the archive on the Events tab.",
+  ] },
   { id: "acquisitions", title: "Acquisitions", group: "Company", body: [
     "Click a company on the Rivals tab to make an offer. Its board wants a premium: more for startups, hot stocks and established companies, and more from a much bigger buyer. A dealmaker CEO or CFO shaves it.",
     "Regulators may open a second request, an in-depth review lasting months, and can sue to block. Big buyers, overlapping markets, strict antitrust law and a populist or progressive Congress all raise the odds. A blocked deal costs a 4% break fee.",
