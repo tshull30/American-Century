@@ -30,10 +30,10 @@ export function Politics() {
                 <div style={{ width: `${p.poll * 100}%`, background: PARTIES.commonwealth.color }} />
                 <div style={{ width: `${(1 - p.poll) * 100}%`, background: PARTIES.frontier.color }} />
               </div>
-              <span className="hint">Commonwealth {fmtPct(p.poll, 1)} · Frontier {fmtPct(1 - p.poll, 1)}</span>
+              <span className="hint">{PARTIES.commonwealth.short} {fmtPct(p.poll, 1)} · {PARTIES.frontier.short} {fmtPct(1 - p.poll, 1)}</span>
             </td></tr>
             <tr><td>Next election</td><td>{dayLabel(p.nextElectionDay)} ({presidentialNext ? "presidential" : "midterm"}), in {daysToElection} days</td></tr>
-            {p.lastResult && <tr><td>Last result</td><td>{dayLabel(p.lastResult.day)}: Commonwealth {fmtPct(p.lastResult.commonwealth, 1)}</td></tr>}
+            {p.lastResult && <tr><td>Last result</td><td>{dayLabel(p.lastResult.day)}: {PARTIES.commonwealth.short} {fmtPct(p.lastResult.commonwealth, 1)}</td></tr>}
           </tbody></table>
           <p className="hint">Voters lean by occupation and swing with the economy: when living standards fall or a recession hits, the president's party pays for it. Struggling pops punish incumbents.</p>
         </Panel>
@@ -60,7 +60,7 @@ export function Politics() {
             )))}
           </div>
           <p className="hint">Donations shift the next election by up to about 2.5 points (with sharply diminishing returns) and reset after every election. Big partisan donations cost public goodwill, and public image affects how households see your brand.</p>
-          <div className="hint">This cycle: Commonwealth {fmtMoney(me.donations.commonwealth ?? 0)} · Frontier {fmtMoney(me.donations.frontier ?? 0)}</div>
+          <div className="hint">This cycle: {PARTIES.commonwealth.short} {fmtMoney(me.donations.commonwealth ?? 0)} · {PARTIES.frontier.short} {fmtMoney(me.donations.frontier ?? 0)}</div>
         </Panel>
       </div>
       <div>
@@ -78,8 +78,8 @@ export function Politics() {
           cols={[
             { key: "law", label: "Law", render: (l) => <span title={l.levels.map((x, i) => `${i === p.laws[l.id] ? "▶ " : ""}${x.name}: ${x.effect}`).join("\n")}>{l.name}</span> },
             { key: "now", label: "Current", render: (l) => <strong title={l.levels[p.laws[l.id]].effect}>{l.levels[p.laws[l.id]].name}</strong> },
-            { key: "cw", label: "Commonwealth", render: (l) => <span style={{ color: PARTIES.commonwealth.color }}>{l.levels[l.platform.commonwealth].name}</span> },
-            { key: "fr", label: "Frontier", render: (l) => <span style={{ color: PARTIES.frontier.color }}>{l.levels[l.platform.frontier].name}</span> },
+            { key: "cw", label: PARTIES.commonwealth.short, render: (l) => <span style={{ color: PARTIES.commonwealth.color }}>{l.levels[l.platform.commonwealth].name}</span> },
+            { key: "fr", label: PARTIES.frontier.short, render: (l) => <span style={{ color: PARTIES.frontier.color }}>{l.levels[l.platform.frontier].name}</span> },
             { key: "lobby", label: "Industry lobbying (up / down)", num: true, render: (l) => `${fmtMoney(lobbyPressure(s, l.id, 1), 0)} / ${fmtMoney(lobbyPressure(s, l.id, -1), 0)}` },
             { key: "mine", label: "Your lobbying", render: (l) => <LobbyControl law={l.id} /> },
           ]}

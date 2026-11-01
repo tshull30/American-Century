@@ -229,7 +229,7 @@ export interface Politics {
   bill: Bill | null;
   /** President's approval, 0–1. */
   approval: number;
-  /** Commonwealth share of the two-party vote if the election were held today. */
+  /** Democratic share of the two-party vote if the election were held today. */
   poll: number;
   nextElectionDay: number;
   /** National average standard of living at the last election. */

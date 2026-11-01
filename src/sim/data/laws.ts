@@ -23,13 +23,13 @@ export interface LawDef {
   start: number;
 }
 
-export const PARTIES: Record<PartyId, { name: string; color: string; pitch: string }> = {
+export const PARTIES: Record<PartyId, { name: string; short: string; color: string; pitch: string }> = {
   commonwealth: {
-    name: "Commonwealth Party", color: "#5c9ded",
+    name: "Democratic Party", short: "Democrats", color: "#3b82f6",
     pitch: "Higher taxes on business, stronger unions and wage floors, tougher antitrust, green industrial policy.",
   },
   frontier: {
-    name: "Frontier Party", color: "#e07a5f",
+    name: "Republican Party", short: "Republicans", color: "#ef4444",
     pitch: "Lower taxes and lighter regulation, protective tariffs, tighter immigration, weaker unions.",
   },
 };
