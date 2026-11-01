@@ -1,11 +1,13 @@
 import { useMemo } from "react";
 import { build, buildQuote, downsize, expand, liquidity, setMethod } from "../../sim/actions";
-import { BUILDINGS, BUILDING_BY_ID, methodOf, type BuildingTypeId } from "../../sim/data/buildings";
+import { BUILDINGS, BUILDING_BY_ID, methodOf, SECTORS, type BuildingTypeId, type SectorId } from "../../sim/data/buildings";
 import { GOOD_BY_ID, type GoodId } from "../../sim/data/goods";
 import { JOB_BY_ID, type JobId } from "../../sim/data/jobs";
 import { STATES } from "../../sim/data/states";
 import { citiesInState, cityLabel, dcPowerCost, opinionOf, permitBlock } from "../../sim/geo";
 import { adminCapacity, adminLoad } from "../../sim/engine";
+import { resourceMult, SUN } from "../../sim/data/resources";
+import { activeSectors, complexityMult, conglomerateDiscount, entryKnowhow, knowhowMult, scaleMult, sectorLevels, SCALE_REF } from "../../sim/sectors";
 import type { Building } from "../../sim/types";
 import { fmtMoney, fmtNum, fmtPct, laborKey } from "../../sim/util";
 import { Bar, Panel, Table, useGame, useSticky } from "../components";
@@ -48,8 +50,29 @@ export function Production() {
           />
         </div>
       </Panel>
+      <IndustriesPanel />
       <BuildPanel />
     </div>
+  );
+}
+
+function IndustriesPanel() {
+  const { me } = useGame();
+  const lv = sectorLevels(me);
+  const rows = (Object.keys(lv) as SectorId[]).map((id) => ({ id, levels: lv[id] ?? 0, k: me.knowhow?.[id] ?? 1 }));
+  if (!rows.length) return null;
+  const n = rows.length;
+  return (
+    <Panel title="Industries" right={n > 2 ? <span className="warn">{n} industries: HQ workload +{fmtPct(complexityMult(me) - 1, 0)}, investors discount you {fmtPct(conglomerateDiscount(me), 0)}</span> : `${n} ${n === 1 ? "industry" : "industries"}`}>
+      <Table rows={rows} rowKey={(r) => r.id} cols={[
+        { key: "n", label: "Industry", render: (r) => SECTORS[r.id].name },
+        { key: "l", label: "Levels", num: true, render: (r) => fmtNum(r.levels), sort: (r) => r.levels },
+        { key: "k", label: "Know-how", num: true, title: "Grows about 4% of the gap each month you operate; related industries give a head start", render: (r) => <span className={r.k < 0.6 ? "warn" : ""}>{fmtPct(r.k, 0)}</span>, sort: (r) => r.k },
+        { key: "s", label: "Scale", num: true, title: `Full economies of scale at ${SCALE_REF} levels`, render: (r) => fmtPct(scaleMult(r.levels), 0), sort: (r) => r.levels },
+        { key: "e", label: "Efficiency from both", num: true, render: (r) => fmtPct(knowhowMult(r.k) * scaleMult(r.levels), 0), sort: (r) => knowhowMult(r.k) * scaleMult(r.levels) },
+      ]} />
+      <p className="hint">New industries start clumsy: lower output and up to 50% higher running costs until you learn the business. Small operations miss out on economies of scale. Every industry beyond your first two adds 15% to headquarters workload, and investors knock up to 25% off a sprawling conglomerate's valuation. Focus pays.</p>
+    </Panel>
   );
 }
 
@@ -87,11 +110,13 @@ function BuildPanel() {
   const jobs = Object.entries(m.staff) as [JobId, number][];
   const block = permitBlock(s, city, me, type);
   const here = s.cities[city];
+  const site = def.resource ? resourceMult(def.resource, here?.state ?? "") : type === "power" && method === "solar" ? SUN[here?.state ?? ""] ?? 1 : 1;
+  const entering = !!def.sector && !sectorLevels(me)[def.sector];
 
   // Rank cities for this building: hireable staff for its two biggest jobs, wages, land, permits, local mood.
   const ranking = useMemo(() => {
     const key = jobs.slice().sort((a, b) => b[1] - a[1]).slice(0, 2);
-    return Object.values(s.cities).filter((c) => stateFilter === "all" || c.state === stateFilter).map((c) => {
+    return Object.values(s.cities).filter((c) => (stateFilter === "all" || c.state === stateFilter) && (!def.resource || (resourceMult(def.resource, c.state) > 0 && (c.rest || !s.cities[`rest-${c.state}`])))).map((c) => {
       let free = Infinity, wage = 0;
       for (const [j, n] of key) {
         const cell = s.labor[laborKey(c.id, j)];
@@ -128,7 +153,7 @@ function BuildPanel() {
             <input type="number" min={1} value={levels} onChange={(e) => setLevels(Math.max(1, Math.floor(Number(e.target.value) || 1)))} /> levels
           </div>
           <p className="hint" style={{ margin: "8px 0" }}>{def.description}</p>
-          <table className="t">
+          <table className="t wrap">
             <tbody>
               <tr><td>Cost</td><td className="num">{fmtMoney(q.total)}{q.total < q.unsubsidized - 1 ? <span className="pos"> (subsidies and local incentives save {fmtMoney(q.unsubsidized - q.total)})</span> : null}</td></tr>
               <tr><td>Construction time</td><td className="num">{q.months.toFixed(1)} months, permitting included</td></tr>
@@ -138,6 +163,10 @@ function BuildPanel() {
               </td></tr>
               {type === "datacenter" && here && <tr><td>Local grid</td><td className="num">{fmtNum(here.dcLoadMW)} of {fmtNum(here.gridMW)} MW used; power bill {fmtMoney(dcPowerCost(s, city))} per level a month</td></tr>}
               {here && <tr><td>{here.name}</td><td className="num">thinks of you: {fmtPct(opinionOf(s, city, me), 0)}; tax break {fmtPct(here.taxBreak, 0)}; data centers {here.dcStance}</td></tr>}
+              {site !== 1 && <tr><td>{def.resource ? "Local reserves" : "Sunshine"}</td><td className="num">{site > 0 ? `${fmtPct(site, 0)} of normal output` : "none"}</td></tr>}
+              {def.sector && <tr><td>Industry</td><td className="num">{entering
+                ? <span className="warn">New industry for you: starts at {fmtPct(knowhowMult(entryKnowhow(me, def.sector)) * scaleMult(levels), 0)} efficiency with {fmtPct(0.5 * (1 - entryKnowhow(me, def.sector)), 0)} higher running costs, and learns over about three years{activeSectors(me).length >= 2 ? "; also adds 15% to HQ workload" : ""}</span>
+                : `${SECTORS[def.sector].name}: know-how ${fmtPct(me.knowhow?.[def.sector] ?? 1, 0)}, scale ${fmtPct(scaleMult(sectorLevels(me)[def.sector] ?? 0), 0)}`}</td></tr>}
               <tr><td>Your cash and credit</td><td className="num">{fmtMoney(liquidity(me))}</td></tr>
             </tbody>
           </table>
@@ -166,6 +195,7 @@ function BuildPanel() {
                 { key: "k", label: "Cost per level", num: true, render: (r) => fmtMoney(r.cost), sort: (r) => -r.cost },
                 { key: "t", label: "Months", num: true, render: (r) => r.months.toFixed(1), sort: (r) => -r.months },
                 { key: "o", label: "Locals", num: true, title: "How the city feels about you", render: (r) => <span className={r.op < 0.35 ? "neg" : r.op > 0.65 ? "pos" : ""}>{fmtPct(r.op, 0)}</span>, sort: (r) => r.op },
+                ...(def.resource ? [{ key: "r", label: "Reserves", num: true, render: (r: typeof ranking[number]) => fmtPct(resourceMult(def.resource!, r.c.state), 0), sort: (r: typeof ranking[number]) => resourceMult(def.resource!, r.c.state) }] : []),
                 ...(type === "datacenter" ? [{ key: "p", label: "Power", num: true, render: (r: typeof ranking[number]) => `${r.c.powerIdx.toFixed(2)}x, ${fmtPct(r.c.dcLoadMW / r.c.gridMW, 0)} load`, sort: (r: typeof ranking[number]) => -r.c.powerIdx }] : []),
               ]}
             />

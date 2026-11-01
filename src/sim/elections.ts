@@ -3,6 +3,8 @@
 import { APPORTIONMENT, type Faction } from "./data/congress";
 import { DISTRICTS_2024, NATIONAL_PRES_2024, STATE_PRES_2024 } from "./data/districts";
 import { candidateName } from "./names";
+import { POLITICIAN_POOL } from "./data/politicianPool";
+import { SENATE_CONTENDERS_2026 } from "./data/contenders2026";
 import type { PartyId } from "./data/laws";
 import type { Candidate, GameState, Politician, Race } from "./types";
 import { clamp, dateOfDay, rand, randNormal, START_YEAR } from "./util";
@@ -16,7 +18,7 @@ export const seatLeanHouse = (st: string, d: number) => {
 export const seatLeanState = (st: string) => clamp((STATE_PRES_2024[st] ?? 0.5) + NEUTRAL, 0.05, 0.95);
 
 /** Senators who announced they wouldn't run in 2026. */
-const RETIRING_2026_SENATE = ["NC-Tillis", "KY-McConnell", "IL-Durbin", "MI-Peters", "NH-Shaheen", "MN-Smith", "IA-Ernst", "AL-Tuberville"];
+const RETIRING_2026_SENATE = ["NC-Tillis", "KY-McConnell", "IL-Durbin", "MI-Peters", "NH-Shaheen", "MN-Smith", "IA-Ernst", "AL-Tuberville", "WY-Lummis"];
 
 /** Approximate primary dates (month, day) used in every even year. */
 const PRIMARY: Record<string, [number, number]> = {
@@ -50,6 +52,13 @@ export function initElectionData(s: GameState) {
       p.personal = 0;
     }
     p.retiring = false;
+  }
+  // House members running for Senate in 2026 aren't running for their own seats.
+  for (const [st, parties] of Object.entries(SENATE_CONTENDERS_2026)) {
+    for (const names of Object.values(parties)) for (const n of names ?? []) {
+      const m = s.politicians.find((p) => p.chamber === "house" && p.state === st && p.name.toUpperCase() === n.toUpperCase());
+      if (m) m.retiring = true;
+    }
   }
   for (const key of RETIRING_2026_SENATE) {
     const [st, last] = key.split("-");
@@ -107,14 +116,50 @@ function pickFaction(s: GameState, party: "D" | "R", lean: number): Faction {
   return r < 0.6 ? "moderate" : "corporate";
 }
 
-function freshName(s: GameState, state: string, party: "D" | "R"): string {
-  const used = new Set(s.politicians.map((p) => p.name));
-  for (const r of s.races) for (const c of Object.values(r.nominees)) if (c) used.add(c.name);
+function usedNames(s: GameState): Set<string> {
+  const used = new Set(s.politicians.map((p) => p.name.toUpperCase()));
+  for (const r of s.races) for (const c of Object.values(r.nominees)) if (c) used.add(c.name.toUpperCase());
+  for (const n of s.politicsUsedNames ?? []) used.add(n);
+  return used;
+}
+
+/**
+ * A name for a new candidate: a real declared 2026 Senate contender if there is one, otherwise usually a real
+ * politician from the state (a former member of Congress for Senate races and their old House seat, statewide
+ * officials, state legislators), otherwise a generated name.
+ */
+function freshName(s: GameState, state: string, party: "D" | "R", race?: Race): string {
+  const used = usedNames(s);
+  const take = (n: string) => { (s.politicsUsedNames ??= []).push(n.toUpperCase()); return n; };
+  if (race?.chamber === "senate" && cycleYearOf(s) === 2026) {
+    // Declared contenders may be sitting House members (they gave up their seats to run).
+    const taken = new Set(s.politicsUsedNames ?? []);
+    for (const r of s.races) for (const c of Object.values(r.nominees)) if (c && r.chamber === "senate") taken.add(c.name.toUpperCase());
+    const list = (SENATE_CONTENDERS_2026[state]?.[party] ?? []).filter((n) => !taken.has(n.toUpperCase()));
+    if (list.length) return take(list[Math.floor(Math.pow(rand(s), 1.5) * list.length)]);
+  }
+  if (rand(s) < 0.85) {
+    const pool = POLITICIAN_POOL.filter((r) => r[1] === state && r[2] === party && !used.has(r[0].toUpperCase()));
+    if (pool.length) {
+      const weight = (r: (typeof pool)[number]) => {
+        if (race?.chamber === "senate") return r[3] === "fmr" ? 4 : r[3] === "gov" ? 5 : r[3] === "ss" ? 1 : 0.3;
+        if (r[3] === "fmr") return race?.district !== undefined && r[4] === race.district ? 12 : 1;
+        return r[3] === "ss" ? 2 : r[3] === "sh" ? 1.5 : 0.6;
+      };
+      const tot = pool.reduce((a, r) => a + weight(r), 0);
+      let x = rand(s) * tot;
+      for (const r of pool) { x -= weight(r); if (x <= 0) return take(r[0]); }
+    }
+  }
   for (let i = 0; i < 40; i++) {
     const n = candidateName(s, state, party);
-    if (!used.has(n)) return n;
+    if (!used.has(n.toUpperCase())) return take(n);
   }
-  return candidateName(s, state, party) + " Jr.";
+  return take(candidateName(s, state, party) + " Jr.");
+}
+
+function cycleYearOf(s: GameState): number {
+  return dateOfDay(s.politics.nextElectionDay).getUTCFullYear();
 }
 
 const CENTRIST: Faction[] = ["moderate", "bluedog", "corporate"];
@@ -136,16 +181,16 @@ export function runPrimaries(s: GameState, log: (t: string) => void) {
       if (cur?.incumbent) {
         // Centrists in safe seats are vulnerable; money spent against them in the other column helps the challenger.
         const safe = party === "D" ? r.lean > 0.65 : r.lean < 0.35;
-        let lose = 0.008 + (safe && (cur.faction === "moderate" || cur.faction === "bluedog") ? 0.05 : safe && CENTRIST.includes(cur.faction) ? 0.008 : 0);
+        let lose = (r.chamber === "senate" ? 0.002 : 0.006) + (safe && (cur.faction === "moderate" || cur.faction === "bluedog") ? 0.05 : safe && CENTRIST.includes(cur.faction) ? 0.008 : 0);
         lose += Math.min(0.15, pacEdge(r, party === "D" ? "R" : "D") * 2);
         if (rand(s) < lose) {
-          const challenger: Candidate = { name: freshName(s, r.state, party), faction: pickFaction(s, party, r.lean), personal: 0, incumbent: false };
+          const challenger: Candidate = { name: freshName(s, r.state, party, r), faction: pickFaction(s, party, r.lean), personal: 0, incumbent: false };
           r.nominees[party] = challenger;
           r.open = true;
           log(`Primary upset in ${r.id}: ${cur.name} lost the ${party === "D" ? "Democratic" : "Republican"} primary to ${challenger.name}.`);
         }
       } else if (!cur) {
-        r.nominees[party] = { name: freshName(s, r.state, party), faction: pickFaction(s, party, r.lean), personal: 0, incumbent: false };
+        r.nominees[party] = { name: freshName(s, r.state, party, r), faction: pickFaction(s, party, r.lean), personal: 0, incumbent: false };
       }
     }
   }
@@ -197,7 +242,7 @@ export function holdGeneral(s: GameState, year: number, presidential: boolean): 
     const dShare = clamp(r.proj + national + 0.03 * randNormal(s), 0.01, 0.99);
     const winner: "D" | "R" = dShare >= 0.5 ? "D" : "R";
     r.result = { dShare, winner };
-    const nom = r.nominees[winner] ?? { name: freshName(s, r.state, winner), faction: pickFaction(s, winner, r.lean), personal: 0, incumbent: false };
+    const nom = r.nominees[winner] ?? { name: freshName(s, r.state, winner, r), faction: pickFaction(s, winner, r.lean), personal: 0, incumbent: false };
     const inc = r.incumbentId ? byId.get(r.incumbentId) : undefined;
     if (inc && inc.party !== winner && flips.length < 14) flips.push(r.id);
     if (nom.incumbent && nom.politicianId && inc) {

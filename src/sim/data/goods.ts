@@ -17,9 +17,17 @@ export type GoodId =
   | "apparel"
   | "streaming"
   | "pharmaceuticals"
-  | "electricity";
+  | "electricity"
+  | "crude_oil"
+  | "natural_gas"
+  | "fuel"
+  | "steel"
+  | "chemicals"
+  | "crops"
+  | "solar_panels"
+  | "household_goods";
 
-export type TechId = "semis" | "ai" | "devices" | "auto" | "battery" | "software" | "cloud" | "consumer" | "media" | "biotech" | "energy";
+export type TechId = "semis" | "ai" | "devices" | "auto" | "battery" | "software" | "cloud" | "consumer" | "media" | "biotech" | "energy" | "extraction" | "materials" | "agri";
 
 export interface GoodDef {
   id: GoodId;
@@ -71,32 +79,48 @@ export const GOODS: GoodDef[] = [
     marketUS: 85e9, marketWorld: 420e9, growth: 0.02, incomeElasticity: 0.8, priceSensitivity: 3, decay: 0.03, importShare: 0.8, color: "#ef5350" },
   { id: "computers", name: "Computers", unit: "computers", refPrice: 1100, recipe: { chips: 6, components: 5 }, tech: "devices",
     marketUS: 90e9, marketWorld: 260e9, growth: 0.01, incomeElasticity: 1.1, priceSensitivity: 3, decay: 0.03, importShare: 0.75, color: "#ab47bc" },
-  { id: "evs", name: "Electric Vehicles", unit: "vehicles", refPrice: 48000, recipe: { batteries: 1, chips: 30, components: 260 }, tech: "auto",
+  { id: "evs", name: "Electric Vehicles", unit: "vehicles", refPrice: 48000, recipe: { batteries: 1, chips: 30, steel: 0.8, components: 253 }, tech: "auto",
     marketUS: 95e9, marketWorld: 420e9, growth: 0.1, incomeElasticity: 1.4, priceSensitivity: 3, decay: 0.01, importShare: 0.25, prefDrift: 0.07, color: "#ffa726" },
-  { id: "gas_cars", name: "Gasoline Vehicles", unit: "vehicles", refPrice: 42000, recipe: { chips: 12, components: 330 }, tech: "auto",
+  { id: "gas_cars", name: "Gasoline Vehicles", unit: "vehicles", refPrice: 42000, recipe: { chips: 12, steel: 1.1, components: 320 }, tech: "auto",
     marketUS: 480e9, marketWorld: 1.6e12, growth: 0.0, incomeElasticity: 1.1, priceSensitivity: 3, decay: 0.01, importShare: 0.4, prefDrift: -0.02, color: "#a1887f" },
   { id: "software", name: "Software", unit: "seat-months", refPrice: 100, recipe: { cloud: 0.01 }, tech: "software",
     marketUS: 420e9, marketWorld: 480e9, growth: 0.1, incomeElasticity: 1, priceSensitivity: 2, decay: 1, importShare: 0.05,
-    buyerJobs: ["clerk", "professional", "manager", "software", "engineer", "scientist"], color: "#42a5f5" },
+    buyerJobs: ["clerk", "professional", "manager", "software", "engineer", "scientist", "datasci", "accountant", "lawyer", "sales", "designer"], color: "#42a5f5" },
   { id: "cloud", name: "Cloud Compute", unit: "compute units", refPrice: 1000, importPrice: 1100, recipe: { ai_accelerators: 0.01, components: 0.1 }, tech: "cloud",
     marketUS: 320e9, marketWorld: 330e9, growth: 0.18, incomeElasticity: 1, priceSensitivity: 2, decay: 1, importShare: 0.02,
-    buyerJobs: ["professional", "manager", "software", "engineer", "scientist"], color: "#29b6f6" },
+    buyerJobs: ["professional", "manager", "software", "engineer", "scientist", "datasci"], color: "#29b6f6" },
   { id: "data_platforms", name: "Data Platforms", unit: "contract-months", refPrice: 100000, recipe: { cloud: 20 }, tech: "software",
     marketUS: 45e9, marketWorld: 25e9, growth: 0.25, incomeElasticity: 1, priceSensitivity: 2, decay: 1, importShare: 0.02,
-    buyerJobs: ["professional", "manager"], color: "#7e57c2" },
+    buyerJobs: ["professional", "manager", "accountant", "datasci"], color: "#7e57c2" },
   { id: "digital_ads", name: "Digital Advertising", unit: "campaign-units", refPrice: 1000, recipe: { cloud: 0.15 }, tech: "media",
     marketUS: 330e9, marketWorld: 450e9, growth: 0.08, incomeElasticity: 1, priceSensitivity: 2, decay: 1, importShare: 0.03,
-    buyerJobs: ["manager", "professional", "clerk", "service"], color: "#ec407a" },
-  { id: "groceries", name: "Groceries", unit: "baskets", refPrice: 50, recipe: { components: 0.25 }, tech: "consumer",
+    buyerJobs: ["manager", "professional", "clerk", "service", "retail", "sales"], color: "#ec407a" },
+  { id: "groceries", name: "Groceries", unit: "baskets", refPrice: 50, recipe: { crops: 0.05, components: 0.12 }, tech: "consumer",
     marketUS: 900e9, marketWorld: 150e9, growth: 0.02, incomeElasticity: 1, priceSensitivity: 3, decay: 0.05, importShare: 0.15, color: "#9ccc65" },
   { id: "apparel", name: "Apparel", unit: "items", refPrice: 40, recipe: { components: 0.15 }, tech: "consumer",
     marketUS: 380e9, marketWorld: 500e9, growth: 0.03, incomeElasticity: 1, priceSensitivity: 3, decay: 0.02, importShare: 0.9, color: "#ffb74d" },
   { id: "streaming", name: "Streaming", unit: "subscriber-months", refPrice: 15, recipe: { cloud: 0.0004 }, tech: "media",
     marketUS: 60e9, marketWorld: 90e9, growth: 0.08, incomeElasticity: 1, priceSensitivity: 2, decay: 1, importShare: 0.05, prefDrift: 0.02, color: "#e57373" },
-  { id: "pharmaceuticals", name: "Pharmaceuticals", unit: "prescriptions", refPrice: 200, recipe: { components: 0.2 }, tech: "biotech",
+  { id: "pharmaceuticals", name: "Pharmaceuticals", unit: "prescriptions", refPrice: 200, recipe: { chemicals: 0.005, components: 0.13 }, tech: "biotech",
     marketUS: 600e9, marketWorld: 900e9, growth: 0.05, incomeElasticity: 1, priceSensitivity: 2, decay: 0.01, importShare: 0.3, color: "#4db6ac" },
-  { id: "electricity", name: "Electricity", unit: "MWh", refPrice: 130, recipe: { components: 0.35 }, tech: "energy",
+  { id: "electricity", name: "Electricity", unit: "MWh", refPrice: 130, importPrice: 125, recipe: { natural_gas: 7, components: 0.07 }, tech: "energy",
     marketUS: 450e9, marketWorld: 0, growth: 0.025, incomeElasticity: 1, priceSensitivity: 4, decay: 1, importShare: 0, color: "#fff176" },
+  { id: "crude_oil", name: "Crude Oil", unit: "barrels", refPrice: 70, importPrice: 74, recipe: { components: 0.22 }, tech: "extraction",
+    marketUS: 0, marketWorld: 900e9, growth: 0.005, incomeElasticity: 1, priceSensitivity: 4, decay: 0.005, intermediate: true, importShare: 0.35, color: "#5d4037" },
+  { id: "natural_gas", name: "Natural Gas", unit: "mcf", refPrice: 4, importPrice: 4.6, recipe: { components: 0.012 }, tech: "extraction",
+    marketUS: 0, marketWorld: 160e9, growth: 0.02, incomeElasticity: 1, priceSensitivity: 4, decay: 0.01, intermediate: true, importShare: 0.05, color: "#90a4ae" },
+  { id: "fuel", name: "Gasoline & Diesel", unit: "barrels", refPrice: 115, recipe: { crude_oil: 1.04, components: 0.07 }, tech: "energy",
+    marketUS: 520e9, marketWorld: 180e9, growth: -0.005, incomeElasticity: 1, priceSensitivity: 3.5, decay: 0.005, importShare: 0.08, prefDrift: -0.01, color: "#795548" },
+  { id: "steel", name: "Steel", unit: "tons", refPrice: 900, importPrice: 960, recipe: { components: 3.2, electricity: 0.6, natural_gas: 3 }, tech: "materials",
+    marketUS: 0, marketWorld: 220e9, growth: 0.015, incomeElasticity: 1, priceSensitivity: 3.5, decay: 0.002, intermediate: true, importShare: 0.25, color: "#607d8b" },
+  { id: "chemicals", name: "Chemicals & Plastics", unit: "tons", refPrice: 1500, importPrice: 1600, recipe: { natural_gas: 45, components: 6 }, tech: "materials",
+    marketUS: 0, marketWorld: 380e9, growth: 0.025, incomeElasticity: 1, priceSensitivity: 3, decay: 0.005, intermediate: true, importShare: 0.3, color: "#00897b" },
+  { id: "crops", name: "Crops", unit: "tons", refPrice: 250, importPrice: 270, recipe: { chemicals: 0.02, components: 0.45 }, tech: "agri",
+    marketUS: 0, marketWorld: 260e9, growth: 0.015, incomeElasticity: 1, priceSensitivity: 3.5, decay: 0.03, intermediate: true, importShare: 0.15, color: "#c0ca33" },
+  { id: "solar_panels", name: "Solar Panels", unit: "panels", refPrice: 140, importPrice: 120, recipe: { chemicals: 0.01, components: 0.65 }, tech: "energy",
+    marketUS: 0, marketWorld: 70e9, growth: 0.12, incomeElasticity: 1, priceSensitivity: 3, decay: 0.01, intermediate: true, importShare: 0.85, color: "#fbc02d" },
+  { id: "household_goods", name: "Household Goods", unit: "items", refPrice: 12, recipe: { chemicals: 0.002, components: 0.04 }, tech: "consumer",
+    marketUS: 260e9, marketWorld: 300e9, growth: 0.025, incomeElasticity: 1, priceSensitivity: 2.5, decay: 0.01, importShare: 0.3, color: "#8d6e63" },
 ];
 
 export const GOOD_BY_ID: Record<GoodId, GoodDef> = Object.fromEntries(GOODS.map((g) => [g.id, g])) as Record<GoodId, GoodDef>;
@@ -111,7 +135,10 @@ export const TECHS: { id: TechId; name: string; goods: GoodId[] }[] = [
   { id: "software", name: "Software Engineering", goods: ["software", "data_platforms"] },
   { id: "cloud", name: "Cloud Infrastructure", goods: ["cloud"] },
   { id: "media", name: "Media & Advertising", goods: ["streaming", "digital_ads"] },
-  { id: "consumer", name: "Consumer Products", goods: ["groceries", "apparel"] },
+  { id: "consumer", name: "Consumer Products", goods: ["groceries", "apparel", "household_goods"] },
   { id: "biotech", name: "Biotechnology", goods: ["pharmaceuticals"] },
-  { id: "energy", name: "Energy Systems", goods: ["electricity"] },
+  { id: "energy", name: "Energy Systems", goods: ["electricity", "fuel", "solar_panels"] },
+  { id: "extraction", name: "Drilling & Extraction", goods: ["crude_oil", "natural_gas"] },
+  { id: "materials", name: "Materials Science", goods: ["steel", "chemicals"] },
+  { id: "agri", name: "Agricultural Science", goods: ["crops"] },
 ];

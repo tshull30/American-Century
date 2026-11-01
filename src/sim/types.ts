@@ -5,6 +5,7 @@ import type { LawId, PartyId } from "./data/laws";
 import type { NeedId } from "./data/needs";
 import type { Faction } from "./data/congress";
 import type { Pop } from "./pops";
+import type { SectorId } from "./data/buildings";
 
 export type GoodMap<T = number> = Partial<Record<GoodId, T>>;
 export type JobMap<T = number> = Partial<Record<JobId, T>>;
@@ -178,6 +179,8 @@ export interface Company {
   /** The month in progress. */
   current: MonthReport;
   distressMonths: number;
+  /** Industry know-how, 0–1 (see sectors.ts). */
+  knowhow?: Partial<Record<SectorId, number>>;
   /** Production cost per unit, by good. */
   unitCost: GoodMap;
   /** Inputs this company consumes per day, by good (kept back from sale). */
@@ -236,6 +239,16 @@ export interface CityState {
   taxBreak: number;
   permitSpeed: number;
   dcStance: "welcome" | "neutral" | "moratorium";
+  /** Lean of residents (Harris 2024 two-party share, roughly). */
+  lean: number;
+  /** Libertarian streak, 0–1: low taxes, few rules, suspicious of subsidies. */
+  lib: number;
+  /** Bans new oil and gas projects. */
+  fossilBan?: boolean;
+  /** Share of a data center's power bill the city abates (welcome) or surcharges (negative). */
+  dcTaxBreak: number;
+  /** Water-use rules for data centers (cooling costs more). */
+  dcWaterRules?: boolean;
   minWage: number;
   union: number;
   powerIdx: number;
@@ -384,6 +397,8 @@ export interface Politics {
   /** Democratic share of the two-party vote if the election were held today. */
   poll: number;
   nextElectionDay: number;
+  /** Average occupational lean of the workforce at game start (polls are measured against it). */
+  leanBase?: number;
   /** National average standard of living at the last election. */
   solAtLastElection: number;
   lastResult?: {
@@ -440,6 +455,8 @@ export interface GameState {
   /** Normalizer that makes the 2026 national average standard of living 100. */
   solNorm: number;
   events: GameEvent[];
+  /** Real politicians already used as candidates (so nobody runs twice). */
+  politicsUsedNames?: string[];
   nextId: number;
   gameOver?: string;
 }

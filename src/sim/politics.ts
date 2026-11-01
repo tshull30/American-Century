@@ -2,7 +2,7 @@
 // economic effects, one bill at a time moving through Congress, and lobbying.
 import { BUILDING_BY_ID, type BuildingTypeId } from "./data/buildings";
 import { GOOD_BY_ID, type GoodId } from "./data/goods";
-import type { JobId } from "./data/jobs";
+import { BLUE_COLLAR, SKILLED, type JobId } from "./data/jobs";
 import { LAWS, LAW_BY_ID, PARTIES, type LawId, type PartyId } from "./data/laws";
 import type { Company, GameState, Politics } from "./types";
 import { clamp, dateOfDay, dayLabel, fmtMoney, rand, randNormal, START_YEAR } from "./util";
@@ -28,7 +28,8 @@ export function tariffRate(s: GameState): number {
 
 /** Multiplier on the price of imported inputs (tariffs plus any world event). */
 export function importMult(s: GameState, g: GoodId): number {
-  let m = 1 + tariffRate(s) * 0.8;
+  // Grid power isn't imported; everything else scales with how much of it comes from abroad.
+  let m = g === "electricity" ? 1 : 1 + tariffRate(s) * 0.8 * Math.min(1, GOOD_BY_ID[g].importShare * 2 + 0.2);
   for (const e of s.worldEvents) m *= e.importMult?.[g] ?? 1;
   return m;
 }
@@ -57,14 +58,13 @@ export function subsidyRate(s: GameState, type: BuildingTypeId, method?: string)
   return r;
 }
 
-const SKILLED: JobId[] = ["software", "engineer", "scientist"];
 export function immigrationMult(s: GameState, job: JobId): number {
   if (!SKILLED.includes(job)) return 1;
   return [0.95, 1, 1.1][lv(s, "immigration")];
 }
 
 export function unionWageMult(s: GameState, job: JobId): number {
-  if (lv(s, "labor_unions") === 2 && (job === "laborer" || job === "technician")) return 1.06;
+  if (lv(s, "labor_unions") === 2 && BLUE_COLLAR.includes(job)) return 1.06;
   return 1;
 }
 export function unionPressure(s: GameState): number {
@@ -158,9 +158,19 @@ export function aiLobbying(_s: GameState, c: Company) {
 
 // ---------------------------------------------------------------- monthly politics
 
+/** Democratic two-party lean by occupation (rough exit-poll and donor-data impressions). */
 const JOB_LEAN: Record<JobId, number> = {
-  laborer: 0.53, service: 0.56, clerk: 0.53, technician: 0.5, engineer: 0.47, software: 0.52, scientist: 0.55, professional: 0.52, manager: 0.42,
+  laborer: 0.5, assembler: 0.46, construction: 0.4, driver: 0.43, farmworker: 0.38, extraction: 0.3, technician: 0.45,
+  service: 0.57, retail: 0.53, care: 0.62, nurse: 0.55,
+  clerk: 0.53, sales: 0.44, accountant: 0.47, lawyer: 0.6, professional: 0.56, teacher: 0.63, physician: 0.57,
+  engineer: 0.48, software: 0.6, datasci: 0.62, scientist: 0.66, designer: 0.64, manager: 0.43,
 };
+/** National occupational lean at game start, so polls start near even. */
+function occupationalLean(s: GameState): number {
+  let l = 0, n = 0;
+  for (const p of s.pops) { l += JOB_LEAN[p.job] * p.workers; n += p.workers; }
+  return n > 0 ? l / n : 0.5;
+}
 
 function donationEdge(s: GameState): number {
   let cw = 0, fr = 0;
@@ -186,7 +196,7 @@ export function updatePolitics(s: GameState, log: (text: string, kind?: "politic
     people += n;
   }
   // Occupational leans net out near even; the swing comes from approval.
-  let poll = 0.5 + (lean / people - 0.522);
+  let poll = 0.5 + (lean / people - (p.leanBase ?? (p.leanBase = occupationalLean(s))));
   const swing = (p.approval - 0.48) * 0.2;
   poll += p.president === "commonwealth" ? swing : -swing;
   poll += donationEdge(s);

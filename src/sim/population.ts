@@ -1,6 +1,6 @@
 // A living population: births, migration between states and cities, people retraining
 // into better-paid jobs, and what each kind of worker thinks of each company.
-import { JOBS, JOB_BY_ID, type JobId } from "./data/jobs";
+import { JOBS, JOB_BY_ID, LOW_WAGE, type JobId } from "./data/jobs";
 import { NEED_OF_GOOD } from "./data/needs";
 import { STATES, STATE_BY_CODE } from "./data/states";
 import { citiesInState, cityWorkforce, stateWage } from "./geo";
@@ -9,10 +9,13 @@ import { clamp, laborKey } from "./util";
 
 /** Who can retrain into what: [from, to]. */
 const LADDERS: [JobId, JobId][] = [
-  ["service", "laborer"], ["service", "clerk"], ["laborer", "technician"], ["clerk", "professional"],
-  ["technician", "engineer"], ["professional", "manager"], ["clerk", "software"], ["professional", "software"],
-  ["engineer", "software"], ["professional", "scientist"],
-];
+  ["service", "retail"], ["retail", "sales"], ["service", "laborer"], ["service", "clerk"], ["care", "nurse"], ["retail", "care"],
+  ["farmworker", "laborer"], ["laborer", "assembler"], ["laborer", "driver"], ["laborer", "construction"], ["laborer", "extraction"],
+  ["assembler", "technician"], ["construction", "technician"], ["extraction", "technician"], ["technician", "engineer"],
+  ["clerk", "accountant"], ["clerk", "professional"], ["sales", "manager"], ["accountant", "professional"], ["professional", "manager"],
+  ["clerk", "software"], ["professional", "software"], ["engineer", "software"], ["software", "datasci"], ["scientist", "datasci"],
+  ["professional", "scientist"], ["professional", "designer"], ["professional", "lawyer"], ["nurse", "physician"],
+]
 
 function stateCol(s: GameState, st: string): number {
   let w = 0, n = 0;
@@ -108,7 +111,7 @@ export function updateJobOpinion(s: GameState, c: Company) {
   for (const j of JOBS) {
     const emp = empByJob[j.id] ?? 0;
     const laid = c.layoffsByJob[j.id] ?? 0;
-    const priceSensitive = j.id === "service" || j.id === "laborer" || j.id === "clerk" ? 1 : 0.4;
+    const priceSensitive = LOW_WAGE.includes(j.id) || j.id === "clerk" ? 1 : 0.4;
     let target = 0.5 + (c.image - 0.6) * 0.6 - gougeHit * priceSensitive;
     if (emp > 0) target += 0.4 * (c.wagePolicy - 1) + 0.04 - Math.min(0.4, (laid / emp) * 4);
     const cur = c.jobOpinion[j.id] ?? 0.5;

@@ -95,4 +95,12 @@ export function fmtPrice(x: number): string {
   return `$${x.toFixed(2)}`;
 }
 
-export const laborKey = (state: string, job: string) => `${state}:${job}`;
+const keyCache = new Map<string, Map<string, string>>();
+/** "city:job" (or "state:job") key, memoized: it's built millions of times a game year. */
+export const laborKey = (place: string, job: string): string => {
+  let m = keyCache.get(place);
+  if (!m) { m = new Map(); keyCache.set(place, m); }
+  let k = m.get(job);
+  if (k === undefined) { k = `${place}:${job}`; m.set(job, k); }
+  return k;
+};

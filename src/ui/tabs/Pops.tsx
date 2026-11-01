@@ -4,8 +4,9 @@ import { feature } from "topojson-client";
 import statesTopo from "us-atlas/states-albers-10m.json";
 import { CULTURES, CULTURE_BY_ID, type CultureId } from "../../sim/data/cultures";
 import { JOBS, JOB_BY_ID, type JobId } from "../../sim/data/jobs";
+const JOB_GROUPS = ["Blue collar", "Service", "Office and professional", "Tech and science"] as const;
 import { NEEDS, solTier } from "../../sim/data/needs";
-import { buildingsInCity, citiesInState, cityLabel, stateLabor, stateWage } from "../../sim/geo";
+import { buildingsInCity, citiesInState, cityLabel, cityPolitics, stateLabor, stateWage } from "../../sim/geo";
 import { BUILDING_BY_ID } from "../../sim/data/buildings";
 import { STATES, STATE_BY_CODE, STATE_BY_FIPS } from "../../sim/data/states";
 import type { Politician } from "../../sim/types";
@@ -117,7 +118,7 @@ export function Pops() {
             </select>
             <select value={job} onChange={(e) => setJob(e.target.value as JobId | "all")}>
               <option value="all">All jobs</option>
-              {JOBS.map((j) => <option key={j.id} value={j.id}>{j.plural}</option>)}
+              {JOB_GROUPS.map((g) => <optgroup key={g} label={g}>{JOBS.filter((j) => j.group === g).map((j) => <option key={j.id} value={j.id}>{j.plural}</option>)}</optgroup>)}
             </select>
             {metric === "culture" && (
               <select value={culture} onChange={(e) => setCulture(e.target.value as CultureId)}>
@@ -187,7 +188,7 @@ export function Pops() {
           </select>
           <select value={jobFilter} onChange={(e) => setJobFilter(e.target.value as JobId | "all")}>
             <option value="all">All jobs</option>
-            {JOBS.map((j) => <option key={j.id} value={j.id}>{j.plural}</option>)}
+            {JOB_GROUPS.map((g) => <optgroup key={g} label={g}>{JOBS.filter((j) => j.group === g).map((j) => <option key={j.id} value={j.id}>{j.plural}</option>)}</optgroup>)}
           </select>
           {sel && <button className="small" onClick={() => setSel(null)}>All states</button>}
         </span>
@@ -283,14 +284,17 @@ function CityPanel({ id, onClose }: { id: string; onClose: () => void }) {
   const fans = s.companies.filter((x) => x.alive && c.opinion[x.id] !== undefined && here.some((h) => h.c.id === x.id)).sort((a, b) => (c.opinion[b.id] ?? 0) - (c.opinion[a.id] ?? 0));
   return (
     <Panel title={cityLabel(s, id)} right={<button className="small" onClick={onClose}>Close</button>}>
-      <table className="t"><tbody>
+      <table className="t wrap"><tbody>
         <tr><td>Population</td><td className="num">{fmtNum(c.share * STATE_BY_CODE[c.state].population)}</td></tr>
-        <tr><td>Council</td><td className="num">{c.council > 0.55 ? "Democratic-leaning" : c.council < 0.45 ? "Republican-leaning" : "Mixed"}</td></tr>
+        <tr><td>Residents</td><td className="num">{cityPolitics(c)}</td></tr>
+        <tr><td>Council</td><td className="num">{c.council > 0.55 ? "Democratic majority" : c.council < 0.45 ? "Republican majority" : "Split"}</td></tr>
         <tr><td>Tax abatements for new plants</td><td className="num">{fmtPct(c.taxBreak, 0)}</td></tr>
         <tr><td>Permitting</td><td className="num">{c.permitSpeed < 0.9 ? "Fast" : c.permitSpeed > 1.15 ? "Slow" : "Average"} ({c.permitSpeed.toFixed(2)}x)</td></tr>
         <tr><td>Local minimum wage</td><td className="num">{c.minWage ? `$${(c.minWage / 173).toFixed(2)} an hour` : "State or federal"}</td></tr>
         <tr><td>Unions</td><td className="num">{c.union > 0.8 ? "Strong" : c.union > 0.5 ? "Moderate" : "Weak"}</td></tr>
         <tr><td>Data centers</td><td className="num">{c.dcStance === "moratorium" ? <span className="neg">Moratorium</span> : c.dcStance === "welcome" ? <span className="pos">Welcome</span> : "Case by case"}; grid {fmtNum(c.dcLoadMW)} of {fmtNum(c.gridMW)} MW; power {c.powerIdx.toFixed(2)}x</td></tr>
+        <tr><td>Data-center rules</td><td className="num">{c.dcTaxBreak > 0.02 ? `power-bill abatement ${fmtPct(c.dcTaxBreak, 0)}` : c.dcTaxBreak < -0.02 ? <span className="neg">grid surcharge {fmtPct(-c.dcTaxBreak, 0)}</span> : "no special deal"}{c.dcWaterRules ? "; water-use limits (cooling costs 10% more)" : ""}</td></tr>
+        <tr><td>Energy</td><td className="num">{c.fossilBan ? <span className="neg">Bans new oil and gas projects</span> : "Oil and gas allowed"}</td></tr>
         <tr><td>Character</td><td className="num">tech {c.tech.toFixed(1)}, manufacturing {c.mfg.toFixed(1)}, cost of living {c.col.toFixed(2)}{c.flags.includes("water") ? ", water-stressed" : ""}{c.flags.includes("univ") ? ", research universities" : ""}</td></tr>
         <tr><td>What they think of you</td><td className="num"><strong>{fmtPct(c.opinion[me.id] ?? me.image, 0)}</strong></td></tr>
       </tbody></table>
@@ -304,7 +308,7 @@ function CityPanel({ id, onClose }: { id: string; onClose: () => void }) {
           ]} />
         </>
       )}
-      <p className="hint">Locals warm to employers who hire many of them and pay well, and to HQ perks like plazas and childcare. They sour on layoffs, price gouging, and data centers that strain the grid or the water supply. Hostile towns slow your permits and eventually refuse them.</p>
+      <p className="hint">What residents believe matters: left-leaning towns reward companies that lobby and give like Democrats and that build solar and EVs, and punish oil and gas; right-leaning towns like factories and fields and companies on their side; libertarian towns dislike subsidy hunters. Locals also warm to employers who hire many of them and pay well, and to HQ perks like plazas and childcare. They sour on layoffs, price gouging, and data centers that strain the grid or the water supply. Hostile towns slow your permits and eventually refuse them.</p>
     </Panel>
   );
 }

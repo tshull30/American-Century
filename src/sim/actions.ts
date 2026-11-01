@@ -274,6 +274,8 @@ function mergeInto(s: GameState, buyer: Company, target: Company) {
     buyer.reputation[g] = Math.max(buyer.reputation[g] ?? 0, target.reputation[g] ?? 0);
   }
   for (const [t, lv] of Object.entries(target.tech) as [TechId, number][]) buyer.tech[t] = Math.max(buyer.tech[t] ?? 0, lv);
+  buyer.knowhow ??= {};
+  for (const [k, v] of Object.entries(target.knowhow ?? {})) buyer.knowhow[k as keyof typeof buyer.knowhow] = Math.max(buyer.knowhow[k as keyof typeof buyer.knowhow] ?? 0, v ?? 0);
   for (const [t, w] of Object.entries(target.researchAlloc) as [TechId, number][]) if (buyer.researchAlloc[t] === undefined) buyer.researchAlloc[t] = w;
   for (const [k, n] of Object.entries(target.employees)) buyer.employees[k] = (buyer.employees[k] ?? 0) + n;
   target.employees = {};

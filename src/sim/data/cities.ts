@@ -150,3 +150,35 @@ export const POWER_PRICE: Record<string, number> = {
   IA: 0.9, NE: 0.9, ND: 0.85, SD: 0.95, MT: 0.95, WY: 0.85, CO: 1.05, UT: 0.85, NV: 1.0, AZ: 0.95, NM: 0.95,
   ID: 0.8, OR: 0.95, WA: 0.75, WV: 0.9,
 };
+
+/**
+ * Local politics: [resident lean (rough Harris 2024 two-party share of the metro core), libertarian streak 0–1].
+ * Hand-set impressions, not survey data. "Rest of state" areas are derived from the state result.
+ */
+export const CITY_POLITICS: Record<string, [number, number]> = {
+  nyc: [0.7, 0.2], la: [0.68, 0.3], chicago: [0.7, 0.2], dallas: [0.5, 0.5], houston: [0.52, 0.45], dc: [0.92, 0.15], nova: [0.62, 0.3],
+  philly: [0.64, 0.25], miami: [0.47, 0.45], atlanta: [0.6, 0.35], boston: [0.67, 0.3], phoenix: [0.48, 0.65], sf: [0.77, 0.45],
+  inland: [0.48, 0.4], detroit: [0.58, 0.25], seattle: [0.72, 0.45], minneapolis: [0.62, 0.3], sandiego: [0.58, 0.45], tampa: [0.46, 0.5],
+  denver: [0.65, 0.6], baltimore: [0.62, 0.2], stlouis: [0.55, 0.3], orlando: [0.52, 0.4], charlotte: [0.54, 0.4], sanantonio: [0.52, 0.45],
+  portland: [0.67, 0.5], sacramento: [0.55, 0.4], pittsburgh: [0.53, 0.3], austin: [0.66, 0.65], lasvegas: [0.52, 0.7], cincinnati: [0.48, 0.4],
+  kc: [0.52, 0.45], columbus: [0.56, 0.4], indianapolis: [0.52, 0.4], cleveland: [0.58, 0.3], sanjose: [0.7, 0.5], nashville: [0.48, 0.5],
+  vabeach: [0.5, 0.4], providence: [0.58, 0.3], jacksonville: [0.46, 0.5], milwaukee: [0.58, 0.3], raleigh: [0.6, 0.4], okc: [0.4, 0.55],
+  memphis: [0.56, 0.3], richmond: [0.55, 0.4], louisville: [0.55, 0.35], neworleans: [0.65, 0.35], saltlake: [0.5, 0.6], hartford: [0.6, 0.3],
+  buffalo: [0.55, 0.3], birmingham: [0.45, 0.4], rochester: [0.56, 0.3], grandrapids: [0.48, 0.45], tucson: [0.56, 0.6], tulsa: [0.38, 0.55],
+  fresno: [0.5, 0.4], honolulu: [0.62, 0.3], worcester: [0.58, 0.35], omaha: [0.5, 0.5], bridgeport: [0.6, 0.35], greenville: [0.35, 0.5],
+  albuquerque: [0.58, 0.55], bakersfield: [0.4, 0.5], albany: [0.58, 0.3], knoxville: [0.38, 0.55], elpaso: [0.58, 0.4], batonrouge: [0.48, 0.4],
+  mcallen: [0.48, 0.35], boise: [0.42, 0.7], columbia: [0.5, 0.4], charleston: [0.48, 0.5], desmoines: [0.52, 0.45], littlerock: [0.45, 0.45],
+  wichita: [0.4, 0.55], madison: [0.75, 0.45], huntsville: [0.42, 0.5], chattanooga: [0.4, 0.5], reno: [0.5, 0.7], spokane: [0.45, 0.6],
+  coloradosprings: [0.4, 0.7], lexington: [0.52, 0.4], anchorage: [0.48, 0.8], fargo: [0.45, 0.6], siouxfalls: [0.4, 0.6], billings: [0.35, 0.75],
+  cheyenne: [0.3, 0.8], burlington: [0.73, 0.5], portlandme: [0.63, 0.5], manchester: [0.52, 0.8], wilmington: [0.62, 0.3], charlestonwv: [0.4, 0.4],
+  jackson: [0.6, 0.3], northjersey: [0.58, 0.3], trenton: [0.62, 0.3], suburbanmd: [0.7, 0.25], harrisburg: [0.48, 0.4], allentown: [0.5, 0.4],
+  toledo: [0.52, 0.3], akron: [0.5, 0.35], dayton: [0.45, 0.4], fortwayne: [0.38, 0.5], lansing: [0.58, 0.4], savannah: [0.52, 0.4],
+  mobile: [0.4, 0.45], corpuschristi: [0.44, 0.5], provo: [0.25, 0.6], eugene: [0.58, 0.5], northwestar: [0.4, 0.55], ftmyers: [0.36, 0.55],
+};
+
+/** How libertarian each state leans outside its big cities (default 0.4). */
+export const STATE_LIB: Record<string, number> = {
+  NH: 0.8, AK: 0.8, WY: 0.8, MT: 0.75, ID: 0.7, NV: 0.7, AZ: 0.65, CO: 0.6, UT: 0.55, TX: 0.55, SD: 0.6, ND: 0.55, OK: 0.5, KS: 0.5,
+  FL: 0.5, OR: 0.5, WA: 0.45, ME: 0.5, VT: 0.45, NE: 0.5, MO: 0.45, TN: 0.45, GA: 0.4, NC: 0.4, SC: 0.45, IN: 0.45,
+  NY: 0.25, NJ: 0.25, MA: 0.3, MD: 0.25, IL: 0.3, CT: 0.3, RI: 0.3, DE: 0.3, DC: 0.15, HI: 0.3, CA: 0.4, MI: 0.35, PA: 0.35, OH: 0.4, WV: 0.4,
+};

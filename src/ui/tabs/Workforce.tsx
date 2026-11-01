@@ -96,6 +96,7 @@ export function Workforce() {
         <Panel title="Who likes you" right={`National image ${fmtPct(me.image, 0)}`}>
           <Table rows={JOBS} rowKey={(j) => j.id} cols={[
             { key: "j", label: "Pop type", render: (j) => j.plural },
+            { key: "g", label: "Group", render: (j) => <span className="muted">{j.group}</span>, sort: (j) => j.group },
             { key: "o", label: "Opinion of you", render: (j) => { const o = me.jobOpinion[j.id] ?? 0.5; return <span className="row" style={{ flexWrap: "nowrap" }}><Bar value={o} tone={o > 0.6 ? "good" : o < 0.4 ? "bad" : undefined} /><span className={o > 0.6 ? "pos" : o < 0.4 ? "neg" : ""}>{fmtPct(o, 0)}</span></span>; }, sort: (j) => me.jobOpinion[j.id] ?? 0.5 },
           ]} />
           <p className="hint">Workers who like you are easier to hire. Pay above market and HQ perks help; layoffs and overcharging for necessities hurt, especially with service workers, laborers and clerks. Each city's view of you is on the Pops & Map tab.</p>

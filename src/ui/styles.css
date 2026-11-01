@@ -209,3 +209,5 @@ button.link { background: none; border: none; color: var(--ink-2); text-decorati
 label.check { display: flex; gap: 8px; align-items: baseline; padding: 3px 0; }
 table.keys td { padding: 3px 12px 3px 0; }
 kbd { font: inherit; font-size: 12px; border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 3px; padding: 0 5px; background: var(--paper-2); }
+table.t.wrap td { white-space: normal; }
+table.t.wrap td:first-child { white-space: nowrap; vertical-align: top; }

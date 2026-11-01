@@ -26,6 +26,14 @@ const STARTUP_GOODS: { good: GoodId; blurb: string }[] = [
   { good: "evs", blurb: "Take on Kestrel. Huge plants, thin margins, enormous market." },
   { good: "smartphones", blurb: "Take on Orchard in a crowded global market." },
   { good: "computers", blurb: "Laptops and desktops. Mature market, steady demand." },
+  { good: "crude_oil", blurb: "Drill for oil where there's oil: Texas, New Mexico, North Dakota. Volatile prices, big royalties." },
+  { good: "natural_gas", blurb: "Gas wells in Pennsylvania or Texas. Power plants, steel mills and chemical plants all buy." },
+  { good: "fuel", blurb: "Refine crude into gasoline and diesel. Thin margins on an enormous market." },
+  { good: "steel", blurb: "Steel mills for automakers and the world market. Hungry for power and gas." },
+  { good: "chemicals", blurb: "Crack natural gas into plastics and fertilizer for other industries." },
+  { good: "crops", blurb: "Farm the Corn Belt. Cheap to start, small margins, only on farmland." },
+  { good: "solar_panels", blurb: "Make panels in America and pray for tariffs: imports are cheap." },
+  { good: "household_goods", blurb: "Detergent, diapers and paper towels. Take on Hearth & Home's brands." },
 ];
 
 export function NewGame({ onStart }: { onStart: (s: GameState) => void }) {

@@ -1,3 +1,4 @@
+import { resourceIdx } from "./data/resources";
 import { CULTURES, ASIAN_SPLIT, type CultureId } from "./data/cultures";
 import { JOBS, type JobId } from "./data/jobs";
 import { STATES, type StateDef } from "./data/states";
@@ -51,7 +52,9 @@ export function jobShares(s: StateDef): Record<JobId, number> {
   const raw = {} as Record<JobId, number>;
   let total = 0;
   for (const j of JOBS) {
-    const v = j.nationalShare * Math.pow(s.techIndex, j.techWeight) * Math.pow(s.mfgIndex, j.mfgWeight);
+    let v = j.nationalShare * Math.pow(s.techIndex, j.techWeight) * Math.pow(s.mfgIndex, j.mfgWeight);
+    if (j.resource === "farm") v *= (0.1 + resourceIdx("farm", s.code)) / 0.8;
+    if (j.resource === "oilgas") v *= (0.04 + resourceIdx("oil", s.code) + resourceIdx("gas", s.code)) / 0.45;
     raw[j.id] = v;
     total += v;
   }

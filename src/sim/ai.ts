@@ -6,6 +6,7 @@ import {
 } from "./actions";
 import { adminCapacity, adminLoad, buildCostPerLevel, creditLimit } from "./engine";
 import { opinionOf, permitBlock, permitMult } from "./geo";
+import { resourceMult, SUN } from "./data/resources";
 import type { Building, Company, GameState } from "./types";
 import { clamp, DAYS_PER_MONTH, laborKey, rand } from "./util";
 
@@ -13,7 +14,7 @@ import { clamp, DAYS_PER_MONTH, laborKey, rand } from "./util";
  * Daily price nudge toward where production and sales balance, never below cost.
  * About ±0.1% a day (≈3% a month).
  */
-export function autoPrice(_s: GameState, c: Company, g: GoodId) {
+export function autoPrice(s: GameState, c: Company, g: GoodId) {
   const def = GOOD_BY_ID[g];
   const produced = c.dayProduced[g] ?? 0;
   const sold = (c.daySold[g] ?? 0) + (c.inputUse[g] ?? 0);
@@ -24,7 +25,9 @@ export function autoPrice(_s: GameState, c: Company, g: GoodId) {
   // Services can't be stockpiled (unsold capacity just vanishes), so watch sell-through as well as stock.
   if (inv > 36 * Math.max(sold, produced * 0.5) || sold < produced * 0.85) next = p * 0.999;
   else if (inv < 7.5 * Math.max(produced, 1e-9) && sold >= produced * 0.95) next = p * 1.0008;
-  const floor = Math.max(def.refPrice * 0.3, (c.unitCost[g] ?? 0) * 1.02);
+  let floor = Math.max(def.refPrice * 0.3, (c.unitCost[g] ?? 0) * 1.02);
+  // Commodities trade near the world price: dumping far below it would just hand buyers a gift.
+  if (def.priceSensitivity >= 3.5) floor = Math.max(floor, (s.markets[g]?.othersPrice ?? def.refPrice) * 0.88);
   next = clamp(next, floor, def.refPrice * 3);
   if (def.importPrice && def.intermediate) next = Math.min(next, def.importPrice * 0.99);
   c.prices[g] = next;
@@ -71,6 +74,10 @@ export function bestCity(s: GameState, c: Company, type: BuildingTypeId, method:
     score -= permitMult(s, city.id, c) * 2;
     score += (opinionOf(s, city.id, c) - 0.5) * 6;
     if (type === "datacenter") score += -city.powerIdx * 6 - Math.max(0, city.dcLoadMW / city.gridMW - 0.6) * 10 + (city.dcStance === "welcome" ? 2 : 0) - (city.flags.includes("water") ? 1.5 : 0);
+    const def = BUILDING_BY_ID[type];
+    if (def.resource) score += resourceMult(def.resource, city.state) * 6;
+    if (type === "power" && method === "solar") score += ((SUN[city.state] ?? 1) - 1) * 12;
+    if (type === "refinery" || type === "chemicals") score += city.flags.includes("port") ? 2 : 0;
     if (present.has(city.id)) score += 2;
     score += rand(s) * 2;
     if (score > bestScore) { bestScore = score; best = city.id; }
@@ -84,6 +91,8 @@ export function runAI(s: GameState, c: Company, o: { warmup: boolean }) {
   if (c.cash < 2 * costs) {
     const room = creditLimit(c) - c.debt;
     if (room > 0) borrow(s, c.id, Math.min(room, 3 * costs - c.cash));
+  } else if (c.debt > creditLimit(c) && c.cash > costs) {
+    repay(s, c.id, Math.min(c.debt, c.cash - costs));
   } else if (c.cash > 6 * costs && c.debt > 0) {
     repay(s, c.id, Math.min(c.debt, c.cash - 4 * costs));
   }

@@ -1,7 +1,7 @@
 import { BUILDINGS, BUILDING_BY_ID, methodOf, type BuildingTypeId, type MethodDef } from "./data/buildings";
 import { COMPANY_SEEDS, STARTUP_PREFIX, STARTUP_SUFFIX, type CompanySeed } from "./data/companies";
 import { GOOD_BY_ID, MARKET_GOODS, TECHS, type GoodId, type TechId } from "./data/goods";
-import { JOBS, JOB_BY_ID, type JobId } from "./data/jobs";
+import { BLUE_COLLAR, JOBS, JOB_BY_ID, LOW_WAGE, type JobId } from "./data/jobs";
 import { NEED_OF_GOOD } from "./data/needs";
 import { STATES, STATE_BY_CODE } from "./data/states";
 import { calibrateConsumers, driftPreferences, updateConsumers } from "./consumers";
@@ -15,6 +15,8 @@ import { cityIncentive, cityLabel, computeStateWages, initCities, defaultCity, s
 import { hqAdminMult, hqCityOpinion, hqHireRateMult, hqHiringMult, hqImageBonus, hqReputationMult, hqResearchMult, hqUpkeep, HQ_FORMS } from "./hq";
 import { updateJobOpinion, updatePopulation } from "./population";
 import { initElectionData, runPrimaries, updateProjections } from "./elections";
+import { complexityMult, conglomerateDiscount, industryMult, learningOverhead, noteEntry, sectorLevels, siteMult, updateKnowhow } from "./sectors";
+import { RESOURCES, resourceMult, SUN, type ResourceId } from "./data/resources";
 import { processDeals } from "./actions";
 import { tierOf } from "./tiers";
 import type { Building, Company, EventTag, GameState, GoodMap, MarketSnapshot, MonthReport } from "./types";
@@ -23,7 +25,7 @@ import {
 } from "./util";
 import { runAI, autoPrice } from "./ai";
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 export const BASELINE_TECH_START = 10;
 const DT = 1 / DAYS_PER_MONTH;
 const DEPRECIATION = 0.006;
@@ -118,8 +120,18 @@ export function newGame(choice: PlayerChoice, seed = Math.floor(Math.random() * 
     c.hypeAnchor = c.hype;
     c.marketCap = target;
     c.valuationTarget = target;
+    // Rescale the warm-up year's valuations so the chart ends at today's value instead of jumping to it.
     const last = c.history[c.history.length - 1];
-    if (last) { last.marketCap = target; last.sharePrice = target / c.shares; }
+    if (last) {
+      // Warm-up valuations are noisy calibration; replace them with a path that follows smoothed revenue.
+      const smooth = (i: number) => { const w = c.history.slice(Math.max(0, i - 2), i + 1); return w.reduce((a, h) => a + h.revenue, 0) / w.length; };
+      const end = smooth(c.history.length - 1);
+      c.history.forEach((h, i) => {
+        const r = end > 0 ? clamp(smooth(i) / end, 0.85, 1.1) : 1;
+        h.marketCap = target * r;
+        h.sharePrice = h.marketCap / c.shares;
+      });
+    }
   }
   s.macro.history = [];
   s.events = [];
@@ -128,6 +140,10 @@ export function newGame(choice: PlayerChoice, seed = Math.floor(Math.random() * 
 }
 
 let warmup = false;
+
+function bestResourceState(r: ResourceId): string {
+  return Object.entries(RESOURCES[r]).sort((a, b) => b[1] - a[1])[0][0];
+}
 setHqOpinionHook(hqCityOpinion);
 
 function emptyReport(month: number, c: Company): MonthReport {
@@ -161,6 +177,7 @@ export function addBuilding(s: GameState, c: Company, type: BuildingTypeId, city
   };
   c.buildings.push(b);
   c.ppe += buildCostPerLevel(s, type, city, b.method, false) * level;
+  noteEntry(c, def.sector);
   return b;
 }
 
@@ -201,7 +218,11 @@ function companyFromSeed(s: GameState, d: CompanySeed): Company {
     const prod = producerFor(p.good, p.method);
     const out = methodOf(prod.type, prod.method).output[p.good]!;
     const levels = Math.ceil(units / 12 / out / 0.95);
-    for (const [st, lvState] of spread(levels, p.states)) {
+    for (const [st, lvRaw] of spread(levels, p.states)) {
+      const pdef = BUILDING_BY_ID[prod.type];
+      const sm = pdef.resource ? resourceMult(pdef.resource, st) : prod.type === "power" && prod.method === "solar" ? SUN[st] ?? 1 : 1;
+      if (sm <= 0) continue;
+      const lvState = Math.max(1, Math.round(lvRaw / sm));
       for (const [city, lv] of spreadInState(s, st, prod.type, lvState, prod.method)) {
         const b = addBuilding(s, c, prod.type, city, lv, prod.method);
         if (p.building) queueConstruction(s, c, b, Math.round((p.building.levels * lv) / levels) || 1, p.building.monthsLeft);
@@ -226,6 +247,8 @@ function companyFromSeed(s: GameState, d: CompanySeed): Company {
   }
   c.hqSite.form = d.marketCap > 500e9 ? "campus" : towerFor(s, c.hqSite.city) ? "tower" : "block";
   if (d.tier === "incumbent") c.hqSite.amenities = d.marketCap > 1e12 ? ["cafeteria", "fitness", "innovation_lab", "shuttle"] : ["cafeteria"];
+  c.knowhow = {};
+  for (const b of c.buildings) { const sec = BUILDING_BY_ID[b.type].sector; if (sec) c.knowhow[sec] = 1; }
   ensureHQ(s, c);
   for (const p of d.produce) {
     const t = GOOD_BY_ID[p.good].tech;
@@ -267,7 +290,7 @@ export function adminCapacity(c: Company): number {
 export function adminLoad(c: Company): number {
   let load = 0;
   for (const b of c.buildings) if (BUILDING_BY_ID[b.type].usesAdmin) load += b.level + b.construction.reduce((a, x) => a + x.levels, 0);
-  return load;
+  return Math.round(load * complexityMult(c));
 }
 
 function ensureHQ(s: GameState, c: Company) {
@@ -302,7 +325,10 @@ export function createStartup(
   c.autoPrice[o.good] = true;
   c.reputation[o.good] = 1;
   if (g.tech) { c.researchAlloc[g.tech] = 10; c.tech[g.tech] = (s.baselineTech[g.tech] ?? BASELINE_TECH_START) + 0.5; }
-  addBuilding(s, c, prod.type, prod.type === "datacenter" || prod.type === "power" ? defaultCity(s, o.hq, prod.type) : c.hqSite.city, 1, prod.method);
+  const pdef = BUILDING_BY_ID[prod.type];
+  const site = pdef.resource && resourceMult(pdef.resource, o.hq) === 0 ? bestResourceState(pdef.resource) : o.hq;
+  addBuilding(s, c, prod.type, prod.type === "datacenter" || prod.type === "power" || site !== o.hq || pdef.resource ? defaultCity(s, site, prod.type) : c.hqSite.city, 1, prod.method);
+  if (pdef.sector) c.knowhow = { [pdef.sector]: 0.6 };
   addBuilding(s, c, "rnd", c.hqSite.city, 3);
   addBuilding(s, c, "hq", c.hqSite.city, 1);
   return c;
@@ -319,7 +345,7 @@ export function supplyShare(s: GameState, c: Company, g: GoodId): number {
   const D0 = baseDemandUnits(s, g);
   if (D0 <= 0) return 0;
   let q = 0;
-  for (const b of c.buildings) q += (methodOf(b.type, b.method).output[g] ?? 0) * b.level * b.efficiency;
+  for (const b of c.buildings) q += (methodOf(b.type, b.method).output[g] ?? 0) * b.level * b.efficiency * siteMult(b);
   q -= (c.inputUse[g] ?? 0) * DAYS_PER_MONTH;
   return Math.max(0, q) / D0;
 }
@@ -388,7 +414,7 @@ function presolvePrices(s: GameState) {
 
 export function companyCapacity(c: Company, g: GoodId): number {
   let cap = 0;
-  for (const b of c.buildings) cap += (methodOf(b.type, b.method).output[g] ?? 0) * b.level;
+  for (const b of c.buildings) cap += (methodOf(b.type, b.method).output[g] ?? 0) * b.level * siteMult(b);
   return cap;
 }
 
@@ -426,7 +452,19 @@ export function attractiveness(s: GameState, c: Company, good: GoodId, price = c
 
 // ---------------------------------------------------------------- labor
 
+const needsCache = new WeakMap<Company, { sig: string; needs: Record<string, number> }>();
+/** Workers wanted per city labor market (cached until the company's buildings change). */
 export function staffNeeds(c: Company): Record<string, number> {
+  let sig = "";
+  for (const b of c.buildings) sig += b.id + "." + b.level + b.method + ",";
+  const hit = needsCache.get(c);
+  if (hit && hit.sig === sig) return hit.needs;
+  const needs = computeStaffNeeds(c);
+  needsCache.set(c, { sig, needs });
+  return needs;
+}
+
+function computeStaffNeeds(c: Company): Record<string, number> {
   const needs: Record<string, number> = {};
   for (const b of c.buildings) {
     if (b.level <= 0) continue;
@@ -499,12 +537,12 @@ function updateWages(s: GameState) {
   const press = unionPressure(s);
   for (const cell of Object.values(s.labor)) {
     const city = s.cities[cell.city];
-    const unionLocal = city && (cell.job === "laborer" || cell.job === "technician") ? 1 + 0.04 * city.union : 1;
+    const unionLocal = city && BLUE_COLLAR.includes(cell.job) ? 1 + 0.04 * city.union : 1;
     const base = JOB_BY_ID[cell.job].baseWage * (city?.col ?? 1) * unionWageMult(s, cell.job) * unionLocal;
     const share = cell.gameEmployed / Math.max(1, cell.workforce);
     const tight = Math.min(1, cell.shortage / Math.max(1, cell.workforce * HIRE_RATE));
     let target = base * (1 + press * Math.pow(share, 1.2) + 0.25 * tight) * (1 + s.macro.gap * 0.5);
-    if (cell.job === "service" || cell.job === "laborer") target = Math.max(target, floor, city?.minWage ?? 0);
+    if (LOW_WAGE.includes(cell.job)) target = Math.max(target, floor, city?.minWage ?? 0);
     cell.wage += (target - cell.wage) * 0.1;
   }
   computeStateWages(s);
@@ -610,7 +648,7 @@ function monthly(s: GameState) {
   updateOthersPrices(s);
   for (const c of alive) updateBrand(s, c);
   updateCities(s, say);
-  for (const c of alive) updateJobOpinion(s, c);
+  for (const c of alive) { updateJobOpinion(s, c); updateKnowhow(c); }
   if (!warmup) {
     updatePolitics(s, (t, k) => log(s, t, k ?? "politics", undefined, /signed into law|vetoed|failed in the/.test(t) ? "law" : undefined));
     updateProjections(s);
@@ -638,6 +676,7 @@ function produce(s: GameState, c: Company, acc: Map<number, DayAcc>, alive: Comp
   const cap = adminCapacity(c);
   const load = adminLoad(c);
   const adminEff = load <= cap ? 1 : Math.max(0.5, Math.sqrt(cap / load));
+  const secLevels = sectorLevels(c);
 
   const plans: { b: Building; m: MethodDef; scale: number }[] = [];
   const inputNeed: GoodMap = {};
@@ -656,17 +695,17 @@ function produce(s: GameState, c: Company, acc: Map<number, DayAcc>, alive: Comp
       wages += have * s.labor[k].wage * c.wagePolicy;
     }
     b.staffRatio = needSum > 0 ? haveSum / needSum : 1;
-    b.efficiency = b.staffRatio * (BUILDING_BY_ID[b.type].usesAdmin ? adminEff : 1);
+    b.efficiency = b.staffRatio * (BUILDING_BY_ID[b.type].usesAdmin ? adminEff : 1) * industryMult(c, b, secLevels);
     b.lastWages = wages;
     const power = b.type === "datacenter" ? dcPowerCost(s, b.city) : 0;
-    const running = (wages + ((m.upkeep ?? 0) + carbonCost(s, b.type, b.method) + power) * b.level + (b.type === "hq" ? hqUpkeep(c) : 0)) * DT;
+    const running = ((wages + ((m.upkeep ?? 0) + carbonCost(s, b.type, b.method) + power) * b.level) * learningOverhead(c, b) + (b.type === "hq" ? hqUpkeep(c) : 0)) * DT;
     if (b.type === "rnd") r.rdCost += running;
     else if (b.type === "hq") r.sgaCost += running;
     else r.wages += running;
     a.cost += running;
     b.profitMTD -= running;
     employees += haveSum;
-    const scale = b.level * b.efficiency;
+    const scale = b.level * b.efficiency * siteMult(b);
     plans.push({ b, m, scale });
     for (const g in m.output) {
       const out = m.output[g as GoodId]! * scale * DT;
@@ -892,7 +931,7 @@ export function fundamentalValue(s: GameState, c: Company, hype = c.hype): numbe
   const ps = clamp(1.5 + 8 * g, 0.5, 10) * rateAdj;
   let core = 0.65 * Math.max(0, ni * pe) + 0.35 * rev * ps;
   if (rev < 50e6) core = Math.max(core, (c.rndCum + c.ppe) * 1.0);
-  return core * hype + c.cash - c.debt + 0.2 * c.ppe;
+  return core * hype * (1 - conglomerateDiscount(c)) + c.cash - c.debt + 0.2 * c.ppe;
 }
 
 function closeMonth(s: GameState) {
@@ -921,9 +960,10 @@ function closeMonth(s: GameState) {
       if (qNI > 0) { r.dividends = qNI * c.dividendPct; c.cash -= r.dividends; }
     }
     if (c.cash < 0) { c.debt += -c.cash; c.cash = 0; }
-    c.distressMonths = s.month > 0 && c.debt > creditLimit(c) * 1.05 && c.debt > 1e6 ? c.distressMonths + 1 : 0;
+    // Lenders look at net debt: cash on hand can always pay loans down.
+    c.distressMonths = s.month > 0 && c.debt - c.cash > creditLimit(c) * 1.05 && c.debt > 1e6 ? c.distressMonths + 1 : 0;
     if (c.isPlayer && !warmup && c.distressMonths > 0 && c.distressMonths < 6) {
-      log(s, `Debt is over your credit limit (${fmtMoney(c.debt)} vs ${fmtMoney(creditLimit(c))}). ${6 - c.distressMonths} month${c.distressMonths === 5 ? "" : "s"} left before default.`, "bad", c.id, "finance");
+      log(s, `Net debt is over your credit limit (${fmtMoney(c.debt - c.cash)} vs ${fmtMoney(creditLimit(c))}). ${6 - c.distressMonths} month${c.distressMonths === 5 ? "" : "s"} left before default.`, "bad", c.id, "finance");
     }
     // Buildings: roll profit (operating, before depreciation).
     for (const b of c.buildings) { b.lastProfit = b.profitMTD; b.profitMTD = 0; }
@@ -1040,7 +1080,8 @@ export function queueConstruction(s: GameState, c: Company, b: Building, levels:
 function maybeSpawnStartup(s: GameState) {
   if (rand(s) > 1 / 7) return;
   const goods: GoodId[] = ["software", "software", "data_platforms", "cloud", "evs", "batteries", "chips", "ai_accelerators", "smartphones",
-    "digital_ads", "groceries", "apparel", "streaming", "pharmaceuticals", "pharmaceuticals", "electricity"];
+    "digital_ads", "groceries", "apparel", "streaming", "pharmaceuticals", "pharmaceuticals", "electricity",
+    "crude_oil", "natural_gas", "steel", "crops", "solar_panels", "household_goods"];
   const good = pick(s, goods);
   const techy = ["software", "data_platforms", "cloud", "ai_accelerators", "digital_ads", "streaming", "pharmaceuticals"].includes(good);
   const weights = STATES.map((st) => st.population * Math.pow(techy ? st.techIndex : st.mfgIndex, 3));

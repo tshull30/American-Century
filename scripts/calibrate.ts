@@ -13,7 +13,7 @@ function table(s: GameState) {
   console.log(`\n=== ${dateLabel(s.month)} ===`);
   console.log("company".padEnd(26), "mcap".padStart(9), "rev ttm".padStart(9), "NI ttm".padStart(9), "cash".padStart(9), "debt".padStart(9), "emp".padStart(8), "tier");
   const cs = s.companies.filter((c) => c.alive).sort((a, b) => b.marketCap - a.marketCap);
-  for (const c of cs.slice(0, 22)) {
+  for (const c of cs.slice(0, 50)) {
     const emp = Object.values(c.employees).reduce((a, b) => a + b, 0);
     console.log(
       c.name.slice(0, 25).padEnd(26), fmtMoney(c.marketCap).padStart(9), fmtMoney(ttm(c, "revenue")).padStart(9),

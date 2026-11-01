@@ -88,7 +88,7 @@ describe("needs and politics", () => {
     const s = newGame({ kind: "incumbent", key: "heartland" }, 3);
     expect(s.sol).toBeGreaterThan(85);
     expect(s.sol).toBeLessThan(115);
-    expect(Object.keys(s.needStats).length).toBe(8);
+    expect(Object.keys(s.needStats).length).toBe(10);
     const poor = s.needStats.food!.byQuintile[0], rich = s.needStats.food!.byQuintile[4];
     expect(rich).toBeGreaterThan(poor);
   });

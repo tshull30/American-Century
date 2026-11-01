@@ -3,7 +3,7 @@ import type { GoodId } from "./goods";
 // What pops spend their income on (Victoria 3 style). Each need is met by one or
 // more goods that substitute for each other (gas cars vs EVs for transport).
 
-export type NeedId = "food" | "energy" | "clothing" | "healthcare" | "transport" | "communication" | "computing" | "entertainment";
+export type NeedId = "food" | "energy" | "fuel" | "household" | "clothing" | "healthcare" | "transport" | "communication" | "computing" | "entertainment";
 
 export interface NeedDef {
   id: NeedId;
@@ -19,6 +19,8 @@ export interface NeedDef {
 export const NEEDS: NeedDef[] = [
   { id: "food", name: "Food", goods: ["groceries"], incomeElasticity: 0.5, weight: 3, basic: true },
   { id: "energy", name: "Energy", goods: ["electricity"], incomeElasticity: 0.4, weight: 2, basic: true },
+  { id: "fuel", name: "Gasoline & heating", goods: ["fuel"], incomeElasticity: 0.5, weight: 1.5, basic: true },
+  { id: "household", name: "Household goods", goods: ["household_goods"], incomeElasticity: 0.7, weight: 1, basic: true },
   { id: "healthcare", name: "Healthcare", goods: ["pharmaceuticals"], incomeElasticity: 0.8, weight: 2, basic: true },
   { id: "clothing", name: "Clothing", goods: ["apparel"], incomeElasticity: 0.8, weight: 1, basic: true },
   { id: "transport", name: "Transportation", goods: ["gas_cars", "evs"], incomeElasticity: 1.1, weight: 2, basic: false },
