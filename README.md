@@ -8,6 +8,8 @@ Deep and spreadsheet-y, but fast: daily ticks, five game speeds, and everything 
 
 **New in v0.3:** about 160 cities with their own tax breaks, permit speed, wages, unions, power grids and data-center rules. A headquarters you shape (downtown tower, suburban campus or city block) with amenities. Locals who like or dislike each company. Pops that grow, migrate and retrain. A real election cycle on the 435 real House districts. Acquisitions that need board approval and can draw an antitrust second request.
 
+**Since v0.3:** new candidates are named from the Football Coach / College Manager name pools (plus hand-typed women's names), matched to the background mix of their state. Quality-of-life additions: the game pauses on the events you pick (elections, laws, your deals, earnings, tier changes, recessions), a clickable list of things that need attention under the tabs, a Settings panel with autosave frequency, more keyboard shortcuts, event-log filters and search, a Best city button, and build choices that stick when you switch tabs.
+
 ## Play
 
 ```bash
@@ -17,7 +19,7 @@ npm run dev        # http://localhost:5173
 
 `npm run build` produces one self-contained `dist/index.html` that you can host anywhere. Pushing to `main` deploys to GitHub Pages through `.github/workflows/deploy.yml`. Enable it once under **Settings → Pages → Source: GitHub Actions**.
 
-Controls: <kbd>Space</kbd> pauses, <kbd>1</kbd>–<kbd>5</kbd> set the speed. The game autosaves to your browser every January; use **Export** to keep a save file.
+Controls: <kbd>Space</kbd> pauses, <kbd>1</kbd>–<kbd>5</kbd> set the speed, <kbd>.</kbd> advances a day, <kbd>[</kbd> and <kbd>]</kbd> switch tabs, <kbd>?</kbd> opens Settings. The game autosaves to your browser every quarter by default; use **Export** to keep a save file.
 
 ## How it works
 
@@ -55,7 +57,7 @@ The state demographics in `src/sim/data/states.ts` are **approximate**, typed in
 
 Check the race and occupation code lists in the script against the data dictionary for the survey year you download.
 
-House district results for 2024 come from [jaytimm/PresElectionResults](https://github.com/jaytimm/PresElectionResults) and the [MIT Election Data and Science Lab](https://electionlab.mit.edu); regenerate with `scripts/build_districts.py`. The game uses the 2024 district lines and does not model the 2025–26 mid-decade redistricting. NY-21's figures are estimated. 2026 challengers and open-seat nominees have made-up names. City figures are rough.
+House district results for 2024 come from [jaytimm/PresElectionResults](https://github.com/jaytimm/PresElectionResults) and the [MIT Election Data and Science Lab](https://electionlab.mit.edu); regenerate with `scripts/build_districts.py`. The game uses the 2024 district lines and does not model the 2025–26 mid-decade redistricting. NY-21's figures are estimated. 2026 challengers and open-seat nominees are generated from the name pools (`scripts/build_names.py`). City figures are rough.
 
 Starting company financials are rough mid-2020s figures for each company's real-world counterpart. All companies are fictional. Politicians are real people at game start, portrayed as satire; factions are the game's shorthand, assigned by hand from caucus membership and public positioning (see `scripts/build_congress.py`), and state legislature seat counts are approximate.
 

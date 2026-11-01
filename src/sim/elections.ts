@@ -2,7 +2,7 @@
 // Senate (plus specials), state primary calendars, primary challenges, ratings, and the general.
 import { APPORTIONMENT, type Faction } from "./data/congress";
 import { DISTRICTS_2024, NATIONAL_PRES_2024, STATE_PRES_2024 } from "./data/districts";
-import { FIRST_NAMES, LAST_NAMES } from "./data/factions";
+import { candidateName } from "./names";
 import type { PartyId } from "./data/laws";
 import type { Candidate, GameState, Politician, Race } from "./types";
 import { clamp, dateOfDay, rand, randNormal, START_YEAR } from "./util";
@@ -107,14 +107,14 @@ function pickFaction(s: GameState, party: "D" | "R", lean: number): Faction {
   return r < 0.6 ? "moderate" : "corporate";
 }
 
-function freshName(s: GameState): string {
+function freshName(s: GameState, state: string, party: "D" | "R"): string {
   const used = new Set(s.politicians.map((p) => p.name));
   for (const r of s.races) for (const c of Object.values(r.nominees)) if (c) used.add(c.name);
   for (let i = 0; i < 40; i++) {
-    const n = `${FIRST_NAMES[Math.floor(rand(s) * FIRST_NAMES.length)]} ${LAST_NAMES[Math.floor(rand(s) * LAST_NAMES.length)]}`;
+    const n = candidateName(s, state, party);
     if (!used.has(n)) return n;
   }
-  return `${FIRST_NAMES[Math.floor(rand(s) * FIRST_NAMES.length)]} ${LAST_NAMES[Math.floor(rand(s) * LAST_NAMES.length)]} ${Math.floor(rand(s) * 90 + 10)}`;
+  return candidateName(s, state, party) + " Jr.";
 }
 
 const CENTRIST: Faction[] = ["moderate", "bluedog", "corporate"];
@@ -139,13 +139,13 @@ export function runPrimaries(s: GameState, log: (t: string) => void) {
         let lose = 0.008 + (safe && (cur.faction === "moderate" || cur.faction === "bluedog") ? 0.05 : safe && CENTRIST.includes(cur.faction) ? 0.008 : 0);
         lose += Math.min(0.15, pacEdge(r, party === "D" ? "R" : "D") * 2);
         if (rand(s) < lose) {
-          const challenger: Candidate = { name: freshName(s), faction: pickFaction(s, party, r.lean), personal: 0, incumbent: false };
+          const challenger: Candidate = { name: freshName(s, r.state, party), faction: pickFaction(s, party, r.lean), personal: 0, incumbent: false };
           r.nominees[party] = challenger;
           r.open = true;
           log(`Primary upset in ${r.id}: ${cur.name} lost the ${party === "D" ? "Democratic" : "Republican"} primary to ${challenger.name}.`);
         }
       } else if (!cur) {
-        r.nominees[party] = { name: freshName(s), faction: pickFaction(s, party, r.lean), personal: 0, incumbent: false };
+        r.nominees[party] = { name: freshName(s, r.state, party), faction: pickFaction(s, party, r.lean), personal: 0, incumbent: false };
       }
     }
   }
@@ -197,7 +197,7 @@ export function holdGeneral(s: GameState, year: number, presidential: boolean): 
     const dShare = clamp(r.proj + national + 0.03 * randNormal(s), 0.01, 0.99);
     const winner: "D" | "R" = dShare >= 0.5 ? "D" : "R";
     r.result = { dShare, winner };
-    const nom = r.nominees[winner] ?? { name: freshName(s), faction: pickFaction(s, winner, r.lean), personal: 0, incumbent: false };
+    const nom = r.nominees[winner] ?? { name: freshName(s, r.state, winner), faction: pickFaction(s, winner, r.lean), personal: 0, incumbent: false };
     const inc = r.incumbentId ? byId.get(r.incumbentId) : undefined;
     if (inc && inc.party !== winner && flips.length < 14) flips.push(r.id);
     if (nom.incumbent && nom.politicianId && inc) {

@@ -59,7 +59,7 @@ export function Workforce() {
             <div className="stat"><div className="label">Open positions</div><div className="value">{fmtNum(cells.reduce((a, r) => a + Math.max(0, r.need - r.have), 0))}</div></div>
           </div>
         </Panel>
-        <Panel title="Labor by state and job">
+        <Panel title="Labor by city and job">
           <div className="scroll">
             <Table
               rows={cells}

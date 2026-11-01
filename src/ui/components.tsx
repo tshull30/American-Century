@@ -13,6 +13,13 @@ export interface GameCtxValue {
   ask: (message: string, onYes: () => void) => void;
 }
 
+const sticky = new Map<string, unknown>();
+/** useState that survives switching tabs (for the rest of the session). */
+export function useSticky<T>(key: string, init: T): [T, (v: T) => void] {
+  const [v, setV] = useState<T>(() => (sticky.has(key) ? (sticky.get(key) as T) : init));
+  return [v, (x: T) => { sticky.set(key, x); setV(x); }];
+}
+
 export const GameCtx = createContext<GameCtxValue | null>(null);
 
 export function useGame(): GameCtxValue {

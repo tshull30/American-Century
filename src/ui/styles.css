@@ -190,3 +190,22 @@ kbd { font-family: var(--sans); font-size: 12px; background: #fff; border: 1px s
 .tally .track > i { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink); }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* Pause notice and attention list */
+.pausebar { display: flex; gap: 10px; align-items: baseline; padding: 8px 16px; background: #f3e6d6; border-bottom: 1px solid #d9c3a5; color: var(--ink); }
+.pausebar .pausetext { flex: 1; min-width: 0; }
+.pausebar button { flex: none; }
+button.link { background: none; border: none; color: var(--ink-2); text-decoration: underline; padding: 2px 4px; }
+.alerts { display: flex; flex-wrap: wrap; gap: 4px 18px; padding: 6px 16px; border-bottom: 1px solid var(--rule); background: var(--paper); font-size: 13px; }
+.alert { background: none; border: none; padding: 2px 0; color: var(--ink-2); text-align: left; border-radius: 0; }
+.alert::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 7px; vertical-align: 1px; background: var(--ink-3); }
+.alert.bad { color: var(--seal); }
+.alert.bad::before { background: var(--seal); }
+.alert.warn::before { background: var(--warn); }
+.alert:hover:not(:disabled) { background: none; text-decoration: underline; color: var(--ink); }
+.modal.settings { max-width: 520px; width: 100%; max-height: 86vh; overflow: auto; }
+.modal.settings h3 { font: 600 15px/1.3 var(--sans); margin: 14px 0 6px; }
+.modal.settings h3:first-child { margin-top: 0; }
+label.check { display: flex; gap: 8px; align-items: baseline; padding: 3px 0; }
+table.keys td { padding: 3px 12px 3px 0; }
+kbd { font: inherit; font-size: 12px; border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 3px; padding: 0 5px; background: var(--paper-2); }

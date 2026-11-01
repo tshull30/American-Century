@@ -67,10 +67,3 @@ export const FACTION_ORDER: { party: "D" | "R"; id: Faction }[] = [
   { party: "R", id: "populist" }, { party: "R", id: "maga" },
 ];
 
-export const FIRST_NAMES = ["James", "Maria", "Robert", "Linda", "Michael", "Sarah", "David", "Jennifer", "Carlos", "Emily", "Daniel", "Aisha",
-  "Matthew", "Rachel", "Anthony", "Laura", "Kevin", "Priya", "Brian", "Megan", "Jason", "Nicole", "Luis", "Hannah", "Eric", "Grace",
-  "Tyler", "Olivia", "Marcus", "Erin", "Derek", "Rosa", "Wesley", "Tamara", "Caleb", "Deborah", "Andre", "Kristen", "Ryan", "Monica"];
-export const LAST_NAMES = ["Whitfield", "Okafor", "Delgado", "Harmon", "Brennan", "Nakamura", "Castillo", "Pruitt", "Lindqvist", "Ashby",
-  "Reyes", "Coleman", "Sandoval", "Mercer", "Haddad", "Thornton", "Kowalski", "Bridges", "Fairbanks", "Ortega", "Langley", "Vance",
-  "Holloway", "Park", "Gutierrez", "McAllister", "Sorensen", "Whitaker", "Dunmore", "Abernathy", "Quintero", "Rhodes", "Ellison",
-  "Hargrove", "Patel", "Beaumont", "Kincaid", "Moreland", "Strickland", "Yates"];

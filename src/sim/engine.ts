@@ -11,13 +11,13 @@ import {
   maybeHoldElection, minWageFloor, subsidyRate, unionPressure, unionWageMult, updatePolitics,
 } from "./politics";
 import { generatePops } from "./pops";
-import { cityIncentive, computeStateWages, initCities, defaultCity, spreadInState, distributeWorkforce, dcPowerCost, permitMult, setHqOpinionHook, updateCities } from "./geo";
+import { cityIncentive, cityLabel, computeStateWages, initCities, defaultCity, spreadInState, distributeWorkforce, dcPowerCost, permitMult, setHqOpinionHook, updateCities } from "./geo";
 import { hqAdminMult, hqCityOpinion, hqHireRateMult, hqHiringMult, hqImageBonus, hqReputationMult, hqResearchMult, hqUpkeep, HQ_FORMS } from "./hq";
 import { updateJobOpinion, updatePopulation } from "./population";
 import { initElectionData, runPrimaries, updateProjections } from "./elections";
 import { processDeals } from "./actions";
 import { tierOf } from "./tiers";
-import type { Building, Company, GameState, GoodMap, MarketSnapshot, MonthReport } from "./types";
+import type { Building, Company, EventTag, GameState, GoodMap, MarketSnapshot, MonthReport } from "./types";
 import {
   clamp, dateLabel, dayLabel, dayOfMonthStart, DAYS_PER_MONTH, fmtMoney, fmtPct, laborKey, monthOfDay, pick, rand, randNormal, shuffle,
 } from "./util";
@@ -545,7 +545,7 @@ export function tick(s: GameState) {
         job.daysLeft--;
         if (job.daysLeft <= 0) {
           b.level += job.levels;
-          if (c.isPlayer && !warmup) log(s, `Construction finished: +${job.levels} ${BUILDING_BY_ID[b.type].name} level${job.levels > 1 ? "s" : ""} in ${STATE_BY_CODE[b.state].name}.`, "good", c.id);
+          if (c.isPlayer && !warmup) log(s, `Construction finished: +${job.levels} ${BUILDING_BY_ID[b.type].name} level${job.levels > 1 ? "s" : ""} in ${cityLabel(s, b.city)}.`, "good", c.id, "build");
         }
       }
       b.construction = b.construction.filter((j) => j.daysLeft > 0);
@@ -581,14 +581,16 @@ export function tick(s: GameState) {
   for (const t of TECHS) s.baselineTech[t.id] = (s.baselineTech[t.id] ?? BASELINE_TECH_START) + DT / 12;
   if (!warmup) {
     runPrimaries(s, (t) => log(s, t, "politics"));
-    maybeHoldElection(s, (t, k) => log(s, t, k ?? "politics"));
+    maybeHoldElection(s, (t, k) => log(s, t, k ?? "politics", undefined, "election"));
     processDeals(s);
   }
 }
 
 function monthly(s: GameState) {
   const alive = s.companies.filter((c) => c.alive);
-  const say = (t: string, k?: "info" | "good" | "bad" | "deal" | "politics") => { if (!warmup) log(s, t, k ?? "info"); };
+  const say = (t: string, k?: "info" | "good" | "bad" | "deal" | "politics", tag?: EventTag) => {
+    if (!warmup) log(s, t, k ?? "info", undefined, tag ?? (/^Recession/.test(t) ? "macro" : undefined));
+  };
   updateMacro(s, say);
   updateWorldEvents(s, say);
   if (!warmup) updatePopulation(s);
@@ -609,7 +611,10 @@ function monthly(s: GameState) {
   for (const c of alive) updateBrand(s, c);
   updateCities(s, say);
   for (const c of alive) updateJobOpinion(s, c);
-  if (!warmup) { updatePolitics(s, (t, k) => log(s, t, k ?? "politics")); updateProjections(s); }
+  if (!warmup) {
+    updatePolitics(s, (t, k) => log(s, t, k ?? "politics", undefined, /signed into law|vetoed|failed in the/.test(t) ? "law" : undefined));
+    updateProjections(s);
+  }
   for (const c of alive) {
     if (!c.isPlayer) { aiLobbying(s, c); runAI(s, c, { warmup }); }
   }
@@ -917,6 +922,9 @@ function closeMonth(s: GameState) {
     }
     if (c.cash < 0) { c.debt += -c.cash; c.cash = 0; }
     c.distressMonths = s.month > 0 && c.debt > creditLimit(c) * 1.05 && c.debt > 1e6 ? c.distressMonths + 1 : 0;
+    if (c.isPlayer && !warmup && c.distressMonths > 0 && c.distressMonths < 6) {
+      log(s, `Debt is over your credit limit (${fmtMoney(c.debt)} vs ${fmtMoney(creditLimit(c))}). ${6 - c.distressMonths} month${c.distressMonths === 5 ? "" : "s"} left before default.`, "bad", c.id, "finance");
+    }
     // Buildings: roll profit (operating, before depreciation).
     for (const b of c.buildings) { b.lastProfit = b.profitMTD; b.profitMTD = 0; }
     // Public image
@@ -959,7 +967,7 @@ function earnings(s: GameState, c: Company, r: MonthReport) {
   c.hype *= 1 + kick;
   c.marketCap *= 1 + kick;
   if (!warmup && (c.isPlayer || (Math.abs(surprise) > 0.05 && c.marketCap > 200e9))) {
-    log(s, `${c.name} ${surprise >= 0 ? "beat" : "missed"} Q${qi} revenue estimates by ${fmtPct(Math.abs(surprise))} (${fmtMoney(q)} vs ${fmtMoney(expected)} expected). Stock ${surprise >= 0 ? "jumps" : "slides"}.`, surprise >= 0 ? "good" : "bad", c.id);
+    log(s, `${c.name} ${surprise >= 0 ? "beat" : "missed"} Q${qi} revenue estimates by ${fmtPct(Math.abs(surprise))} (${fmtMoney(q)} vs ${fmtMoney(expected)} expected). Stock ${surprise >= 0 ? "jumps" : "slides"}.`, surprise >= 0 ? "good" : "bad", c.id, c.isPlayer ? "finance" : undefined);
   }
 }
 
@@ -1013,8 +1021,8 @@ function updateBrand(s: GameState, c: Company) {
 
 // ---------------------------------------------------------------- events
 
-export function log(s: GameState, text: string, kind: "info" | "good" | "bad" | "deal" | "politics" = "info", companyId?: number) {
-  s.events.push({ day: s.day, text, kind, companyId });
+export function log(s: GameState, text: string, kind: "info" | "good" | "bad" | "deal" | "politics" = "info", companyId?: number, tag?: EventTag) {
+  s.events.push({ day: s.day, text, kind, companyId, ...(tag ? { tag } : {}) });
   if (s.events.length > 400) s.events.shift();
 }
 
@@ -1088,7 +1096,7 @@ function checkTiers(s: GameState) {
   if (!p) return;
   const t = tierOf(p.marketCap).id;
   const prev = lastTier.get(p);
-  if (prev && prev !== t) log(s, `${p.name} is now in the ${tierOf(p.marketCap).name} tier.`, "deal", p.id);
+  if (prev && prev !== t) log(s, `${p.name} is now in the ${tierOf(p.marketCap).name} tier.`, "deal", p.id, "tier");
   lastTier.set(p, t);
 }
 

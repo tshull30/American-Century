@@ -1,7 +1,8 @@
 import { GOOD_BY_ID, type GoodId } from "../../sim/data/goods";
-import { adminCapacity, adminLoad, interestRate, revenueGrowth, ttm } from "../../sim/engine";
+import { interestRate, revenueGrowth, ttm } from "../../sim/engine";
 import { tierOf } from "../../sim/tiers";
 import { dateLabel, dayLabel, fmtMoney, fmtNum, fmtPct } from "../../sim/util";
+import { computeAlerts } from "../alerts";
 import { LineChart, Panel, Signed, Stat, Table, useGame } from "../components";
 
 export function Overview() {
@@ -14,13 +15,8 @@ export function Overview() {
   const hist = me.history.slice(-60);
   const last = me.history[me.history.length - 1];
   const myEvents = s.events.filter((e) => e.companyId === me.id || e.kind === "deal" || e.kind === "politics").slice(-12).reverse();
-  const load = adminLoad(me), cap = adminCapacity(me);
 
-  const alerts: string[] = [];
-  if (load > cap) alerts.push(`Headquarters overloaded (${load}/${cap} building levels): every building is running below full efficiency. Expand HQ.`);
-  for (const b of me.buildings) if (b.level > 0 && b.staffRatio < 0.8) { alerts.push(`Understaffed buildings: some sites are below 80% staffed. See Workforce.`); break; }
-  if (me.distressMonths > 0) alerts.push(`Debt exceeds what lenders will support. ${6 - me.distressMonths} months until default.`);
-  if (last && last.netIncome < 0 && me.cash < -last.netIncome * 6) alerts.push(`Less than six months of cash at the current burn rate. Raise money or cut costs.`);
+  const alerts = computeAlerts(s, me);
 
   return (
     <div className="grid2">
@@ -34,7 +30,7 @@ export function Overview() {
             <Stat label="Cash" value={fmtMoney(me.cash)} sub={`debt ${fmtMoney(me.debt)}`} />
             <Stat label="Tier" value={tier.name} sub={`#${peers.findIndex((c) => c.id === me.id) + 1} of ${peers.length}`} />
           </div>
-          {alerts.length > 0 && <ul style={{ margin: "10px 0 0", paddingLeft: 18 }}>{alerts.map((a) => <li key={a} className="warn">{a}</li>)}</ul>}
+          {alerts.length > 0 && <ul style={{ margin: "10px 0 0", paddingLeft: 18 }}>{alerts.map((a) => <li key={a.text} className={a.tone === "bad" ? "neg" : a.tone === "warn" ? "warn" : ""}>{a.text}</li>)}</ul>}
         </Panel>
         <Panel title="Market cap">
           <LineChart data={hist.map((h) => ({ x: dateLabel(h.month), y: h.marketCap }))} fmt={(v) => fmtMoney(v, 1)} />

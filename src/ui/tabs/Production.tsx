@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { build, buildQuote, downsize, expand, liquidity, setMethod } from "../../sim/actions";
 import { BUILDINGS, BUILDING_BY_ID, methodOf, type BuildingTypeId } from "../../sim/data/buildings";
 import { GOOD_BY_ID, type GoodId } from "../../sim/data/goods";
@@ -8,13 +8,13 @@ import { citiesInState, cityLabel, dcPowerCost, opinionOf, permitBlock } from ".
 import { adminCapacity, adminLoad } from "../../sim/engine";
 import type { Building } from "../../sim/types";
 import { fmtMoney, fmtNum, fmtPct, laborKey } from "../../sim/util";
-import { Bar, Panel, Table, useGame } from "../components";
+import { Bar, Panel, Table, useGame, useSticky } from "../components";
 
 export function Production() {
   const { s, me, act, ask } = useGame();
   const load = adminLoad(me), cap = adminCapacity(me);
   const rows = me.buildings.slice().sort((a, b) => a.type.localeCompare(b.type) || b.level - a.level);
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useSticky("prod.step", 1);
 
   return (
     <div>
@@ -76,13 +76,13 @@ function MethodPicker({ b }: { b: Building }) {
 
 function BuildPanel() {
   const { s, me, act } = useGame();
-  const [type, setType] = useState<BuildingTypeId>("software");
+  const [type, setType] = useSticky<BuildingTypeId>("build.type", "software");
   const def = BUILDING_BY_ID[type];
-  const [method, setMethodId] = useState(def.methods[0].id);
+  const [method, setMethodId] = useSticky("build.method", def.methods[0].id);
   const m = methodOf(type, method);
-  const [city, setCity] = useState(me.hqSite.city);
-  const [levels, setLevels] = useState(1);
-  const [stateFilter, setStateFilter] = useState("all");
+  const [city, setCity] = useSticky("build.city", me.hqSite.city);
+  const [levels, setLevels] = useSticky("build.levels", 1);
+  const [stateFilter, setStateFilter] = useSticky("build.state", "all");
   const q = buildQuote(s, type, city, levels, method, me);
   const jobs = Object.entries(m.staff) as [JobId, number][];
   const block = permitBlock(s, city, me, type);
@@ -124,6 +124,7 @@ function BuildPanel() {
                 </optgroup>
               ))}
             </select>
+            <button onClick={() => { const best = ranking.find((r) => !r.blocked); if (best) setCity(best.c.id); }} title="Pick the city with the most hireable workers that will give you a permit">Best city</button>
             <input type="number" min={1} value={levels} onChange={(e) => setLevels(Math.max(1, Math.floor(Number(e.target.value) || 1)))} /> levels
           </div>
           <p className="hint" style={{ margin: "8px 0" }}>{def.description}</p>

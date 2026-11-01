@@ -201,7 +201,7 @@ export function offer(s: GameState, buyerId: number, targetId: number, premium: 
   if (!target.alive || buyer === target) return fail("Invalid target.");
   if (target.isPlayer) return fail("You can't buy the player.");
   const r = makeOffer(s, buyer, target, premium, payment, liquidity(buyer));
-  if (r.ok && (buyer.isPlayer || target.marketCap > 5e9)) log(s, r.message.replace(`${target.name}'s board`, `${target.name}'s board`).replace(/^/, `${buyer.name} → ${target.name}: `), "deal", buyer.id);
+  if (r.ok && (buyer.isPlayer || target.marketCap > 5e9)) log(s, r.message.replace(`${target.name}'s board`, `${target.name}'s board`).replace(/^/, `${buyer.name} → ${target.name}: `), "deal", buyer.id, target.isPlayer ? "deal" : undefined);
   return { ok: r.ok, message: r.message };
 }
 
@@ -220,13 +220,13 @@ export function processDeals(s: GameState) {
     if (d.stage === "second_request" && seededBlock(s, d.blockChance)) {
       buyer.cash -= fee; target.cash += fee;
       if (buyer.cash < 0) { buyer.debt += -buyer.cash; buyer.cash = 0; }
-      log(s, `Regulators sued to block ${buyer.name}'s takeover of ${target.name}; the deal is dead. ${buyer.name} pays a ${fmtMoney(fee)} break fee.`, "deal", buyer.id);
+      log(s, `Regulators sued to block ${buyer.name}'s takeover of ${target.name}; the deal is dead. ${buyer.name} pays a ${fmtMoney(fee)} break fee.`, "deal", buyer.id, buyer.isPlayer || target.isPlayer ? "deal" : undefined);
       continue;
     }
     if (d.payment === "cash") {
       if (d.price > liquidity(buyer)) {
         buyer.cash -= fee; target.cash += fee;
-        log(s, `${buyer.name} couldn't finance its ${fmtMoney(d.price)} takeover of ${target.name} at closing and paid a ${fmtMoney(fee)} break fee.`, "deal", buyer.id);
+        log(s, `${buyer.name} couldn't finance its ${fmtMoney(d.price)} takeover of ${target.name} at closing and paid a ${fmtMoney(fee)} break fee.`, "deal", buyer.id, buyer.isPlayer || target.isPlayer ? "deal" : undefined);
         continue;
       }
       buyer.cash -= d.price;
@@ -237,7 +237,7 @@ export function processDeals(s: GameState) {
       buyer.marketCap += d.price;
     }
     mergeInto(s, buyer, target);
-    log(s, `${buyer.name} completed its ${fmtMoney(d.price)} acquisition of ${target.name}.`, "deal", buyer.id);
+    log(s, `${buyer.name} completed its ${fmtMoney(d.price)} acquisition of ${target.name}.`, "deal", buyer.id, buyer.isPlayer || target.isPlayer ? "deal" : undefined);
   }
 }
 

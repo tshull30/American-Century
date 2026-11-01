@@ -203,7 +203,7 @@ export function defaultCity(s: GameState, st: string, type: BuildingTypeId): str
 
 // ---------------------------------------------------------------- monthly city politics
 
-export function updateCities(s: GameState, log: (t: string, kind?: "info" | "bad" | "good") => void) {
+export function updateCities(s: GameState, log: (t: string, kind?: "info" | "bad" | "good", tag?: "city") => void) {
   // Data-center load.
   for (const c of Object.values(s.cities)) c.dcLoadMW = 0;
   for (const co of s.companies) if (co.alive) for (const b of co.buildings) if (b.type === "datacenter" && s.cities[b.city]) s.cities[b.city].dcLoadMW += b.level * DC_MW_PER_LEVEL;
@@ -246,12 +246,13 @@ export function updateCities(s: GameState, log: (t: string, kind?: "info" | "bad
     }
     // Councils react: strained grids and unpopular data centers bring moratoriums; empty ones bring welcome mats.
     const strain = city.dcLoadMW / city.gridMW;
+    const mine = s.companies.some((co) => co.isPlayer && (co.hqSite.city === city.id || co.buildings.some((b) => b.city === city.id))) ? "city" as const : undefined;
     if (city.dcStance !== "moratorium" && strain > 1.0 && rand(s) < 0.08 + (city.council - 0.5) * 0.2) {
       city.dcStance = "moratorium";
-      log(`${city.name} passed a moratorium on new data centers: the grid is at ${(strain * 100).toFixed(0)}% of capacity.`, "bad");
+      log(`${city.name} passed a moratorium on new data centers: the grid is at ${(strain * 100).toFixed(0)}% of capacity.`, "bad", mine);
     } else if (city.dcStance === "moratorium" && strain < 0.85 && rand(s) < 0.04) {
       city.dcStance = "neutral";
-      log(`${city.name} lifted its data-center moratorium.`, "info");
+      log(`${city.name} lifted its data-center moratorium.`, "info", mine);
     } else if (city.dcStance === "neutral" && strain < 0.3 && city.council < 0.45 && rand(s) < 0.01) {
       city.dcStance = "welcome";
       log(`${city.name} is offering incentives to data centers.`, "good");

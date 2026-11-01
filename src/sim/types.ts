@@ -317,10 +317,14 @@ export interface MarketSnapshot {
   priceHistory: number[];
 }
 
+export type EventTag = "election" | "law" | "deal" | "finance" | "tier" | "city" | "build" | "macro";
+
 export interface GameEvent {
   day: number;
   text: string;
   kind: "info" | "good" | "bad" | "deal" | "politics";
+  /** Why this event might pause the game (see PAUSE_TAGS in the UI). */
+  tag?: EventTag;
   companyId?: number;
 }
 
