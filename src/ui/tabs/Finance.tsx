@@ -54,12 +54,20 @@ export function Finance() {
           </table>
         </Panel>
         <Panel help="earnings" title="Earnings">
-          {me.lastEarnings ? (
-            <p style={{ margin: 0 }}>
-              {me.lastEarnings.quarter}: revenue {fmtMoney(me.lastEarnings.revenue)} vs {fmtMoney(me.lastEarnings.expected)} expected:{" "}
-              <strong className={me.lastEarnings.surprise >= 0 ? "pos" : "neg"}>{me.lastEarnings.surprise >= 0 ? "beat" : "miss"} by {fmtPct(Math.abs(me.lastEarnings.surprise))}</strong>
-            </p>
-          ) : <div className="hint">You report your first quarter once you have enough history.</div>}
+          {me.lastEarnings ? (() => {
+            const e = me.lastEarnings;
+            const v = e.verdict ?? (e.surprise >= 0 ? "beat" : "missed");
+            return (
+              <table className="t" style={{ marginBottom: 8 }}>
+                <thead><tr><th>{e.quarter}</th><th className="num">Actual</th><th className="num">Expected</th><th className="num">Difference</th></tr></thead>
+                <tbody>
+                  <tr><td>Revenue</td><td className="num">{fmtMoney(e.revenue)}</td><td className="num">{fmtMoney(e.expected)}</td><td className={`num ${e.revenue >= e.expected ? "pos" : "neg"}`}>{e.revenue >= e.expected ? "+" : "−"}{fmtPct(Math.abs(e.revenue / e.expected - 1))}</td></tr>
+                  {e.netIncome !== undefined && <tr><td>Net income</td><td className={`num ${e.netIncome >= 0 ? "pos" : "neg"}`}>{fmtMoney(e.netIncome)}</td><td className="num">{fmtMoney(e.expectedNI ?? 0)}</td><td className={`num ${e.netIncome >= (e.expectedNI ?? 0) ? "pos" : "neg"}`}>{e.netIncome >= (e.expectedNI ?? 0) ? "+" : "−"}{fmtMoney(Math.abs(e.netIncome - (e.expectedNI ?? 0)))}</td></tr>}
+                  <tr><td colSpan={4}>Verdict: <strong className={v === "beat" ? "pos" : v === "missed" ? "neg" : ""}>{v === "beat" ? "beat estimates" : v === "missed" ? "missed estimates" : "in line"}</strong>{v === "missed" && (e.netIncome ?? 0) > 0 ? <span className="muted"> (still profitable; a miss means below Wall Street's forecast, not a loss)</span> : null}</td></tr>
+                </tbody>
+              </table>
+            );
+          })() : <div className="hint">You report your first quarter once you have enough history.</div>}
           <div className="row">
             Dividend <input type="range" min={0} max={0.8} step={0.05} value={me.dividendPct} onChange={(e) => act(setDividend(s, me.id, Number(e.target.value)))} style={{ width: 200 }} />
             <strong>{fmtPct(me.dividendPct, 0)}</strong> of quarterly profit

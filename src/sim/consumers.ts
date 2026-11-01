@@ -84,10 +84,21 @@ export function updateConsumers(s: GameState) {
   }
 
   const tilted = NEEDS.map((n) => n.goods.some((g) => GOOD_BY_ID[g].tilt));
+  // Precomputed per need: goods, their split, tilt index and 1/refPrice, so the per-pop loop is just lookups.
+  const tilts: number[] = [];
+  const tiltIdx = (t: number) => { let k = tilts.indexOf(t); if (k < 0) { k = tilts.length; tilts.push(t); } return k; };
+  const needGoods = NEEDS.map((n) => n.goods.map((g) => ({ g, split: split[g]!, ti: tiltIdx(GOOD_BY_ID[g].tilt ?? 0), inv: 1 / GOOD_BY_ID[g].refPrice })));
+  const elast = NEEDS.map((n) => n.incomeElasticity - 1);
+  const shares = NEEDS.map((n) => s.needShare[n.id] ?? 0);
+  const pw = new Float64Array(tilts.length);
+  const demandAcc = new Float64Array(GOODS.length);
+  const goodIndex = new Map(GOODS.map((g, i) => [g.id, i]));
+  const gIdx = needGoods.map((list) => list.map((x) => goodIndex.get(x.g)!));
   const order = s.pops.map((_, i) => i).sort((a, b) => inc[a] - inc[b]);
   const totalPeople = s.pops.reduce((a, p) => a + p.workers + p.dependents, 0);
   const quint: { sat: number[]; n: number }[] = Array.from({ length: 5 }, () => ({ sat: NEEDS.map(() => 0), n: 0 }));
   const spending: Partial<Record<NeedId, number>> = {};
+  const spendArr = new Float64Array(NEEDS.length);
   let cum = 0, solSum = 0;
   const wsum = NEEDS.reduce((a, n) => a + n.weight, 0);
   for (const i of order) {
@@ -96,30 +107,37 @@ export function updateConsumers(s: GameState) {
     const q = Math.min(4, Math.floor((cum / totalPeople) * 5));
     cum += people;
     let sol = 0;
-    p.sat = NEEDS.map((n, k) => {
-      const share = s.needShare[n.id] ?? 0;
-      const rel = Math.pow(inc[i] / avg, n.incomeElasticity - 1);
-      const perPerson = inc[i] * share * rel * macro;
+    const lnr = Math.log(Math.max(1e-9, inc[i] / avg));
+    for (let t = 0; t < tilts.length; t++) pw[t] = Math.exp(tilts[t] * lnr);
+    const sat = new Array<number>(NEEDS.length);
+    for (let k = 0; k < NEEDS.length; k++) {
+      const n = NEEDS[k];
+      const share = shares[k];
+      const perPerson = inc[i] * share * Math.exp(elast[k] * lnr) * macro;
       const spend = perPerson * people;
-      spending[n.id] = (spending[n.id] ?? 0) + spend;
+      spendArr[k] += spend;
+      const list = needGoods[k], idx = gIdx[k];
       if (tilted[k]) {
         // Segments: richer pops lean toward premium goods within the need, poorer ones toward budget goods.
-        const r = inc[i] / avg;
         let tw = 0;
-        for (const g of n.goods) tw += split[g]! * Math.pow(r, GOOD_BY_ID[g].tilt ?? 0);
-        for (const g of n.goods) usDemand[g] = (usDemand[g] ?? 0) + (spend * split[g]! * Math.pow(r, GOOD_BY_ID[g].tilt ?? 0)) / tw / GOOD_BY_ID[g].refPrice;
-      } else for (const g of n.goods) usDemand[g] = (usDemand[g] ?? 0) + (spend * split[g]!) / GOOD_BY_ID[g].refPrice;
+        for (let j = 0; j < list.length; j++) tw += list[j].split * pw[list[j].ti];
+        const f = spend / tw;
+        for (let j = 0; j < list.length; j++) demandAcc[idx[j]] += f * list[j].split * pw[list[j].ti] * list[j].inv;
+      } else for (let j = 0; j < list.length; j++) demandAcc[idx[j]] += spend * list[j].split * list[j].inv;
       const standard = share * avg;
-      const sat = clamp(perPerson / (priceIndex[n.id]! * standard), 0, 2);
-      quint[q].sat[k] += sat * people;
-      sol += n.weight * Math.min(1.3, sat);
-      return Math.round(sat * 1000) / 1000;
-    });
+      const st = clamp(perPerson / (priceIndex[n.id]! * standard), 0, 2);
+      quint[q].sat[k] += st * people;
+      sol += n.weight * Math.min(1.3, st);
+      sat[k] = Math.round(st * 1000) / 1000;
+    }
+    p.sat = sat;
     p.sol = Math.round((100 * sol) / wsum / (s.solNorm || 1));
     quint[q].n += people;
     solSum += p.sol * people;
   }
   s.sol = solSum / totalPeople;
+  NEEDS.forEach((n, k) => { spending[n.id] = spendArr[k]; });
+  GOODS.forEach((g, i) => { if (demandAcc[i] > 0) usDemand[g.id] = demandAcc[i]; });
   NEEDS.forEach((n, k) => {
     const st: NeedStats = { byQuintile: quint.map((x) => (x.n ? x.sat[k] / x.n : 0)), priceIndex: priceIndex[n.id]!, spending: spending[n.id] ?? 0 };
     s.needStats[n.id] = st;

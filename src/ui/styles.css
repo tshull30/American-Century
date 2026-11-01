@@ -66,8 +66,8 @@ input[type="number"] { width: 90px; }
 input[type="checkbox"] { accent-color: var(--engrave); }
 
 .app { display: flex; flex-direction: column; height: 100%; min-width: 0; }
-.app > .main { flex: 1 1 auto; min-height: 0; }
-.app > * { min-width: 0; }
+.app > * { min-width: 0; flex: 0 0 auto; }
+.app > .main { flex: 1 1 0; min-height: 0; }
 
 /* Masthead: the one ornate element */
 .masthead { background: var(--paper-2); border-bottom: 1px solid var(--rule); }

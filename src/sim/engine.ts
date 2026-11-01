@@ -26,11 +26,11 @@ import { processDeals } from "./actions";
 import { tierOf } from "./tiers";
 import type { Building, Company, EventTag, GameEvent, GameState, GoodMap, MarketSnapshot, MonthReport } from "./types";
 import {
-  clamp, dateLabel, dayLabel, dayOfMonthStart, DAYS_PER_MONTH, fmtMoney, fmtPct, laborKey, monthOfDay, pick, rand, randNormal, shuffle,
+  clamp, dateLabel, dayLabel, dayOfMonthStart, DAYS_PER_MONTH, fmtMoney, laborKey, monthOfDay, pick, rand, randNormal, shuffle,
 } from "./util";
 import { runAI, autoPrice, maintainHQ } from "./ai";
 
-export const SAVE_VERSION = 7;
+export const SAVE_VERSION = 8;
 export const BASELINE_TECH_START = 10;
 const DT = 1 / DAYS_PER_MONTH;
 const DEPRECIATION = 0.006;
@@ -271,8 +271,9 @@ function companyFromSeed(s: GameState, d: CompanySeed): Company {
     }
   }
   const labCost = labMonthlyCost();
-  const rndLevels = d.rndLevels ?? Math.max(1, Math.round((d.rndIntensity * annualRevenue) / 12 / labCost));
-  for (const [st, lvState] of spread(rndLevels, d.rndStates)) {
+  // Small firms in low-research industries run no lab at all; a lab level costs millions a month.
+  const rndLevels = d.rndLevels ?? Math.round((d.rndIntensity * annualRevenue) / 12 / labCost);
+  if (rndLevels > 0) for (const [st, lvState] of spread(rndLevels, d.rndStates)) {
     if (st === d.hq && lvState < 200) { addBuilding(s, c, "rnd", c.hqSite.city, lvState); continue; }
     for (const [city, lv] of spreadInState(s, st, "rnd", lvState)) addBuilding(s, c, "rnd", city, lv);
   }
@@ -801,11 +802,12 @@ function produce(s: GameState, c: Company, acc: Map<number, DayAcc>, alive: Comp
         got += q;
       }
     }
-    if (got < need && imp) {
+    if (got < need) {
+      // Whatever's left comes from abroad, or from the wholesale market (the unmodeled "everyone else").
       const q = need - got;
-      cost += q * imp;
+      cost += q * (imp ?? (s.othersPrice[igId] ?? g.refPrice) * 1.05);
       got += q;
-      dayImports[igId] = (dayImports[igId] ?? 0) + q;
+      if (imp) dayImports[igId] = (dayImports[igId] ?? 0) + q;
     }
     const bought = cost - own * (c.unitCost[igId] ?? GOOD_BY_ID[igId].refPrice * 0.6);
     r.inputCosts += bought;
@@ -833,7 +835,7 @@ function produce(s: GameState, c: Company, acc: Map<number, DayAcc>, alive: Comp
       let unitInput = 0;
       for (const ig in rec) {
         const avg = (a.costOf[ig as GoodId] ?? 0) / Math.max(1e-9, c.inputUse[ig as GoodId] ?? 0);
-        const fallback = GOOD_BY_ID[ig as GoodId].importPrice ?? 0;
+        const fallback = GOOD_BY_ID[ig as GoodId].importPrice ?? (s.othersPrice[ig as GoodId] ?? GOOD_BY_ID[ig as GoodId].refPrice);
         unitInput += rec[ig as GoodId]! * (isFinite(avg) && avg > 0 ? avg : fallback);
       }
       let inputCost = q * unitInput;
@@ -1064,28 +1066,66 @@ function closeMonth(s: GameState) {
 }
 
 function earnings(s: GameState, c: Company, r: MonthReport) {
-  const q = r.revenue + c.history.slice(-2).reduce((a, h) => a + h.revenue, 0);
-  const prevQ = c.history.slice(-5, -2).reduce((a, h) => a + h.revenue, 0);
-  if (prevQ <= 1e6) return;
-  const expected = prevQ * Math.pow(1 + c.growthHint * 0.5 + revenueGrowth(c) * 0.5, 0.25) * leadEffects.expectations(c);
-  const surprise = q / expected - 1;
+  // The quarter just closed: this month plus the two before it.
+  const qMonths = [...c.history.slice(-2), r];
+  const sumOf = (hs: MonthReport[], k: "revenue" | "netIncome") => hs.reduce((a, h) => a + h[k], 0);
+  const q = sumOf(qMonths, "revenue"), qNI = sumOf(qMonths, "netIncome");
+  const days = (hs: MonthReport[]) => hs.reduce((a, h) => a + (dayOfMonthStart(h.month + 1) - dayOfMonthStart(h.month)), 0);
+  // Analysts compare with the same quarter last year when they can (no calendar effects),
+  // otherwise with the previous quarter adjusted for its length.
+  const yearAgo = c.history.slice(-14, -11);
+  const prevQ = c.history.slice(-5, -2);
+  let base: number, baseNI: number, years: number;
+  if (yearAgo.length === 3 && sumOf(yearAgo, "revenue") > 1e6) {
+    base = sumOf(yearAgo, "revenue"); baseNI = sumOf(yearAgo, "netIncome"); years = 1;
+  } else {
+    const k = days(qMonths) / Math.max(1, days(prevQ));
+    base = sumOf(prevQ, "revenue") * k; baseNI = sumOf(prevQ, "netIncome") * k; years = 0.25;
+  }
+  if (base <= 1e6) return;
+  // Consensus: last year's trend, slightly conservative (companies guide low), shaded by the CFO.
+  const gExp = c.growthHint;
+  const shade = 0.985 * leadEffects.expectations(c);
+  const expected = base * Math.pow(1 + gExp, years) * shade;
+  // Margin: what the last two quarters before this one showed (fresher than a year ago).
+  const recent = c.history.slice(-8, -2);
+  const recentRev = sumOf(recent, "revenue");
+  const trailingMargin = clamp(recentRev > 1e6 ? sumOf(recent, "netIncome") / recentRev : baseNI / base, -1, 0.6);
+  const expectedNI = expected * trailingMargin * shade;
+  const revSurprise = q / expected - 1;
+  const niSurprise = clamp((qNI - expectedNI) / Math.max(Math.abs(expectedNI), 0.03 * expected), -0.5, 0.5);
+  const surprise = 0.7 * revSurprise + 0.3 * clamp(niSurprise, -0.25, 0.25) * 0.4;
+  // Analysts update their growth view toward what actually happened.
+  const realized = years === 1 ? q / base - 1 : Math.pow(Math.max(0.01, q / base), 4) - 1;
+  c.growthHint = clamp(c.growthHint + (clamp(realized, -0.5, 2) - c.growthHint) * 0.5, -0.3, 1.5);
   const qi = Math.floor((((s.month % 12) + 12) % 12) / 3) + 1;
   const year = 2026 + Math.floor(s.month / 12);
-  c.lastEarnings = { quarter: `Q${qi} ${year}`, revenue: q, expected, surprise };
-  const kick = clamp(surprise * 2, -0.08, 0.08);
+  const verdict = surprise > 0.01 ? "beat" : surprise < -0.01 ? "missed" : "met";
+  c.lastEarnings = { quarter: `Q${qi} ${year}`, revenue: q, expected, surprise, netIncome: qNI, expectedNI, revSurprise, niSurprise, verdict };
+  const kick = verdict === "met" ? surprise : clamp(surprise * 2, -0.08, 0.08);
   c.hype *= 1 + kick;
   c.marketCap *= 1 + kick;
   if (!warmup && (c.isPlayer || (Math.abs(surprise) > 0.05 && c.marketCap > 200e9))) {
-    log(s, `${c.name} ${surprise >= 0 ? "beat" : "missed"} Q${qi} revenue estimates by ${fmtPct(Math.abs(surprise))} (${fmtMoney(q)} vs ${fmtMoney(expected)} expected). Stock ${surprise >= 0 ? "jumps" : "slides"}.`, surprise >= 0 ? "good" : "bad", c.id, c.isPlayer ? "finance" : undefined);
+    const earned = qNI >= 0 ? `earned ${fmtMoney(qNI)}` : `lost ${fmtMoney(-qNI)}`;
+    const vs = `revenue ${fmtMoney(q)} vs ${fmtMoney(expected)} expected, profit ${fmtMoney(qNI)} vs ${fmtMoney(expectedNI)}`;
+    const tail = verdict === "beat" ? "Stock jumps." : verdict === "missed" ? "Stock slides." : "Stock little changed.";
+    log(s, `${c.name} ${earned} in Q${qi} and ${verdict} estimates (${vs}). ${tail}`, verdict === "missed" ? "bad" : verdict === "beat" ? "good" : "info", c.id, c.isPlayer ? "finance" : undefined);
   }
 }
 
 // ---------------------------------------------------------------- research & brand
 
+const techRevCache = new WeakMap<Company, { len: number; last: MonthReport | undefined; by: Map<TechId, number> }>();
 export function revenueByTech(c: Company, t: TechId): number {
+  const last = c.history[c.history.length - 1];
+  let e = techRevCache.get(c);
+  if (!e || e.len !== c.history.length || e.last !== last) { e = { len: c.history.length, last, by: new Map() }; techRevCache.set(c, e); }
+  const hit = e.by.get(t);
+  if (hit !== undefined) return hit;
   const tech = TECHS.find((x) => x.id === t)!;
   let rev = 0;
-  for (const g of tech.goods) rev += c.history.slice(-12).reduce((a, h) => a + (h.revenueByGood[g] ?? 0), 0);
+  for (const h of c.history.slice(-12)) for (const g of tech.goods) rev += h.revenueByGood[g] ?? 0;
+  e.by.set(t, rev);
   return rev;
 }
 
@@ -1101,6 +1141,11 @@ export function researchOutput(c: Company): number {
 }
 
 function research(s: GameState, c: Company, dt: number) {
+  // Spillover: suppliers, consultants and new hires bring standard practice, so nobody falls more than a level behind.
+  for (const t in c.tech) {
+    const floor = (s.baselineTech[t as TechId] ?? BASELINE_TECH_START) - 1;
+    if ((c.tech[t as TechId] ?? floor) < floor) c.tech[t as TechId] = Math.min(floor, c.tech[t as TechId]! + (1.2 * dt) / 12);
+  }
   const pts = researchOutput(c) * dt * leadEffects.research(c);
   if (pts <= 0) return;
   let wsum = 0;

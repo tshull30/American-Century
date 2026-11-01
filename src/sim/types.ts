@@ -136,6 +136,11 @@ export interface EarningsResult {
   revenue: number;
   expected: number;
   surprise: number;
+  netIncome?: number;
+  expectedNI?: number;
+  revSurprise?: number;
+  niSurprise?: number;
+  verdict?: "beat" | "missed" | "met";
 }
 
 export interface Company {

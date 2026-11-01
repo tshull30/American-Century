@@ -26,6 +26,8 @@ export const TOPICS: Topic[] = [
     "Each building belongs to an industry. Entering a new one starts you at 20% know-how (more if you're already in a related industry), which means lower output and up to 50% higher running costs. Know-how grows about 4% of the gap each month you operate.",
     "Scale: one level runs at about 78% efficiency, rising to 100% at 150 levels in that industry.",
     "Every industry beyond your second adds 15% to headquarters workload, and investors discount a sprawling company by up to 25%.",
+    "The game covers the whole economy: factories, mines and farms; banks, insurers and payment networks; hospitals, clinics and health plans; big-box stores, supermarkets, e-commerce and gas stations; hotels, cruise lines, casinos, theme parks and sports teams; universities and child care; landlords, utilities, railroads and law, consulting and accounting firms.",
+    "Stores, restaurants and service businesses buy what they sell from manufacturers, or from the wholesale market when no company in the game makes it.",
   ] },
   { id: "headquarters", title: "Headquarters", group: "Company", body: [
     "Headquarters houses executives, finance, legal and HR. Each level supports 15 levels of plants and offices; beyond that every building runs below full efficiency. Turn on automatic growth on the Production tab to keep it sized.",
@@ -33,7 +35,9 @@ export const TOPICS: Topic[] = [
     "Moving headquarters changes which state taxes your profits, gives you a honeymoon in the new city, and needs the [[board]]'s approval.",
   ] },
   { id: "earnings", title: "Earnings and the stock", group: "Company", body: [
-    "Wall Street expects revenue to keep growing at its recent pace. Beating the estimate lifts the stock and investor sentiment; missing knocks them down, up to 8% at a time.",
+    "Every quarter you report revenue and net income against Wall Street's estimates. Analysts compare with the same quarter a year earlier, project last year's growth rate forward, and apply the profit margin of your last two quarters. They aim a little low, as companies guide them to.",
+    "Within 1% either way the results are in line and the stock barely moves. A clear beat lifts the stock and investor sentiment; a miss knocks them down, up to 8% at a time. A miss is not a loss: a company earning billions can still miss if it grew more slowly than expected. The header's Profit last month shows what you actually earned.",
+    "After each report analysts move their growth estimate halfway toward what actually happened.",
     "Market value comes from earnings and sales multiples that rise with growth and fall with interest rates, times investor sentiment. Very rich valuations on real profits slowly deflate.",
   ] },
   { id: "credit", title: "Debt and credit", group: "Company", body: [
@@ -49,7 +53,7 @@ export const TOPICS: Topic[] = [
     "Brand awareness drifts toward your share of supply. An unknown seller can't charge more than the market; better quality, reputation or a strong brand earns a premium.",
   ] },
   { id: "research", title: "Research", group: "Company", body: [
-    "Every tech level above the market baseline makes products about 8% better, and buyers weigh quality squared. The market improves one level a year, so standing still means falling behind.",
+    "Every tech level above the market baseline makes products about 8% better, and buyers weigh quality squared. The market improves one level a year, so standing still means falling behind, though industry spillover keeps even a company with no lab within about a level of the frontier.",
     "Bigger product lines cost more research per level, and every level of lead costs 40% more. Labs and a strong CTO drive output.",
   ] },
   { id: "acquisitions", title: "Acquisitions", group: "Company", body: [

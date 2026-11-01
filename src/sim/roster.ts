@@ -46,15 +46,77 @@ const SUFFIX: Partial<Record<GoodId, string[]>> = {
   beverages: ["Beverage", "Brewing", "Bottling"], meals_fast: ["Burgers", "Chicken", "Tacos"], meals_casual: ["Grill", "Roadhouse", "Kitchen & Bar"], meals_fine: ["Steakhouse", "Restaurant Group", "Hospitality"], luxury_fashion: ["Maison", "Atelier", "Couture"], luxury_cars: ["Motorcars", "Coachworks"], video_games: ["Games", "Interactive", "Studios"],
   aircraft: ["Aerospace", "Aviation"], defense: ["Defense", "Dynamics", "Systems"], medical_devices: ["Medical", "Surgical", "Health"], telecom: ["Wireless", "Telecom"],
   air_travel: ["Airlines", "Air"], logistics: ["Freight", "Logistics", "Express"],
+  banking: ["Bank", "Bancorp", "Savings", "Trust"],
+  insurance: ["Insurance", "Mutual", "Assurance"],
+  wealth_mgmt: ["Capital", "Investments", "Asset Management"],
+  payments: ["Pay", "Payments", "Card"],
+  ibanking: ["& Co.", "Partners", "Securities"],
+  hospital_care: ["Health", "Medical Center", "Health System"],
+  clinics: ["Clinics", "Care", "Health Partners"],
+  health_insurance: ["Health Plans", "Healthcare", "Care Group"],
+  senior_care: ["Senior Living", "Communities"],
+  diagnostics: ["Diagnostics", "Labs"],
+  big_box: ["Mart", "Stores", "Supercenter"],
+  ecommerce: [".com", "Online", "Marketplace"],
+  home_improvement: ["Home Center", "Hardware", "Supply"],
+  drugstores: ["Drug", "Pharmacy"],
+  gas_stations: ["Fuel Stop", "Travel Centers", "Quick Mart"],
+  supermarkets: ["Market", "Grocers", "Food Stores"],
+  hotel_stays: ["Hotels", "Inns", "Lodging"],
+  resort_stays: ["Resorts", "Hotels & Resorts"],
+  cruises: ["Cruises", "Cruise Line"],
+  theme_parks: ["Parks", "Adventures"],
+  casinos: ["Gaming", "Casinos", "Resorts"],
+  live_events: ["Live", "Entertainment", "Presents"],
+  pro_sports: ["Sports & Entertainment", "Sports Group"],
+  fitness: ["Fitness", "Athletic Clubs"],
+  cinemas: ["Cinemas", "Theatres"],
+  cosmetics: ["Beauty", "Cosmetics"],
+  prestige_beauty: ["Beauté", "Cosmetics"],
+  salons: ["Salons", "Spa"],
+  tobacco: ["Tobacco", "Leaf"],
+  alcohol: ["Brewing", "Spirits", "Vineyards"],
+  higher_ed: ["University", "College"],
+  private_school: ["Academy", "Schools"],
+  childcare: ["Learning Centers", "Kids"],
+  apartments: ["Residential", "Apartment Communities", "Properties"],
+  office_space: ["Realty", "Properties", "REIT"],
+  water: ["Water", "Water Works"],
+  waste: ["Waste", "Disposal", "Environmental"],
+  broadband: ["Cable", "Fiber", "Communications"],
+  satellite_internet: ["Orbital", "Space"],
+  rideshare: ["Rides", "Go"],
+  rail_freight: ["Railroad", "Rail", "& Pacific"],
+  space_launch: ["Launch", "Rocketworks", "Space"],
+  machinery: ["Machinery", "Equipment", "Tractor"],
+  electrical_equipment: ["Electric", "Power Systems"],
+  robots: ["Robotics", "Automation"],
+  chip_tools: ["Materials", "Instruments"],
+  ships: ["Shipbuilding", "Marine"],
+  tires: ["Tire & Rubber", "Tire"],
+  toys: ["Toys", "Playthings"],
+  sporting_goods: ["Sports", "Outdoor"],
+  pet_food: ["Pet", "Petcare"],
+  jewelry: ["Jewelers", "& Sons", "Watches"],
+  coffee: ["Coffee", "Roasters"],
+  music: ["Records", "Music", "Audio"],
+  news: ["Times", "Gazette", "Media"],
+  consulting: ["Consulting", "Advisory", "Group"],
+  legal: ["LLP", "& Associates"],
+  accounting: ["LLP", "Accounting"],
+  staffing: ["Staffing", "Workforce"],
+  cybersecurity: ["Security", "Cyber", "Shield"],
+  commercial_construction: ["Construction", "Builders", "Contracting"],
 };
 
 /** Price-to-sales ratio by technology, to size revenue from market cap. */
 const PS: Partial<Record<TechId, number>> = {
   software: 7, cloud: 6, ai: 10, semis: 5, media: 4, devices: 2.2, biotech: 4, medtech: 4, consumer: 1.6, auto: 0.7, battery: 1.2, energy: 1.5,
   extraction: 1.5, materials: 1, agri: 0.8, aero: 1.8, telecom: 2,
+  finance: 3, care: 1.2, retail: 0.7, industrial: 1.8, services: 2,
 };
-const RND: Partial<Record<TechId, number>> = { software: 0.12, cloud: 0.06, ai: 0.15, semis: 0.12, media: 0.06, devices: 0.05, biotech: 0.15, medtech: 0.08, aero: 0.04, telecom: 0.02 };
-const CONSUMER = new Set(["groceries", "apparel", "household_goods", "smartphones", "computers", "evs", "gas_cars", "streaming", "beverages", "meals_fast", "meals_casual", "meals_fine", "luxury_fashion", "luxury_cars", "video_games", "furniture", "appliances", "homes", "telecom", "air_travel", "pharmaceuticals", "medical_devices"]);
+const RND: Partial<Record<TechId, number>> = { software: 0.12, cloud: 0.06, ai: 0.15, semis: 0.12, media: 0.06, devices: 0.05, biotech: 0.15, medtech: 0.08, aero: 0.04, telecom: 0.02, finance: 0.02, care: 0.01, retail: 0.005, industrial: 0.03, services: 0.01 };
+const CONSUMER = new Set(["groceries", "apparel", "household_goods", "smartphones", "computers", "evs", "gas_cars", "streaming", "beverages", "meals_fast", "meals_casual", "meals_fine", "luxury_fashion", "luxury_cars", "video_games", "furniture", "appliances", "homes", "telecom", "air_travel", "pharmaceuticals", "medical_devices", "banking", "insurance", "wealth_mgmt", "hospital_care", "clinics", "health_insurance", "senior_care", "diagnostics", "big_box", "ecommerce", "home_improvement", "drugstores", "gas_stations", "supermarkets", "hotel_stays", "resort_stays", "cruises", "theme_parks", "casinos", "live_events", "pro_sports", "fitness", "cinemas", "cosmetics", "prestige_beauty", "salons", "tobacco", "alcohol", "higher_ed", "private_school", "childcare", "apartments", "water", "waste", "broadband", "satellite_internet", "rideshare", "tires", "toys", "sporting_goods", "pet_food", "jewelry", "coffee", "music", "news", "coffee"]);
 
 const TAG_SIZE: Record<string, string[]> = {
   startup: ["A venture-backed upstart in {good}.", "Two years old, burning cash, sure it can take on the giants in {good}.", "A scrappy {good} company out of {place}."],
@@ -154,7 +216,8 @@ function makeCompany(r: () => number, i: number, used: Set<string>, tickers: Set
     techEdge: tech ? { [tech]: Math.round((r() * 2.5 - 0.5) * 10) / 10 } : {},
     produce,
     rndIntensity: tier === "startup" ? 0 : (RND[tech ?? "materials"] ?? 0.005) * (0.6 + r() * 0.8),
-    rndLevels: tier === "startup" ? 1 + Math.floor(r() * 4) : undefined,
+    // Tech startups are R&D shops; a startup brewery or landlord isn't.
+    rndLevels: tier === "startup" ? ((RND[tech ?? "materials"] ?? 0) >= 0.04 ? 1 + Math.floor(r() * 4) : r() < 0.25 ? 1 : 0) : undefined,
     rndStates: { [hq]: 1 },
     marketingPct: consumer ? 0.03 + r() * 0.06 : 0.003 + r() * 0.01,
     wagePolicy: 0.95 + r() * 0.2,
@@ -168,7 +231,7 @@ export function rollRoster(seed = Math.floor(Math.random() * 1e9), count?: numbe
   for (const c of COMPANY_SEEDS) if (r() < (ANCHORS.has(c.key) ? 0.9 : 0.55)) companies.push(c);
   const used = new Set(COMPANY_SEEDS.map((c) => c.name));
   const tickers = new Set(COMPANY_SEEDS.map((c) => c.ticker));
-  const n = count ?? 45 + Math.floor(r() * 16);
+  const n = count ?? 60 + Math.floor(r() * 16);
   for (let i = 0; i < n; i++) {
     const c = makeCompany(r, i, used, tickers);
     if (c) companies.push(c);

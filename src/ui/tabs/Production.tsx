@@ -17,7 +17,7 @@ export function Production() {
   const rows = me.buildings.filter((b) => filter === "all" || (filter === "abroad" ? !!s.cities[b.city]?.foreign : filter === "losing" ? b.lastProfit < 0 && b.type !== "hq" && b.type !== "rnd" : b.type === filter))
     .sort((a, b) => a.type.localeCompare(b.type) || b.level - a.level);
   const [step, setStep] = useSticky("prod.step", 1);
-  const tot = rows.reduce((a, b) => ({ lv: a.lv + b.level, w: a.w + b.lastWages, p: a.p + b.lastProfit }), { lv: 0, w: 0, p: 0 });
+  const tot = rows.reduce((a, b) => ({ lv: a.lv + b.level, w: a.w + b.lastWages, p: a.p + (b.type === "hq" || b.type === "rnd" ? 0 : b.lastProfit), o: a.o + (b.type === "hq" || b.type === "rnd" ? -b.lastProfit : 0) }), { lv: 0, w: 0, p: 0, o: 0 });
 
   return (
     <div>
@@ -48,7 +48,7 @@ export function Production() {
               { key: "eff", label: "Efficiency", num: true, render: (b) => b.level > 0 ? fmtPct(b.efficiency, 0) : "", sort: (b) => b.efficiency },
               { key: "out", label: "Output / month", num: true, render: (b) => outputLabel(b) },
               { key: "w", label: "Wages / month", num: true, render: (b) => fmtMoney(b.lastWages), sort: (b) => b.lastWages },
-              { key: "p", label: "Profit last month", num: true, title: "Sales value of output minus inputs, wages and running costs (before depreciation). R&D and HQ show their cost.", render: (b) => <span className={b.lastProfit >= 0 ? "pos" : "neg"}>{fmtMoney(b.lastProfit)}</span>, sort: (b) => b.lastProfit },
+              { key: "p", label: "Profit last month", num: true, title: "Sales value of output minus inputs, wages and running costs (before depreciation). Headquarters and R&D show their cost.", render: (b) => b.type === "hq" || b.type === "rnd" ? <span className="muted" title="Overhead: counted in the income statement, not a loss-making site">{fmtMoney(-b.lastProfit)} cost</span> : <span className={b.lastProfit >= 0 ? "pos" : "neg"}>{fmtMoney(b.lastProfit)}</span>, sort: (b) => b.lastProfit },
               { key: "act", label: "", render: (b) => (
                 <span className="row" style={{ flexWrap: "nowrap" }}>
                   <button className="small" onClick={() => act(expand(s, me.id, b.id, step))} title={`Build ${step} more level(s): ${fmtMoney(buildQuote(s, b.type, b.city, step, b.method, me).total)}`}>+{step}</button>
@@ -58,7 +58,7 @@ export function Production() {
             ]}
           />
         </div>
-        <div className="hint" style={{ marginTop: 6 }}>{rows.length} sites, {fmtNum(tot.lv)} levels; wages {fmtMoney(tot.w)} a month; profit last month <span className={tot.p >= 0 ? "pos" : "neg"}>{fmtMoney(tot.p)}</span></div>
+        <div className="hint" style={{ marginTop: 6 }}>{rows.length} sites, {fmtNum(tot.lv)} levels; wages {fmtMoney(tot.w)} a month; site profit last month <span className={tot.p >= 0 ? "pos" : "neg"}>{fmtMoney(tot.p)}</span>{tot.o > 0 ? <>, headquarters and R&D cost {fmtMoney(tot.o)}</> : null}. Net income after marketing, depreciation, interest and tax is <span className={(me.history.at(-1)?.netIncome ?? 0) >= 0 ? "pos" : "neg"}>{fmtMoney(me.history.at(-1)?.netIncome ?? 0)}</span>.</div>
       </Panel>
       <IndustriesPanel />
       <BuildPanel />

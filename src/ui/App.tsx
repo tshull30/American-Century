@@ -153,6 +153,7 @@ function Game({ initial, onQuit }: { initial: GameState; onQuit: () => void }) {
             <span className="brand">American Century</span>
             <span className="co"><span className="swatch" style={{ background: me.color }} />{me.name} <span className="muted" style={{ fontWeight: 400 }}>{me.ticker}</span></span>
             <div className="kpi"><span className="label">Cash</span><span className="value">{fmtMoney(me.cash)}</span></div>
+            <div className="kpi" title="Net income for the last full month, after every cost, interest and tax"><span className="label">Profit last month</span><span className={`value ${(prev?.netIncome ?? 0) >= 0 ? "pos" : "neg"}`}>{prev ? `${prev.netIncome >= 0 ? "+" : "−"}${fmtMoney(Math.abs(prev.netIncome))}` : "–"}</span></div>
             <div className="kpi"><span className="label">Debt</span><span className="value">{fmtMoney(me.debt)}</span></div>
             <div className="kpi"><span className="label">Market cap</span><span className="value">{fmtMoney(me.marketCap)} <span className={change >= 0 ? "pos" : "neg"} style={{ fontSize: 12, fontWeight: 400 }}>{change >= 0 ? "+" : "−"}{fmtPct(Math.abs(change))}</span></span></div>
             <div className="kpi"><span className="label">Tier</span><span className="value">{tier.name}, {rank} of {peers.length}</span></div>

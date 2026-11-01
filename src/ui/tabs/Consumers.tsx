@@ -51,10 +51,10 @@ export function Consumers() {
             rowKey={(n) => n.id}
             cols={[
               { key: "n", label: "Need", render: (n) => <>{n.name}{n.basic ? <span className="muted"> (basic)</span> : null}</> },
-              { key: "g", label: "Met by", render: (n) => n.goods.map((g) => {
+              { key: "g", label: "Met by", render: (n) => <span style={{ whiteSpace: "normal" }}>{n.goods.map((g, i) => {
                 const sh = s.markets[g]?.sales[me.id]?.share;
-                return <span key={g} title={sh ? `You hold ${fmtPct(sh, 2)} of this market` : undefined}>{GOOD_BY_ID[g].name}{sh ? " ★" : ""} </span>;
-              }) },
+                return <span key={g} title={sh ? `You hold ${fmtPct(sh, 2)} of this market` : undefined}>{GOOD_BY_ID[g].name}{sh ? " ★" : ""}{i < n.goods.length - 1 ? ", " : ""}</span>;
+              })}</span> },
               { key: "sp", label: "US spending / yr", num: true, render: (n) => fmtMoney((s.needStats[n.id]?.spending ?? 0) * 12), sort: (n) => s.needStats[n.id]?.spending ?? 0 },
               { key: "pi", label: "Price index", num: true, title: "Average price of the goods that meet this need, vs. 2026", render: (n) => { const pi = s.needStats[n.id]?.priceIndex ?? 1; return <span className={pi > 1.05 ? "neg" : pi < 0.95 ? "pos" : ""}>{pi.toFixed(2)}</span>; } },
               { key: "q", label: "Satisfaction", render: (n) => {

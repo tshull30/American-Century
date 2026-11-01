@@ -98,8 +98,17 @@ export function cityPolitics(c: CityState): string {
   return side + streak;
 }
 
+const cityIndex = new WeakMap<GameState["cities"], { n: number; by: Map<string, CityState[]> }>();
 export function citiesInState(s: GameState, st: string): CityState[] {
-  return Object.values(s.cities).filter((c) => c.state === st);
+  const n = Object.keys(s.cities).length;
+  let idx = cityIndex.get(s.cities);
+  if (!idx || idx.n !== n) {
+    const by = new Map<string, CityState[]>();
+    for (const c of Object.values(s.cities)) { const l = by.get(c.state); if (l) l.push(c); else by.set(c.state, [c]); }
+    idx = { n, by };
+    cityIndex.set(s.cities, idx);
+  }
+  return idx.by.get(st) ?? [];
 }
 
 /** Workforce by city and job: the state's pops spread over its cities, tech and factory work concentrating where it does in real life. */

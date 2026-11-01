@@ -187,10 +187,11 @@ export function runAI(s: GameState, c: Company, o: { warmup: boolean }) {
   const rev = last.revenue;
   if (rev > 0 && c.kind !== "startup") {
     const lab = c.buildings.find((b) => b.type === "rnd");
-    const perLevel = (lab?.lastWages ?? 0) / Math.max(1, lab?.level ?? 1) + (methodOf("rnd", "rnd").upkeep ?? 0);
+    // A lab level's full monthly cost (estimated from the payroll if there's no lab yet).
+    const perLevel = lab && lab.level > 0 ? lab.lastWages / lab.level + (methodOf("rnd", "rnd").upkeep ?? 0) : labLevelCost();
     const want = (c.rndIntensity * rev) / Math.max(1, perLevel);
     const have = c.buildings.filter((b) => b.type === "rnd").reduce((a, b) => a + b.level + b.construction.reduce((x, j) => x + j.levels, 0), 0);
-    if (want > have * 1.1) {
+    if (want >= 0.75 && want > have * 1.1) {
       const add = Math.max(1, Math.round(Math.min(want - have, have * 0.08 + 1)));
       if (liquidity(c) > buildCostPerLevel(s, "rnd", lab?.city ?? c.hqSite.city) * add * 2) build(s, c.id, "rnd", lab?.city ?? c.hqSite.city, add);
     }
@@ -212,4 +213,11 @@ export function runAI(s: GameState, c: Company, o: { warmup: boolean }) {
     if (targets.length) offer(s, c.id, targets[Math.floor(rand(s) * targets.length)].id, 0.35 + rand(s) * 0.25, "cash");
   }
 
+}
+
+function labLevelCost(): number {
+  const m = methodOf("rnd", "rnd");
+  let w = m.upkeep ?? 0;
+  for (const [j, n] of Object.entries(m.staff)) w += (n ?? 0) * JOB_BY_ID[j as JobId].baseWage * 1.1;
+  return w;
 }
