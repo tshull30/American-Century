@@ -8,6 +8,7 @@ import { Panel, useGame } from "../components";
 const LINES: [keyof MonthReport, string, number][] = [
   ["revenue", "Revenue", 1],
   ["inputCosts", "Purchased inputs", -1],
+  ["tariffs", "  of which tariffs & freight", -1],
   ["wages", "Production wages & running costs", -1],
   ["rdCost", "Research & development", -1],
   ["sgaCost", "Headquarters (SG&A)", -1],

@@ -74,7 +74,7 @@ export const GOODS: GoodDef[] = [
   { id: "batteries", name: "Battery Packs", unit: "packs", refPrice: 8000, importPrice: 8800, recipe: { components: 40 }, tech: "battery",
     marketUS: 0, marketWorld: 90e9, growth: 0.12, incomeElasticity: 1, priceSensitivity: 2.5, decay: 0.01, intermediate: true, importShare: 0.7, color: "#8bc34a" },
   { id: "ai_accelerators", name: "AI Accelerators", unit: "units", refPrice: 30000, importPrice: 34000, recipe: { chips: 50, components: 20 }, tech: "ai",
-    marketUS: 0, marketWorld: 260e9, growth: 0.35, incomeElasticity: 1, priceSensitivity: 1.5, decay: 0.03, importShare: 0.2, color: "#26a69a" },
+    marketUS: 0, marketWorld: 260e9, growth: 0.25, incomeElasticity: 1, priceSensitivity: 1.5, decay: 0.03, importShare: 0.2, color: "#26a69a" },
   { id: "smartphones", name: "Smartphones", unit: "phones", refPrice: 800, recipe: { chips: 3, components: 4 }, tech: "devices",
     marketUS: 85e9, marketWorld: 420e9, growth: 0.02, incomeElasticity: 0.8, priceSensitivity: 3, decay: 0.03, importShare: 0.8, color: "#ef5350" },
   { id: "computers", name: "Computers", unit: "computers", refPrice: 1100, recipe: { chips: 6, components: 5 }, tech: "devices",

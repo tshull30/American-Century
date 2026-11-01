@@ -4,9 +4,13 @@ import { GOOD_BY_ID, type GoodId } from "./data/goods";
 import {
   offer, acquisitionPrice, antitrustIssue, borrow, build, buyback, downsize, issueShares, liquidity, repay,
 } from "./actions";
-import { adminCapacity, adminLoad, buildCostPerLevel, creditLimit } from "./engine";
+import { adminCapacity, adminLoad, buildCostPerLevel, creditLimit, quality, usShare } from "./engine";
 import { opinionOf, permitBlock, permitMult } from "./geo";
 import { resourceMult, SUN } from "./data/resources";
+import { COUNTRY_BY_ID } from "./data/countries";
+import { JOB_BY_ID, type JobId } from "./data/jobs";
+import { siteMultFor } from "./sectors";
+import { homeCostShare } from "./intl";
 import type { Building, Company, GameState } from "./types";
 import { clamp, DAYS_PER_MONTH, laborKey, rand } from "./util";
 
@@ -28,7 +32,12 @@ export function autoPrice(s: GameState, c: Company, g: GoodId) {
   let floor = Math.max(def.refPrice * 0.3, (c.unitCost[g] ?? 0) * 1.02);
   // Commodities trade near the world price: dumping far below it would just hand buyers a gift.
   if (def.priceSensitivity >= 3.5) floor = Math.max(floor, (s.markets[g]?.othersPrice ?? def.refPrice) * 0.88);
-  next = clamp(next, floor, def.refPrice * 3);
+  // Buyers pay a premium only for better products or a trusted name; an unknown seller can't charge more than the market.
+  const others = s.markets[g]?.othersPrice ?? def.refPrice;
+  const brandStrength = Math.min(1, (c.brand[g] ?? 0) / 0.02);
+  const premium = Math.min(2, Math.pow(Math.max(1, quality(s, c, g) ** 2 * (c.reputation[g] ?? 1)), 1 / def.priceSensitivity) * (1 + 0.6 * brandStrength));
+  const ceiling = Math.max(floor, Math.min(def.refPrice * 3, others * premium));
+  next = clamp(next, floor, (globalThis as { NOCEIL?: boolean }).NOCEIL ? def.refPrice * 3 : ceiling);
   if (def.importPrice && def.intermediate) next = Math.min(next, def.importPrice * 0.99);
   c.prices[g] = next;
 }
@@ -60,14 +69,20 @@ export function bestCity(s: GameState, c: Company, type: BuildingTypeId, method:
   let best = c.hqSite.city;
   let bestScore = -Infinity;
   const present = new Set(c.buildings.map((b) => b.city));
+  // Most expansion decisions don't even consider going abroad.
+  const considerAbroad = rand(s) < 0.2;
   for (const city of Object.values(s.cities)) {
+    if (city.foreign && !considerAbroad) continue;
     if (permitBlock(s, city.id, c, type)) continue;
     let score = 0;
+    const eff = siteMultFor(type, method, city.state);
     for (const [j, n] of jobs) {
       const cell = s.labor[laborKey(city.id, j)];
       if (!cell) continue;
       const free = Math.max(0, cell.workforce - cell.gameEmployed);
-      score += (n ?? 0) * Math.log(1 + free) - (n ?? 0) * 3 * (cell.wage / 5000);
+      // Abroad, count productivity and the cost of managing from a distance.
+      const wage = city.foreign ? cell.wage / Math.max(0.2, eff) + 0.35 * JOB_BY_ID[j as JobId].baseWage : cell.wage;
+      score += (n ?? 0) * Math.log(1 + Math.min(free, 2e5)) - (n ?? 0) * 3 * (wage / 5000);
     }
     score /= Math.max(1, jobs.reduce((a, [, n]) => a + (n ?? 0), 0)) / 20;
     score -= (buildCostPerLevel(s, type, city.id, method, true, c) / BUILDING_BY_ID[type].cost) * 2;
@@ -78,11 +93,34 @@ export function bestCity(s: GameState, c: Company, type: BuildingTypeId, method:
     if (def.resource) score += resourceMult(def.resource, city.state) * 6;
     if (type === "power" && method === "solar") score += ((SUN[city.state] ?? 1) - 1) * 12;
     if (type === "refinery" || type === "chemicals") score += city.flags.includes("port") ? 2 : 0;
+    if (city.foreign) {
+      // Cheap labor abroad, but tariffs and freight on what comes home, lower productivity, risk and politics.
+      const goods = Object.keys(m.output) as GoodId[];
+      const us = goods.length ? goods.reduce((a, g) => a + (GOOD_BY_ID[g].intermediate ? 0.5 : usShare(s, g)), 0) / goods.length : 0.5;
+      const ctry = COUNTRY_BY_ID[city.state];
+      score -= 40 * us * homeCostShare(s, city.id) + 6 * ctry.risk + 8 * (1 - ctry.productivity) + 3;
+      if (def.industry === "office" && type !== "datacenter") score -= 4;
+    }
     if (present.has(city.id)) score += 2;
     score += rand(s) * 2;
     if (score > bestScore) { bestScore = score; best = city.id; }
   }
   return best;
+}
+
+/** Headquarters keeps pace with the company's size (AI always; the player if they turn it on). */
+export function maintainHQ(s: GameState, c: Company): string | null {
+  const load = adminLoad(c);
+  const cap = adminCapacity(c);
+  const hqBuilding = c.buildings.filter((b) => b.type === "hq").reduce((a, b) => a + b.construction.reduce((x, j) => x + j.levels, 0), 0);
+  if (load > cap * 0.95 && hqBuilding === 0) {
+    const add = Math.ceil((load * 1.1 - cap) / 15);
+    if (add > 0 && liquidity(c) > buildCostPerLevel(s, "hq", c.hqSite.city, undefined, true, c) * add) {
+      const r = build(s, c.id, "hq", c.hqSite.city, add);
+      return r.ok ? r.message : null;
+    }
+  }
+  return null;
 }
 
 export function runAI(s: GameState, c: Company, o: { warmup: boolean }) {
@@ -158,14 +196,7 @@ export function runAI(s: GameState, c: Company, o: { warmup: boolean }) {
     }
   }
 
-  // Headquarters keeps pace with the company's size.
-  const load = adminLoad(c);
-  const cap = adminCapacity(c);
-  const hqBuilding = c.buildings.filter((b) => b.type === "hq").reduce((a, b) => a + b.construction.reduce((x, j) => x + j.levels, 0), 0);
-  if (load > cap * 0.95 && hqBuilding === 0) {
-    const add = Math.ceil((load * 1.1 - cap) / 15);
-    if (add > 0 && liquidity(c) > buildCostPerLevel(s, "hq", c.hqSite.city, undefined, true, c) * add) build(s, c.id, "hq", c.hqSite.city, add);
-  }
+  maintainHQ(s, c);
 
   // Return excess cash.
   if (c.debt < c.cash && c.cash > 8 * costs && c.kind !== "startup") buyback(s, c.id, (c.cash - 5 * costs) * 0.5);

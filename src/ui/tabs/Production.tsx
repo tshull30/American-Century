@@ -7,7 +7,8 @@ import { STATES } from "../../sim/data/states";
 import { citiesInState, cityLabel, dcPowerCost, opinionOf, permitBlock } from "../../sim/geo";
 import { adminCapacity, adminLoad } from "../../sim/engine";
 import { resourceMult, SUN } from "../../sim/data/resources";
-import { activeSectors, complexityMult, conglomerateDiscount, entryKnowhow, knowhowMult, scaleMult, sectorLevels, SCALE_REF } from "../../sim/sectors";
+import { homeCostShare } from "../../sim/intl";
+import { siteMultFor, activeSectors, complexityMult, conglomerateDiscount, entryKnowhow, knowhowMult, scaleMult, sectorLevels, SCALE_REF } from "../../sim/sectors";
 import type { Building } from "../../sim/types";
 import { fmtMoney, fmtNum, fmtPct, laborKey } from "../../sim/util";
 import { Bar, Panel, Table, useGame, useSticky } from "../components";
@@ -15,15 +16,27 @@ import { Bar, Panel, Table, useGame, useSticky } from "../components";
 export function Production() {
   const { s, me, act, ask } = useGame();
   const load = adminLoad(me), cap = adminCapacity(me);
-  const rows = me.buildings.slice().sort((a, b) => a.type.localeCompare(b.type) || b.level - a.level);
+  const [filter, setFilter] = useSticky("prod.filter", "all");
+  const types = [...new Set(me.buildings.map((b) => b.type))].sort();
+  const rows = me.buildings.filter((b) => filter === "all" || (filter === "abroad" ? !!s.cities[b.city]?.foreign : filter === "losing" ? b.lastProfit < 0 && b.type !== "hq" && b.type !== "rnd" : b.type === filter))
+    .sort((a, b) => a.type.localeCompare(b.type) || b.level - a.level);
   const [step, setStep] = useSticky("prod.step", 1);
+  const tot = rows.reduce((a, b) => ({ lv: a.lv + b.level, w: a.w + b.lastWages, p: a.p + b.lastProfit }), { lv: 0, w: 0, p: 0 });
 
   return (
     <div>
       <Panel
         title="Buildings"
-        right={<span className="row">Step <select value={step} onChange={(e) => setStep(Number(e.target.value))}>{[1, 5, 10, 50, 100].map((n) => <option key={n}>{n}</option>)}</select>
-          <span className={load > cap ? "neg" : "muted"}>HQ capacity {fmtNum(load)} / {fmtNum(cap)} levels</span></span>}
+        right={<span className="row">
+          <select value={filter} onChange={(e) => setFilter(e.target.value)} aria-label="Show buildings">
+            <option value="all">All buildings</option>
+            <option value="losing">Losing money</option>
+            <option value="abroad">Abroad</option>
+            {types.map((t) => <option key={t} value={t}>{BUILDING_BY_ID[t].name}</option>)}
+          </select>
+          Step <select value={step} onChange={(e) => setStep(Number(e.target.value))}>{[1, 5, 10, 50, 100].map((n) => <option key={n}>{n}</option>)}</select>
+          <span className={load > cap ? "neg" : "muted"}>HQ capacity {fmtNum(load)} / {fmtNum(cap)} levels</span>
+          <label title="Add HQ levels automatically when headquarters runs out of capacity"><input type="checkbox" checked={!!me.autoHq} onChange={(e) => { me.autoHq = e.target.checked; act({ ok: true, message: e.target.checked ? "Headquarters will grow automatically." : "Automatic HQ growth off." }); }} /> Grow HQ automatically</label></span>}
       >
         <div className="scroll">
           <Table
@@ -49,6 +62,7 @@ export function Production() {
             ]}
           />
         </div>
+        <div className="hint" style={{ marginTop: 6 }}>{rows.length} sites, {fmtNum(tot.lv)} levels; wages {fmtMoney(tot.w)} a month; profit last month <span className={tot.p >= 0 ? "pos" : "neg"}>{fmtMoney(tot.p)}</span></div>
       </Panel>
       <IndustriesPanel />
       <BuildPanel />
@@ -98,7 +112,7 @@ function MethodPicker({ b }: { b: Building }) {
 }
 
 function BuildPanel() {
-  const { s, me, act } = useGame();
+  const { s, me, act, ask } = useGame();
   const [type, setType] = useSticky<BuildingTypeId>("build.type", "software");
   const def = BUILDING_BY_ID[type];
   const [method, setMethodId] = useSticky("build.method", def.methods[0].id);
@@ -116,7 +130,7 @@ function BuildPanel() {
   // Rank cities for this building: hireable staff for its two biggest jobs, wages, land, permits, local mood.
   const ranking = useMemo(() => {
     const key = jobs.slice().sort((a, b) => b[1] - a[1]).slice(0, 2);
-    return Object.values(s.cities).filter((c) => (stateFilter === "all" || c.state === stateFilter) && (!def.resource || (resourceMult(def.resource, c.state) > 0 && (c.rest || !s.cities[`rest-${c.state}`])))).map((c) => {
+    return Object.values(s.cities).filter((c) => (stateFilter === "all" || (stateFilter === "abroad" ? c.foreign : stateFilter === "us" ? !c.foreign : c.state === stateFilter)) && (!def.resource || (resourceMult(def.resource, c.state) > 0 && (c.rest || !s.cities[`rest-${c.state}`])))).map((c) => {
       let free = Infinity, wage = 0;
       for (const [j, n] of key) {
         const cell = s.labor[laborKey(c.id, j)];
@@ -148,9 +162,13 @@ function BuildPanel() {
                   {citiesInState(s, st.code).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </optgroup>
               ))}
+              <optgroup label="Abroad">
+                {Object.values(s.cities).filter((c) => c.foreign).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </optgroup>
             </select>
             <button onClick={() => { const best = ranking.find((r) => !r.blocked); if (best) setCity(best.c.id); }} title="Pick the city with the most hireable workers that will give you a permit">Best city</button>
             <input type="number" min={1} value={levels} onChange={(e) => setLevels(Math.max(1, Math.floor(Number(e.target.value) || 1)))} /> levels
+            {[1, 5, 10, 25, 100].map((n) => <button key={n} className={`small ${levels === n ? "active" : ""}`} onClick={() => setLevels(n)}>{n}</button>)}
           </div>
           <p className="hint" style={{ margin: "8px 0" }}>{def.description}</p>
           <table className="t wrap">
@@ -163,7 +181,8 @@ function BuildPanel() {
               </td></tr>
               {type === "datacenter" && here && <tr><td>Local grid</td><td className="num">{fmtNum(here.dcLoadMW)} of {fmtNum(here.gridMW)} MW used; power bill {fmtMoney(dcPowerCost(s, city))} per level a month</td></tr>}
               {here && <tr><td>{here.name}</td><td className="num">thinks of you: {fmtPct(opinionOf(s, city, me), 0)}; tax break {fmtPct(here.taxBreak, 0)}; data centers {here.dcStance}</td></tr>}
-              {site !== 1 && <tr><td>{def.resource ? "Local reserves" : "Sunshine"}</td><td className="num">{site > 0 ? `${fmtPct(site, 0)} of normal output` : "none"}</td></tr>}
+              {here?.foreign && <tr><td>Abroad</td><td className="num">{fmtPct(siteMultFor(type, method, here.state), 0)} of US productivity; tariffs and freight cost {fmtPct(homeCostShare(s, city), 0)} of the price of everything sold into the US</td></tr>}
+              {site !== 1 && !here?.foreign && <tr><td>{def.resource ? "Local reserves" : "Sunshine"}</td><td className="num">{site > 0 ? `${fmtPct(site, 0)} of normal output` : "none"}</td></tr>}
               {def.sector && <tr><td>Industry</td><td className="num">{entering
                 ? <span className="warn">New industry for you: starts at {fmtPct(knowhowMult(entryKnowhow(me, def.sector)) * scaleMult(levels), 0)} efficiency with {fmtPct(0.5 * (1 - entryKnowhow(me, def.sector)), 0)} higher running costs, and learns over about three years{activeSectors(me).length >= 2 ? "; also adds 15% to HQ workload" : ""}</span>
                 : `${SECTORS[def.sector].name}: know-how ${fmtPct(me.knowhow?.[def.sector] ?? 1, 0)}, scale ${fmtPct(scaleMult(sectorLevels(me)[def.sector] ?? 0), 0)}`}</td></tr>}
@@ -172,7 +191,11 @@ function BuildPanel() {
           </table>
           {block && <p className="neg">{block}</p>}
           <div className="row" style={{ marginTop: 10 }}>
-            <button className="primary" disabled={!!block} onClick={() => act(build(s, me.id, type, city, levels, method))}>Build {levels} level{levels > 1 ? "s" : ""} in {here?.name}</button>
+            <button className="primary" disabled={!!block} onClick={() => {
+              const go = () => act(build(s, me.id, type, city, levels, method));
+              const share = q.total / Math.max(1, liquidity(me));
+              if (share > 0.25) ask(`This costs ${fmtMoney(q.total)}, ${fmtPct(share, 0)} of your cash and credit. Build it?`, go); else go();
+            }}>Build {levels} level{levels > 1 ? "s" : ""} in {here?.name}</button>
           </div>
         </div>
         <div>
@@ -180,6 +203,8 @@ function BuildPanel() {
             <span className="hint">Where to build. Hireable is how many levels' worth of the two biggest jobs you could hire a month.</span>
             <select value={stateFilter} onChange={(e) => setStateFilter(e.target.value)} aria-label="Filter by state">
               <option value="all">All states</option>
+              <option value="us">United States only</option>
+              <option value="abroad">Abroad</option>
               {STATES.map((st) => <option key={st.code} value={st.code}>{st.name}</option>)}
             </select>
           </div>

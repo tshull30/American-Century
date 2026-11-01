@@ -144,7 +144,7 @@ export function Pops() {
                   />
                 );
               })}
-              {showCities && Object.values(s.cities).filter((c) => !c.rest).map((c) => {
+              {showCities && Object.values(s.cities).filter((c) => !c.rest && !c.foreign).map((c) => {
                 const xy = project([c.lon, c.lat]);
                 if (!xy) return null;
                 const st = STATE_BY_CODE[c.state];

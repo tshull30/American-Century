@@ -53,8 +53,8 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     brand: { smartphones: 2.6, computers: 2.0, software: 1.6 },
     techEdge: { devices: 3, software: 1 },
     produce: [
-      { good: "smartphones", annualRevenue: 215e9, states: { TX: 0.4, AZ: 0.3, NC: 0.3 } },
-      { good: "computers", annualRevenue: 65e9, states: { TX: 0.5, CA: 0.5 } },
+      { good: "smartphones", annualRevenue: 215e9, states: { CHN: 0.55, IND: 0.2, VNM: 0.1, TX: 0.15 } },
+      { good: "computers", annualRevenue: 65e9, states: { CHN: 0.5, TX: 0.3, CA: 0.2 } },
       { good: "software", annualRevenue: 110e9, states: { CA: 0.6, TX: 0.2, WA: 0.2 } },
     ],
     rndIntensity: 0.08, rndStates: { CA: 0.7, TX: 0.15, WA: 0.15 }, marketingPct: 0.03, wagePolicy: 1.15, tier: "incumbent",
@@ -91,7 +91,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     brand: { evs: 1.6, batteries: 1.0 },
     techEdge: { auto: 2, battery: 2 },
     produce: [
-      { good: "evs", annualRevenue: 85e9, method: "auto_robot", states: { TX: 0.4, CA: 0.4, NV: 0.2 } },
+      { good: "evs", annualRevenue: 85e9, method: "auto_robot", states: { TX: 0.35, CA: 0.3, NV: 0.1, CHN: 0.25 } },
       { good: "batteries", annualUnits: 1.9e6 + 1.5e6, states: { NV: 0.6, TX: 0.4 } },
     ],
     rndIntensity: 0.05, rndStates: { TX: 0.5, CA: 0.5 }, marketingPct: 0.003, wagePolicy: 1.0, tier: "incumbent",
@@ -245,7 +245,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     priceMult: { computers: 0.95 },
     brand: { computers: 1.4 },
     techEdge: { devices: 0 },
-    produce: [{ good: "computers", annualRevenue: 95e9, states: { TX: 0.6, TN: 0.4 } }],
+    produce: [{ good: "computers", annualRevenue: 95e9, states: { CHN: 0.35, MEX: 0.25, TX: 0.25, TN: 0.15 } }],
     rndIntensity: 0.03, rndStates: { TX: 1 }, marketingPct: 0.02, wagePolicy: 1.0, tier: "incumbent",
   },
   {
@@ -256,7 +256,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     brand: { gas_cars: 1.1, evs: 0.9 },
     techEdge: { auto: 0 },
     produce: [
-      { good: "gas_cars", annualRevenue: 160e9, states: { MI: 0.4, TN: 0.15, KY: 0.15, TX: 0.15, IN: 0.15 } },
+      { good: "gas_cars", annualRevenue: 160e9, states: { MI: 0.35, TN: 0.1, KY: 0.1, TX: 0.1, IN: 0.1, MEX: 0.2, CAN: 0.05 } },
       { good: "evs", annualRevenue: 15e9, states: { MI: 0.6, TN: 0.4 } },
     ],
     rndIntensity: 0.06, rndStates: { MI: 1 }, marketingPct: 0.02, wagePolicy: 1.0, tier: "incumbent",
@@ -269,7 +269,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     brand: { gas_cars: 1.1, evs: 0.8 },
     techEdge: { auto: 0 },
     produce: [
-      { good: "gas_cars", annualRevenue: 150e9, states: { MI: 0.4, KY: 0.25, OH: 0.15, MO: 0.2 } },
+      { good: "gas_cars", annualRevenue: 150e9, states: { MI: 0.35, KY: 0.2, OH: 0.15, MO: 0.15, MEX: 0.1, CAN: 0.05 } },
       { good: "evs", annualRevenue: 8e9, states: { MI: 0.5, TN: 0.5 } },
     ],
     rndIntensity: 0.05, rndStates: { MI: 1 }, marketingPct: 0.02, wagePolicy: 1.0, tier: "incumbent",
@@ -291,7 +291,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     priceMult: { apparel: 1.6 },
     brand: { apparel: 2.8 },
     techEdge: { consumer: 2 },
-    produce: [{ good: "apparel", annualRevenue: 50e9, states: { OR: 0.2, NC: 0.3, SC: 0.25, GA: 0.25 } }],
+    produce: [{ good: "apparel", annualRevenue: 50e9, states: { VNM: 0.45, CHN: 0.15, IND: 0.1, NC: 0.15, SC: 0.15 } }],
     rndIntensity: 0.02, rndStates: { OR: 1 }, marketingPct: 0.1, wagePolicy: 1.0, tier: "incumbent",
   },
   {
@@ -311,7 +311,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     priceMult: { pharmaceuticals: 1.0 },
     brand: { pharmaceuticals: 1.5 },
     techEdge: { biotech: 0 },
-    produce: [{ good: "pharmaceuticals", annualRevenue: 60e9, states: { NJ: 0.3, PA: 0.25, NC: 0.25, MA: 0.2 } }],
+    produce: [{ good: "pharmaceuticals", annualRevenue: 60e9, states: { NJ: 0.25, PA: 0.2, NC: 0.2, MA: 0.15, IRL: 0.2 } }],
     rndIntensity: 0.18, rndStates: { MA: 0.5, NJ: 0.5 }, marketingPct: 0.06, wagePolicy: 1.05, tier: "incumbent",
   },
   {
@@ -321,7 +321,7 @@ export const COMPANY_SEEDS: CompanySeed[] = [
     priceMult: { pharmaceuticals: 1.5 },
     brand: { pharmaceuticals: 2.0 },
     techEdge: { biotech: 4 },
-    produce: [{ good: "pharmaceuticals", annualRevenue: 55e9, states: { IN: 0.6, NC: 0.4 } }],
+    produce: [{ good: "pharmaceuticals", annualRevenue: 55e9, states: { IN: 0.5, NC: 0.3, IRL: 0.2 } }],
     rndIntensity: 0.22, rndStates: { IN: 0.6, MA: 0.4 }, marketingPct: 0.05, wagePolicy: 1.1, tier: "incumbent",
   },
   {

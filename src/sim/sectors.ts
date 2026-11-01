@@ -1,7 +1,8 @@
 // Industry know-how, economies of scale and the cost of running too many businesses at once.
-import { BUILDING_BY_ID, SECTORS, type SectorId } from "./data/buildings";
+import { BUILDING_BY_ID, SECTORS, type BuildingTypeId, type SectorId } from "./data/buildings";
+import { COUNTRY_BY_ID } from "./data/countries";
 import { resourceMult, SUN } from "./data/resources";
-import type { Building, Company } from "./types";
+import type { Building, Company, WorldEvent } from "./types";
 import { clamp } from "./util";
 
 /** Levels at which a company reaches full economies of scale in an industry. */
@@ -92,10 +93,19 @@ export function conglomerateDiscount(c: Company): number {
   return Math.min(0.25, 0.05 * Math.max(0, effectiveSectors(c) - 2));
 }
 
-/** Output multiplier from the site itself: resources for wells and farms, sunshine for solar. */
-export function siteMult(b: Building): number {
-  const def = BUILDING_BY_ID[b.type];
-  if (def.resource) return resourceMult(def.resource, b.state);
-  if (b.type === "power" && b.method === "solar") return SUN[b.state] ?? 1;
-  return 1;
+/** Output multiplier from the site itself: resources, sunshine, and abroad, local productivity. */
+export function siteMultFor(type: BuildingTypeId, method: string, state: string): number {
+  const def = BUILDING_BY_ID[type];
+  let m = 1;
+  if (def.resource) m = resourceMult(def.resource, state);
+  else if (type === "power" && method === "solar") m = SUN[state] ?? 1;
+  const c = COUNTRY_BY_ID[state];
+  if (c && !def.resource) m *= c.productivity * (def.industry === "office" && type !== "datacenter" ? 0.75 : 1);
+  return m;
+}
+
+export function siteMult(b: Building, events?: WorldEvent[]): number {
+  let m = siteMultFor(b.type, b.method, b.state);
+  if (events) for (const e of events) m *= e.countryOutput?.[b.state] ?? 1;
+  return m;
 }

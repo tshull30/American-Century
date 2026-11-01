@@ -35,3 +35,9 @@ for (let m = 0; m < years * 12 && !s.gameOver; m++) {
   if (m % 12 === 11) console.log(dateLabel(s.month), "mcap", fmtMoney(me.marketCap), "rev", fmtMoney(ttm(me, "revenue")), "NI", fmtMoney(ttm(me, "netIncome")), "cash", fmtMoney(me.cash), "debt", fmtMoney(me.debt), "price", me.prices[good]?.toFixed(1), tierOf(me.marketCap).name);
 }
 if (s.gameOver) console.log(s.gameOver);
+{
+  const h = me.history[me.history.length - 1];
+  const f = (x: number) => fmtMoney(x);
+  console.log("last month: rev", f(h.revenue), "inputs", f(h.inputCosts), "wages+running", f(h.wages), "R&D", f(h.rdCost), "HQ", f(h.sgaCost), "marketing", f(h.marketing), "dep", f(h.depreciation), "interest", f(h.interest), "NI", f(h.netIncome));
+  for (const b of me.buildings) console.log("  ", b.type, b.city, b.level, "staff", b.staffRatio.toFixed(2), "eff", b.efficiency.toFixed(2), "profit", f(b.lastProfit), JSON.stringify(me.knowhow));
+}

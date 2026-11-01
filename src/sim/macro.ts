@@ -48,6 +48,7 @@ interface EventTemplate {
   importMult?: GoodMap;
   demandMult?: GoodMap;
   prefMult?: GoodMap;
+  countryOutput?: Record<string, number>;
 }
 
 const EVENTS: EventTemplate[] = [
@@ -58,6 +59,10 @@ const EVENTS: EventTemplate[] = [
   { id: "heat_wave", name: "Record heat wave", description: "Air conditioners everywhere: electricity demand surges.", months: [2, 3], demandMult: { electricity: 1.12 } },
   { id: "blockbuster_drug", name: "Medical breakthrough", description: "A new class of drugs expands the pharmaceutical market.", months: [12, 24], demandMult: { pharmaceuticals: 1.08 } },
   { id: "ad_slump", name: "Advertising slump", description: "Marketers slash budgets.", months: [3, 6], demandMult: { digital_ads: 0.88 } },
+  { id: "strait_crisis", name: "Taiwan Strait crisis", description: "Naval drills around Taiwan: chip shipments slow and plants there run at half speed.", months: [2, 6], importMult: { chips: 1.35, ai_accelerators: 1.25 }, countryOutput: { TWN: 0.5 } },
+  { id: "china_lockdown", name: "Factory shutdowns in China", description: "Rolling shutdowns idle Chinese plants; imported parts get dearer.", months: [2, 5], importMult: { components: 1.1, batteries: 1.1 }, countryOutput: { CHN: 0.7 } },
+  { id: "border_slowdown", name: "Border inspections", description: "Trucks back up for miles at the Mexican border.", months: [1, 3], countryOutput: { MEX: 0.85 } },
+  { id: "gulf_conflict", name: "Gulf conflict", description: "Missile strikes near Saudi oil fields; output there falls and crude imports get pricier.", months: [2, 6], importMult: { crude_oil: 1.2, fuel: 1.1 }, countryOutput: { SAU: 0.6 } },
   { id: "lithium_glut", name: "Lithium glut", description: "Battery materials crash in price: imported battery packs are 20% cheaper.", months: [6, 12], importMult: { batteries: 0.8 } },
 ];
 
@@ -74,7 +79,7 @@ export function updateWorldEvents(s: GameState, log: (text: string, kind?: "info
   const months = t.months[0] + Math.floor(rand(s) * (t.months[1] - t.months[0] + 1));
   const e: WorldEvent = {
     id: t.id, name: t.name, description: t.description, untilDay: s.day + Math.round(months * DAYS_PER_MONTH),
-    importMult: t.importMult, demandMult: t.demandMult, prefMult: t.prefMult,
+    importMult: t.importMult, demandMult: t.demandMult, prefMult: t.prefMult, countryOutput: t.countryOutput,
   };
   s.worldEvents.push(e);
   log(`${t.name}: ${t.description}`, "info");

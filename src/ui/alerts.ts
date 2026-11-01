@@ -5,6 +5,8 @@ import { adminCapacity, adminLoad } from "../sim/engine";
 import { cityLabel, opinionOf } from "../sim/geo";
 import type { Company, GameState } from "../sim/types";
 import { fmtMoney } from "../sim/util";
+import { SECTORS, type SectorId } from "../sim/data/buildings";
+import { sectorLevels } from "../sim/sectors";
 
 export interface Alert {
   text: string;
@@ -42,6 +44,10 @@ export function computeAlerts(s: GameState, me: Company): Alert[] {
       if (!good || good.decay >= 1 || good.intermediate || q < 1) continue;
       if (q > Math.max(sold * 3, 1000)) { out.push({ tone: "info", tab: "markets", text: `Unsold ${good.name.toLowerCase()} piling up (${sold > 0 ? `${(q / sold).toFixed(0)} months of sales` : "no sales last month"})` }); break; }
     }
+  }
+
+  for (const [sec, k] of Object.entries(me.knowhow ?? {})) {
+    if ((k ?? 1) < 0.5 && Object.keys(sectorLevels(me)).includes(sec)) { out.push({ tone: "info", tab: "production", text: `Still learning ${SECTORS[sec as SectorId].name.toLowerCase()} (know-how ${Math.round((k ?? 0) * 100)}%)` }); break; }
   }
 
   for (const d of s.deals) {

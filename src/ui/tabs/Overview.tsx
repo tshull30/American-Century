@@ -1,7 +1,7 @@
 import { GOOD_BY_ID, type GoodId } from "../../sim/data/goods";
 import { interestRate, revenueGrowth, ttm } from "../../sim/engine";
 import { tierOf } from "../../sim/tiers";
-import { dateLabel, dayLabel, fmtMoney, fmtNum, fmtPct } from "../../sim/util";
+import { dateLabel, dayLabel, dayOfMonthStart, fmtMoney, fmtNum, fmtPct } from "../../sim/util";
 import { computeAlerts } from "../alerts";
 import { LineChart, Panel, Signed, Stat, Table, useGame } from "../components";
 
@@ -17,6 +17,9 @@ export function Overview() {
   const myEvents = s.events.filter((e) => e.companyId === me.id || e.kind === "deal" || e.kind === "politics").slice(-12).reverse();
 
   const alerts = computeAlerts(s, me);
+  let qm = s.month;
+  while ((((qm % 12) + 12) % 12) % 3 !== 2) qm++;
+  const nextEarnings = dayOfMonthStart(qm + 1);
 
   return (
     <div className="grid2">
@@ -29,6 +32,7 @@ export function Overview() {
             <Stat label="Employees" value={fmtNum(emp)} sub={`${me.buildings.length} sites`} />
             <Stat label="Cash" value={fmtMoney(me.cash)} sub={`debt ${fmtMoney(me.debt)}`} />
             <Stat label="Tier" value={tier.name} sub={`#${peers.findIndex((c) => c.id === me.id) + 1} of ${peers.length}`} />
+            <Stat label="Next earnings" value={dayLabel(nextEarnings)} sub={`in ${nextEarnings - s.day} days`} />
           </div>
           {alerts.length > 0 && <ul style={{ margin: "10px 0 0", paddingLeft: 18 }}>{alerts.map((a) => <li key={a.text} className={a.tone === "bad" ? "neg" : a.tone === "warn" ? "warn" : ""}>{a.text}</li>)}</ul>}
         </Panel>

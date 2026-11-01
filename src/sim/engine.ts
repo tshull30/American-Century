@@ -15,15 +15,16 @@ import { cityIncentive, cityLabel, computeStateWages, initCities, defaultCity, s
 import { hqAdminMult, hqCityOpinion, hqHireRateMult, hqHiringMult, hqImageBonus, hqReputationMult, hqResearchMult, hqUpkeep, HQ_FORMS } from "./hq";
 import { updateJobOpinion, updatePopulation } from "./population";
 import { initElectionData, runPrimaries, updateProjections } from "./elections";
-import { complexityMult, conglomerateDiscount, industryMult, learningOverhead, noteEntry, sectorLevels, siteMult, updateKnowhow } from "./sectors";
-import { RESOURCES, resourceMult, SUN, type ResourceId } from "./data/resources";
+import { homeCostShare, initWorld, updateWorld } from "./intl";
+import { complexityMult, conglomerateDiscount, industryMult, learningOverhead, noteEntry, sectorLevels, siteMult, siteMultFor, updateKnowhow } from "./sectors";
+import { RESOURCES, resourceMult, type ResourceId } from "./data/resources";
 import { processDeals } from "./actions";
 import { tierOf } from "./tiers";
 import type { Building, Company, EventTag, GameState, GoodMap, MarketSnapshot, MonthReport } from "./types";
 import {
   clamp, dateLabel, dayLabel, dayOfMonthStart, DAYS_PER_MONTH, fmtMoney, fmtPct, laborKey, monthOfDay, pick, rand, randNormal, shuffle,
 } from "./util";
-import { runAI, autoPrice } from "./ai";
+import { runAI, autoPrice, maintainHQ } from "./ai";
 
 export const SAVE_VERSION = 5;
 export const BASELINE_TECH_START = 10;
@@ -53,6 +54,7 @@ export function newGame(choice: PlayerChoice, seed = Math.floor(Math.random() * 
     sol: 100, solNorm: 1, events: [], nextId: 1,
   };
   initCities(s);
+  initWorld(s);
   s.politics = initPolitics(s);
   initElectionData(s);
   refreshWorkforce(s);
@@ -220,7 +222,7 @@ function companyFromSeed(s: GameState, d: CompanySeed): Company {
     const levels = Math.ceil(units / 12 / out / 0.95);
     for (const [st, lvRaw] of spread(levels, p.states)) {
       const pdef = BUILDING_BY_ID[prod.type];
-      const sm = pdef.resource ? resourceMult(pdef.resource, st) : prod.type === "power" && prod.method === "solar" ? SUN[st] ?? 1 : 1;
+      const sm = siteMultFor(prod.type, prod.method ?? pdef.methods[0].id, st);
       if (sm <= 0) continue;
       const lvState = Math.max(1, Math.round(lvRaw / sm));
       for (const [city, lv] of spreadInState(s, st, prod.type, lvState, prod.method)) {
@@ -542,7 +544,7 @@ function updateWages(s: GameState) {
     const share = cell.gameEmployed / Math.max(1, cell.workforce);
     const tight = Math.min(1, cell.shortage / Math.max(1, cell.workforce * HIRE_RATE));
     let target = base * (1 + press * Math.pow(share, 1.2) + 0.25 * tight) * (1 + s.macro.gap * 0.5);
-    if (LOW_WAGE.includes(cell.job)) target = Math.max(target, floor, city?.minWage ?? 0);
+    if (LOW_WAGE.includes(cell.job) && !city?.foreign) target = Math.max(target, floor, city?.minWage ?? 0);
     cell.wage += (target - cell.wage) * 0.1;
   }
   computeStateWages(s);
@@ -631,7 +633,8 @@ function monthly(s: GameState) {
   };
   updateMacro(s, say);
   updateWorldEvents(s, say);
-  if (!warmup) updatePopulation(s);
+  if (s.month % 12 === 0) s.immigrantsThisYear = 0;
+  if (!warmup) { updatePopulation(s); updateWorld(s); }
   refreshWorkforce(s);
   updateWages(s);
   driftPreferences(s);
@@ -654,6 +657,7 @@ function monthly(s: GameState) {
     updateProjections(s);
   }
   for (const c of alive) {
+    if (c.isPlayer && c.autoHq && !warmup) { const m = maintainHQ(s, c); if (m) log(s, `Headquarters: ${m}`, "info", c.id, "build"); }
     if (!c.isPlayer) { aiLobbying(s, c); runAI(s, c, { warmup }); }
   }
   if (!warmup) {
@@ -705,7 +709,7 @@ function produce(s: GameState, c: Company, acc: Map<number, DayAcc>, alive: Comp
     a.cost += running;
     b.profitMTD -= running;
     employees += haveSum;
-    const scale = b.level * b.efficiency * siteMult(b);
+    const scale = b.level * b.efficiency * siteMult(b, s.worldEvents);
     plans.push({ b, m, scale });
     for (const g in m.output) {
       const out = m.output[g as GoodId]! * scale * DT;
@@ -783,7 +787,17 @@ function produce(s: GameState, c: Company, acc: Map<number, DayAcc>, alive: Comp
         const fallback = GOOD_BY_ID[ig as GoodId].importPrice ?? 0;
         unitInput += rec[ig as GoodId]! * (isFinite(avg) && avg > 0 ? avg : fallback);
       }
-      const inputCost = q * unitInput;
+      let inputCost = q * unitInput;
+      // Made abroad: tariffs and freight on the share that ends up in the US.
+      if (s.cities[b.city]?.foreign) {
+        // Intermediates mostly feed American plants (yours or others'); finished goods split by where demand is.
+        const toUS = GOOD_BY_ID[gId].intermediate ? 0.5 : usShare(s, gId);
+        const home = q * (c.prices[gId] ?? GOOD_BY_ID[gId].refPrice) * toUS * homeCostShare(s, b.city);
+        inputCost += home;
+        r.inputCosts += home;
+        r.tariffs = (r.tariffs ?? 0) + home;
+        a.cost += home;
+      }
       b.profitMTD += q * (c.prices[gId] ?? 0) - inputCost;
       outputCost[gId] = (outputCost[gId] ?? 0) + inputCost + (b.lastWages + ((m.upkeep ?? 0) + carbonCost(s, b.type, b.method) + (b.type === "datacenter" ? dcPowerCost(s, b.city) : 0)) * b.level) * DT;
     }

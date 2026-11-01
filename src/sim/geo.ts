@@ -4,6 +4,8 @@ import { CITY_POLITICS, CITY_SEEDS, POWER_PRICE, STATE_LIB } from "./data/cities
 import { RESOURCE_NAME, resourceMult } from "./data/resources";
 import { STATE_PRES_2024 } from "./data/districts";
 import { LAW_BY_ID } from "./data/laws";
+import { offshoreShare } from "./intl";
+import { COUNTRY_BY_ID } from "./data/countries";
 import { JOBS, JOB_BY_ID, type JobId } from "./data/jobs";
 import { STATES, STATE_BY_CODE } from "./data/states";
 import type { Building, CityState, Company, GameState, LaborCell } from "./types";
@@ -189,6 +191,8 @@ export function permitBlock(s: GameState, cityId: string, c: Company, type: Buil
   const res = BUILDING_BY_ID[type].resource;
   if (res && resourceMult(res, city.state) <= 0) return `There are no ${RESOURCE_NAME[res]} in ${STATE_BY_CODE[city.state]?.name ?? city.state}.`;
   if (res && !city.rest && s.cities[`rest-${city.state}`]) return `Wells and farms go outside the big metros: try Rest of ${STATE_BY_CODE[city.state]?.name ?? city.state}.`;
+  if (city.foreign && type === "hq") return "Headquarters stay in the US.";
+  if (city.foreign && COUNTRY_BY_ID[city.state]?.trade === "rival" && (type === "fab" || type === "design" || type === "datacenter" || type === "rnd")) return `US export controls bar advanced chip, AI and research work in ${city.name}.`;
   if (city.fossilBan && FOSSIL.includes(type)) return `${city.name} bans new fossil-fuel projects.`;
   if (type === "hq" && c.hqSite.city !== cityId) return "Headquarters floors go in your HQ city. Relocate HQ on the Headquarters tab.";
   if (opinionOf(s, cityId, c) < 0.15) return `${city.name}'s council denied the permit: residents can't stand ${c.name}.`;
@@ -274,7 +278,13 @@ export function updateCities(s: GameState, log: (t: string, kind?: "info" | "bad
   const stance = new Map<number, Stance>();
   for (const co of s.companies) if (co.alive) stance.set(co.id, companyStance(co));
   const national = s.politics?.poll ?? 0.5;
+  const offshore = new Map<number, number>();
+  for (const co of s.companies) if (co.alive) offshore.set(co.id, offshoreShare(s, co));
   for (const city of Object.values(s.cities)) {
+    if (city.foreign) {
+      for (const co of s.companies) if (co.alive) city.opinion[co.id] = 0.6;
+      continue;
+    }
     // Councils drift with the national mood but stay rooted in who lives there.
     city.council = clamp(city.council + (city.lean + 0.6 * (national - 0.5) - city.council) * 0.03 + 0.004 * (rand(s) - 0.5), 0.1, 0.92);
     applyPolicies(city);
@@ -294,6 +304,7 @@ export function updateCities(s: GameState, log: (t: string, kind?: "info" | "bad
       if (p.emp > 0) target -= Math.min(0.4, (laid / p.emp) * 4);
       // What residents believe: politics, energy and how a company uses Washington.
       const st = stance.get(co.id)!;
+      target -= 0.12 * (offshore.get(co.id) ?? 0); // shipping jobs overseas plays badly at home
       target += 0.12 * left * st.politics + 0.1 * left * (st.green - st.fossil) + 0.06 * -left * st.industry - 0.08 * libTilt * st.subsidies;
       city.opinion[co.id] = clamp(cur + (clamp(target, 0.02, 0.98) - cur) * 0.12, 0, 1);
     }
@@ -380,5 +391,5 @@ export function buildingsInCity(s: GameState, cityId: string): { c: Company; b: 
 export function cityLabel(s: GameState, cityId: string): string {
   const c = s.cities[cityId];
   if (!c) return cityId;
-  return c.rest ? c.name : `${c.name}, ${c.state}`;
+  return c.rest || c.foreign ? c.name : `${c.name}, ${c.state}`;
 }

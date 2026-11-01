@@ -56,6 +56,8 @@ export interface MonthReport {
   interest: number;
   taxes: number;
   netIncome: number;
+  /** Tariffs and freight on goods made abroad (already inside inputCosts). */
+  tariffs?: number;
   dividends: number;
   capex: number;
   cash: number;
@@ -179,6 +181,8 @@ export interface Company {
   /** The month in progress. */
   current: MonthReport;
   distressMonths: number;
+  /** Player setting: add HQ levels automatically when the HQ runs out of capacity. */
+  autoHq?: boolean;
   /** Industry know-how, 0–1 (see sectors.ts). */
   knowhow?: Partial<Record<SectorId, number>>;
   /** Production cost per unit, by good. */
@@ -258,6 +262,8 @@ export interface CityState {
   /** Opinion of each company, 0–1. */
   opinion: Record<number, number>;
   rest?: boolean;
+  /** A country abroad rather than a US city. */
+  foreign?: boolean;
 }
 
 export interface Race {
@@ -368,6 +374,8 @@ export interface WorldEvent {
   importMult?: GoodMap;
   demandMult?: GoodMap;
   prefMult?: GoodMap;
+  /** Output multiplier for plants in these countries. */
+  countryOutput?: Record<string, number>;
 }
 
 export interface Bill {
@@ -455,6 +463,10 @@ export interface GameState {
   /** Normalizer that makes the 2026 national average standard of living 100. */
   solNorm: number;
   events: GameEvent[];
+  /** Workers abroad, by country and job. */
+  intlPops?: import("./intl").IntlPop[];
+  /** Net immigrants (workers) so far this year. */
+  immigrantsThisYear?: number;
   /** Real politicians already used as candidates (so nobody runs twice). */
   politicsUsedNames?: string[];
   nextId: number;

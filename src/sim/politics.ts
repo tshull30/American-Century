@@ -11,7 +11,7 @@ import { holdGeneral } from "./elections";
 
 // ---------------------------------------------------------------- law effects
 
-const lv = (s: GameState, id: LawId) => s.politics.laws[id];
+export const lv = (s: GameState, id: LawId) => s.politics.laws[id];
 
 export function corpTax(s: GameState): number {
   return [0.15, 0.21, 0.28, 0.35][lv(s, "corporate_tax")];

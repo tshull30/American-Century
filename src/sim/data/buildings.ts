@@ -208,7 +208,7 @@ export const BUILDINGS: BuildingDef[] = [
     id: "steel", sector: "materials", name: "Steel Mill", short: "Steel", cost: 70e6, buildTime: 10, usesAdmin: true, industry: "strategic",
     description: "Makes steel for cars, buildings and the world market. Hungry for power and gas.",
     methods: [
-      { id: "eaf", name: "Electric Arc (Scrap)", staff: { assembler: 55, technician: 20, laborer: 15, engineer: 4, manager: 4 }, output: { steel: 5000 }, upkeep: 550_000, retoolCost: 0.4 },
+      { id: "eaf", name: "Electric Arc (Scrap)", staff: { assembler: 55, technician: 20, laborer: 15, engineer: 4, manager: 4 }, output: { steel: 5000 }, upkeep: 450_000, retoolCost: 0.4 },
       { id: "integrated", name: "Integrated (Blast Furnace)", staff: { assembler: 75, technician: 25, laborer: 25, engineer: 6, manager: 5 }, output: { steel: 7500 }, upkeep: 900_000, costMult: 1.5, retoolCost: 0.8 },
     ],
   },
