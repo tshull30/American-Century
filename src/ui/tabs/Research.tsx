@@ -2,6 +2,7 @@ import { setResearchAlloc } from "../../sim/actions";
 import { TECHS, GOOD_BY_ID } from "../../sim/data/goods";
 import { BASELINE_TECH_START, researchCost, researchOutput } from "../../sim/engine";
 import { fmtMoney, fmtNum } from "../../sim/util";
+import { licensingTerms, toggleLicense } from "../../sim/corp";
 import { cancelMoonshot, FUNDING, MOONSHOTS, startMoonshot, type Funding } from "../../sim/fun";
 import { Bar, Panel, Table, useGame } from "../components";
 
@@ -18,12 +19,18 @@ export function Research() {
           rowKey={(t) => t.id}
           cols={[
             { key: "t", label: "Technology", render: (t) => t.name },
-            { key: "g", label: "Improves", render: (t) => t.goods.map((g) => GOOD_BY_ID[g].name).join(", ") },
+            { key: "g", label: "Improves", render: (t) => <span style={{ whiteSpace: "normal", display: "inline-block", maxWidth: 380, fontSize: 13 }}>{t.goods.map((g) => GOOD_BY_ID[g].name).join(", ")}</span> },
             { key: "lv", label: "Your level", num: true, render: (t) => (me.tech[t.id] ?? BASELINE_TECH_START).toFixed(1) },
             { key: "base", label: "Market", num: true, render: (t) => (s.baselineTech[t.id] ?? BASELINE_TECH_START).toFixed(1) },
             { key: "lead", label: "Lead", num: true, render: (t) => { const d = (me.tech[t.id] ?? 0) - (s.baselineTech[t.id] ?? 0); return <span className={d >= 0 ? "pos" : "neg"}>{d >= 0 ? "+" : ""}{d.toFixed(1)}</span>; } },
             { key: "prog", label: "Progress to next level", render: (t) => { const c = researchCost(s, me, t.id); const p = me.researchPoints[t.id] ?? 0; return <span className="row" style={{ flexWrap: "nowrap" }}><Bar value={p / c} tone={undefined} />{fmtNum(p)} / {fmtNum(c)}</span>; } },
             { key: "eta", label: "ETA", num: true, render: (t) => { const share = wsum > 0 ? (me.researchAlloc[t.id] ?? 0) / wsum : 0; const rate = pts * share; if (rate <= 0) return "–"; const left = researchCost(s, me, t.id) - (me.researchPoints[t.id] ?? 0); return `${Math.ceil(left / rate)} mo`; } },
+            { key: "lic", label: "Licensing", render: (t) => {
+              const on = me.licenses?.[t.id] !== undefined;
+              const terms = licensingTerms(s, me, t.id);
+              if (!on && terms.lead < 1) return <span className="muted small">needs a 1-level lead</span>;
+              return <button className={`small ${on ? "active" : ""}`} title={on ? "Stop licensing" : "License this technology to rivals for royalties; they catch up faster"} onClick={() => act(toggleLicense(s, me, t.id))}>{on ? `Licensed, ${fmtMoney(terms.royalty)}/mo` : `License for ~${fmtMoney(terms.royalty)}/mo`}</button>;
+            } },
             { key: "a", label: "Priority", render: (t) => (
               <span className="row" style={{ flexWrap: "nowrap" }}>
                 <input type="range" min={0} max={10} step={1} value={me.researchAlloc[t.id] ?? 0} onChange={(e) => act(setResearchAlloc(s, me.id, t.id, Number(e.target.value)))} />

@@ -1,3 +1,4 @@
+import { consentCap } from "./corp";
 import { boardVote, needsVote, recordBuyback } from "./leadership";
 // Things a company can do. The player's UI and the AI rivals both go through these.
 import { BUILDING_BY_ID, methodOf, type BuildingTypeId } from "./data/buildings";
@@ -113,9 +114,10 @@ export function ensureSells(_s: GameState, c: Company, g: GoodId) {
 
 export function setPrice(s: GameState, cid: number, g: GoodId, price: number): Result {
   const c = company(s, cid);
-  c.prices[g] = Math.max(0.01, price);
+  const cap = consentCap(s, c, g);
+  c.prices[g] = Math.max(0.01, Math.min(price, cap));
   c.autoPrice[g] = false;
-  return ok(`${GOOD_BY_ID[g].name} price set.`);
+  return ok(price > cap ? `Your consent decree caps the ${GOOD_BY_ID[g].name.toLowerCase()} price at ${fmtMoney(cap)}.` : `${GOOD_BY_ID[g].name} price set.`);
 }
 
 export function setAutoPrice(s: GameState, cid: number, g: GoodId, on: boolean): Result {

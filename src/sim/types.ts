@@ -233,6 +233,14 @@ export interface Company {
   hq2?: import("./fun").Hq2;
   lastSpy?: number;
   meme?: { until: number; mult: number };
+  /** Corporate life (corp.ts). */
+  rating?: import("./corp").Rating;
+  holdings?: Record<number, import("./corp").Holding>;
+  antitrust?: { kind: "consent" | "trial"; good: GoodId; until: number; rev: number };
+  lastSuit?: number;
+  lastBid?: number;
+  foundation?: Partial<Record<import("./corp").CauseId, number>>;
+  licenses?: Partial<Record<TechId, number>>;
   /** Hard difficulty: rivals' running-cost multiplier. */
   costEdge?: number;
   /** Earnings guidance the CFO gave Wall Street. */
@@ -521,4 +529,5 @@ export interface GameState {
   /** Local politics: city councils and statehouses. */
   cityGov?: Record<string, import("./local").CityGov>;
   stateGov?: Record<string, import("./local").StateGov>;
+  rankings?: import("./corp").Rankings;
 }

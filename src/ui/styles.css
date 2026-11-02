@@ -535,3 +535,15 @@ ul.votes .when { color: var(--ink-3); min-width: 74px; }
 .local-main { min-width: 0; }
 .local .grid2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .bar-split { flex: none; }
+
+.rating { display: inline-block; font-family: var(--display); font-weight: 600; padding: 0 7px; border: 1.5px solid currentColor; border-radius: 2px; }
+.rating.ig { color: var(--gain); }
+.rating.junk { color: var(--seal); }
+.ranks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.rank-col h3 { font-family: var(--display); font-weight: 500; font-size: 17px; margin: 0 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--ink-2); }
+.rank-col ol { margin: 0; padding-left: 22px; font-size: 13.5px; }
+.rank-col li { padding: 1px 0; }
+.rank-col li.me { font-weight: 700; color: var(--engrave); }
+.panel { min-width: 0; }
+.panel > table.t, .panel .scroll { max-width: 100%; }
+td.wrap, th.wrap { white-space: normal !important; }

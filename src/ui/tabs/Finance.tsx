@@ -3,7 +3,8 @@ import { borrow, buyback, issueShares, repay, setDividend, setGuidance, setMarke
 import { creditLimit, ebitdaTTM, interestRate, ttm } from "../../sim/engine";
 import type { MonthReport } from "../../sim/types";
 import { fmtMoney, fmtNum, fmtPct } from "../../sim/util";
-import { Panel, useGame } from "../components";
+import { Panel, Signed, useGame } from "../components";
+import { CAUSES, computeRating, holdingValue, investmentGrade, setCause, tradeStake, type CauseId } from "../../sim/corp";
 
 const LINES: [keyof MonthReport, string, number][] = [
   ["revenue", "Revenue", 1],
@@ -97,6 +98,7 @@ export function Finance() {
             <tr><td>Plants & equipment (book)</td><td className="num">{fmtMoney(me.ppe)}</td></tr>
             <tr><td>Debt</td><td className="num">{fmtMoney(me.debt)}</td></tr>
             <tr><td>Credit limit</td><td className="num">{fmtMoney(limit)}</td></tr>
+            <tr><td>Credit rating</td><td className="num"><span className={`rating ${me.rating && investmentGrade(me.rating) ? "ig" : "junk"}`}>{me.rating ?? computeRating(me)}</span> <span className="muted small">{me.rating && investmentGrade(me.rating) ? "investment grade" : "junk"}</span></td></tr>
             <tr><td>Interest rate</td><td className="num">{fmtPct(interestRate(s, me), 1)}</td></tr>
             <tr><td>EBITDA (TTM)</td><td className="num">{fmtMoney(ebitdaTTM(me))}</td></tr>
             <tr><td>Shares outstanding</td><td className="num">{fmtNum(me.shares)}</td></tr>
@@ -121,7 +123,67 @@ export function Finance() {
             ))}
           </div>
         </Panel>
+        <Portfolio />
+        <Foundation />
       </div>
     </div>
+  );
+}
+
+function Portfolio() {
+  const { s, me, act } = useGame();
+  const [pickId, setPickId] = useState<number>(0);
+  const rows = Object.entries(me.holdings ?? {}).map(([id, h]) => ({ id: Number(id), h, c: s.companies.find((x) => x.id === Number(id)) })).filter((x) => x.c?.alive);
+  const others = s.companies.filter((c) => c.alive && !c.isPlayer).sort((a, b) => b.marketCap - a.marketCap);
+  const total = rows.reduce((a, r) => a + holdingValue(s, r.id, r.h), 0);
+  const cost = rows.reduce((a, r) => a + r.h.cost, 0);
+  const sel = pickId || others[0]?.id;
+  return (
+    <Panel help="portfolio" title="Stock portfolio" right={rows.length ? <>Worth {fmtMoney(total)}, <Signed value={total - cost} fmt={(x) => `${x >= 0 ? "+" : "−"}${fmtMoney(Math.abs(x))}`} /></> : "Empty"}>
+      {rows.length > 0 && (
+        <table className="t"><thead><tr><th>Company</th><th className="num">Stake</th><th className="num">Value</th><th className="num">Gain</th><th></th></tr></thead><tbody>
+          {rows.map((r) => {
+            const v = holdingValue(s, r.id, r.h);
+            return <tr key={r.id}><td>{r.c!.name}</td><td className="num">{fmtPct(r.h.stake, 1)}</td><td className="num">{fmtMoney(v)}</td><td className="num"><Signed value={v - r.h.cost} fmt={(x) => fmtMoney(x)} /></td>
+              <td className="row" style={{ flexWrap: "nowrap", gap: 4 }}><button className="small" onClick={() => act(tradeStake(s, me, r.id, 0.01))}>+1%</button><button className="small" onClick={() => act(tradeStake(s, me, r.id, -0.01))}>−1%</button><button className="small" onClick={() => act(tradeStake(s, me, r.id, -r.h.stake))}>Sell all</button></td></tr>;
+          })}
+        </tbody></table>
+      )}
+      <div className="row" style={{ marginTop: 8 }}>
+        <select value={sel} onChange={(e) => setPickId(Number(e.target.value))} style={{ maxWidth: 260 }}>
+          {others.map((c) => <option key={c.id} value={c.id}>{c.name} ({fmtMoney(c.marketCap)})</option>)}
+        </select>
+        <button onClick={() => act(tradeStake(s, me, sel, 0.01))}>Buy 1%</button>
+        <button onClick={() => act(tradeStake(s, me, sel, 0.05))}>Buy 5%</button>
+      </div>
+      <p className="muted small">You collect dividends on what you own, and a stake comes off the price if you later buy the whole company. At 5% you have to disclose it, and their CEO notices.</p>
+    </Panel>
+  );
+}
+
+function Foundation() {
+  const { me, act } = useGame();
+  const base = Math.max(1e6, Math.round(ttm(me, "revenue") / 12 * 0.002 / 1e6) * 1e6);
+  const total = Object.values(me.foundation ?? {}).reduce((a, b) => a + (b ?? 0), 0);
+  return (
+    <Panel help="foundation" title={`The ${me.name} Foundation`} right={total ? `${fmtMoney(total)} a month` : "Not funded"}>
+      <table className="t policy"><tbody>
+        {(Object.keys(CAUSES) as CauseId[]).map((id) => {
+          const cur = me.foundation?.[id] ?? 0;
+          return (
+            <tr key={id}>
+              <td><strong>{CAUSES[id].name}</strong></td>
+              <td className="muted wrap" style={{ fontSize: 13 }}>{CAUSES[id].effect}</td>
+              <td className="num">{cur ? fmtMoney(cur) : "–"}</td>
+              <td className="row" style={{ flexWrap: "nowrap", gap: 4 }}>
+                <button className="small" onClick={() => act(setCause(me, id, cur + base))}>+{fmtMoney(base)}</button>
+                {cur > 0 && <button className="small" onClick={() => act(setCause(me, id, Math.max(0, cur - base)))}>−</button>}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody></table>
+      <p className="muted small">Giving is counted as overhead. The effect grows with the square root of what you give, relative to your size.</p>
+    </Panel>
   );
 }

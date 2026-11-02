@@ -43,6 +43,7 @@ export const TOPICS: Topic[] = [
   { id: "credit", title: "Debt and credit", group: "Company", body: [
     "If cash runs out the company draws on its credit line automatically. The limit is 3.5× EBITDA, plus 40% of plant value and 10% of market cap; a good CFO raises it.",
     "Net debt (debt minus cash) above the limit for six months is a default. For you, that's game over.",
+    "Rating agencies grade every company from AAA to C on net leverage, size and distress. The rating sets your spread over the Fed's rate, from half a point at AAA to twelve at C. Falling below BBB (to junk) knocks the stock too. Licensing patents counts as revenue.",
   ] },
   { id: "shares", title: "Share issues and buybacks", group: "Company", body: [
     "Issuing shares raises cash without debt but dilutes your ownership and dents investor sentiment. More than 5% at once needs the [[board]].",
@@ -90,6 +91,21 @@ export const TOPICS: Topic[] = [
     "You can lobby any pending vote (dealmakers listen; ideologues mostly don't; populists hold it against you), ask a council for an incentive deal (an extra 12% abatement on your projects there), meet officials, and fund their campaigns or their opponents'. Half of each council stands for election every two years.",
     "States have a governor and a legislature. Bills on right-to-work, the state minimum wage, corporate tax, data-center tax exemptions and megaproject funds pass or fail on the legislature's makeup and the governor's pen. State minimum wages set the floor in every city; your headquarters state's corporate tax applies to your profits.",
     "Mayors, council members and governors are fictional. Members of Congress are real.",
+  ] },
+  { id: "portfolio", title: "Stock portfolio", group: "Company", body: [
+    "Buy stakes of up to 20% in any public company with spare cash. You collect their dividends and gain or lose as their stock moves. A stake also comes off the price if you later buy the whole company, the classic toehold. Cross 5% and you have to disclose it; their CEO won't love it.",
+  ] },
+  { id: "foundation", title: "The foundation", group: "Company", body: [
+    "Fund causes each month: schools, climate, hometown grants, hospitals or veterans. Giving improves your public image and has its own effects: hometown grants win over cities and councils, climate giving pleases green politicians and executives and annoys their opposites, veterans' charities please conservatives. The effect grows with the square root of the money, relative to your size.",
+  ] },
+  { id: "rankings", title: "The American 500", group: "Company", body: [
+    "Every January the game ranks every company by revenue, as a place to work (pay, how workers and executives feel) and by admiration (image, size, achievements and credit). Top spots make the front page.",
+  ] },
+  { id: "antitrust", title: "Antitrust suits", group: "Politics", body: [
+    "Hold 45% of a market (35% under strict antitrust law) and the Justice Department may sue. Settling costs a fine and puts a three-year cap on your price in that market. Fighting takes a year: win and it's over, lose and it's a bigger fine and a forced sale of 30% of the business. Or offer to sell a quarter of it up front.",
+  ] },
+  { id: "takeovers", title: "Hostile bids", group: "Company", body: [
+    "When a company six times your size with deep pockets sees a bargain (especially when your board is unhappy), it may bid for you directly. A poison pill works if the board backs you. A white knight needs a partner or a rival CEO who likes you. Or sell: the game ends, and you go out rich.",
   ] },
   { id: "acquisitions", title: "Acquisitions", group: "Company", body: [
     "Click a company on the Rivals tab to make an offer. Its board wants a premium: more for startups, hot stocks and established companies, and more from a much bigger buyer. A dealmaker CEO or CFO shaves it.",

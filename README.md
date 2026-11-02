@@ -28,6 +28,8 @@ Deep and spreadsheet-y, but fast: daily ticks, five game speeds, and everything 
 
 **New in v0.12:** deeper local politics. A States & cities tab with every state's governor, legislature and state policy (corporate tax, minimum wage, right-to-work, data-center tax exemptions, megaproject funds) and every city's mayor and council, drawn as a council chamber whose seats shade by how members are expected to vote. Councils propose and vote on ordinances (minimum wage, tax abatements, permitting reform, data-center moratoriums and incentives, water rules, oil and gas bans, labor-peace rules and a per-worker head tax on big employers) and hold staggered elections; states pass bills through their legislatures, subject to the governor's veto. Lobby any vote, ask a council for an incentive deal, meet officials, and fund their campaigns or their opponents'. Mayors, councils and governors are fictional.
 
+**New in v0.13:** credit ratings from AAA to C that set your borrowing costs (with front pages on upgrades, downgrades and falls to junk); a stock portfolio for stakes of up to 20% in rivals, with dividends and a toehold discount if you later buy them; Justice Department antitrust suits against dominant companies (settle under a price cap, fight a year-long trial, or sell a unit); a corporate foundation funding five causes with different political and local effects; the American 500 rankings every January (revenue, best places to work, most admired); hostile bids for your company (poison pill, white knight or sell and retire rich); patent licensing that turns a research lead into royalties; and pointed analyst questions on the earnings call.
+
 ## Play
 
 ```bash

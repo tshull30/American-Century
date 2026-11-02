@@ -8,6 +8,7 @@ import { STATES, STATE_BY_CODE } from "./data/states";
 import { activePartners, updatePeople } from "./people";
 import { checkMilestones } from "./milestones";
 import { updateFun } from "./fun";
+import { earningsCall, ratingSpread, updateCorp } from "./corp";
 import { stateCorpTax, updateLocal } from "./local";
 import { applySetup, checkGoal, difficultyShade, type Setup } from "./setup";
 import { calibrateConsumers, driftPreferences, updateConsumers } from "./consumers";
@@ -35,7 +36,7 @@ import {
 } from "./util";
 import { runAI, autoPrice, maintainHQ } from "./ai";
 
-export const SAVE_VERSION = 12;
+export const SAVE_VERSION = 13;
 export const BASELINE_TECH_START = 10;
 const DT = 1 / DAYS_PER_MONTH;
 const DEPRECIATION = 0.006;
@@ -695,6 +696,7 @@ function monthly(s: GameState) {
     updatePeople(s, (t, k, extra) => { if (!warmup && me) log(s, t, k, me.id, extra?.headline && s.decisions?.some((d) => d.headline === extra.headline) ? "decision" : "news", extra); }, warmup);
     const partners = activePartners(s);
     for (const c of alive) c.allyBoost = c.isPlayer ? 1 + 0.05 * partners.length : partners.includes(c.id) ? 1.05 : 1;
+    updateCorp(s, (c) => (t, k, extra) => { if (!warmup) log(s, t, k, c.id, c.isPlayer ? (extra?.headline && s.decisions?.some((d) => d.headline === extra.headline) ? "decision" : "news") : undefined, extra); }, warmup);
     updateFun(s, (c) => (t, k, extra) => { if (!warmup) log(s, t, k, c.id, c.isPlayer ? (extra?.headline && s.decisions?.some((d) => d.headline === extra.headline) ? "decision" : "news") : undefined, extra); }, warmup);
     if (!warmup && me) checkGoal(s, me, (t, k, extra) => log(s, t, k, me.id, "decision", extra));
     if (!warmup && me) checkMilestones(s, me, (t, extra) => log(s, t, "good", me.id, "news", extra));
@@ -992,10 +994,8 @@ export function creditLimit(c: Company): number {
 }
 
 export function interestRate(s: GameState, c: Company): number {
-  const e = ebitdaTTM(c);
-  const lev = e > 0 ? c.debt / e : c.debt > 0 ? 99 : 0;
-  const spread = lev < 1 ? 0.01 : lev < 3 ? 0.025 : lev < 5 ? 0.05 : 0.09;
-  return Math.max(0.005, s.baseRate + spread + leadEffects.interest(c));
+  // The credit rating sets the spread over the Fed's rate.
+  return Math.max(0.005, s.baseRate + ratingSpread(c) + leadEffects.interest(c));
 }
 
 /** What the market thinks the company is worth: earnings and sales multiples driven by growth, times sentiment, plus net cash. */
@@ -1127,6 +1127,7 @@ function earnings(s: GameState, c: Company, r: MonthReport) {
     const earned = qNI >= 0 ? `earned ${fmtMoney(qNI)}` : `lost ${fmtMoney(-qNI)}`;
     const vs = `revenue ${fmtMoney(q)} vs ${fmtMoney(expected)} expected, profit ${fmtMoney(qNI)} vs ${fmtMoney(expectedNI)}`;
     const tail = verdict === "beat" ? "Stock jumps." : verdict === "missed" ? "Stock slides." : "Stock little changed.";
+    if (c.isPlayer) earningsCall(s, c);
     log(s, `${c.name} ${earned} in Q${qi} and ${verdict} estimates (${vs}). ${tail}`, verdict === "missed" ? "bad" : verdict === "beat" ? "good" : "info", c.id, c.isPlayer ? "finance" : undefined);
   }
 }

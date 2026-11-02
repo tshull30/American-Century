@@ -1,4 +1,5 @@
 import { friendlyPremium } from "./people";
+import { toeholdDiscount } from "./corp";
 import { leadEffects } from "./leadership";
 // Mergers and acquisitions: the board has to say yes, regulators get a look, and big deals take time.
 import { GOOD_BY_ID, type GoodId } from "./data/goods";
@@ -73,7 +74,8 @@ export function makeOffer(s: GameState, buyer: Company, target: Company, premium
   if (s.deals.some((d) => d.buyerId === buyer.id && d.stage === "second_request") && buyer.marketCap > 200e9) {
     return { ok: false, message: "Regulators won't look at a second deal while one is under in-depth review." };
   }
-  const price = target.marketCap * (1 + premium);
+  // A stake you already own doesn't need buying again.
+  const price = target.marketCap * (1 + premium) * (1 - toeholdDiscount(buyer, target));
   const ov = overlap(s, buyer, target);
   if (ov.share > antitrustCap(s)) return { ok: false, message: `Dead on arrival: combined ${GOOD_BY_ID[ov.good!].name} share of ${fmtPct(ov.share, 0)} is over the ${fmtPct(antitrustCap(s), 0)} legal limit.` };
   if (payment === "cash" && price > liquidity) return { ok: false, message: `Needs ${fmtMoney(price)} in cash and credit at closing.` };

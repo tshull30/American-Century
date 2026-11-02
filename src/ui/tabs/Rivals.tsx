@@ -66,6 +66,7 @@ export function Rivals() {
             <p className="empty">Pick a company in the table to open its file and make an offer.</p>
           </Panel>
         )}
+        <AmericanFiveHundred />
       </div>
     </div>
   );
@@ -102,4 +103,27 @@ export function Rivals() {
       </div>
     );
   }
+}
+
+
+export function AmericanFiveHundred() {
+  const { s, me } = useGame();
+  const r = s.rankings;
+  if (!r) return <Panel help="rankings" title="The American 500"><p className="empty">The first list comes out in January.</p></Panel>;
+  const name = (id: number) => s.companies.find((c) => c.id === id)?.name ?? "A company that no longer exists";
+  const col = (title: string, ids: number[]) => {
+    const mine = ids.indexOf(me.id);
+    return (
+      <div className="rank-col">
+        <h3>{title}</h3>
+        <ol>{ids.slice(0, 10).map((id) => <li key={id} className={id === me.id ? "me" : ""}>{name(id)}</li>)}</ol>
+        <p className="muted small">{mine >= 0 ? `You: #${mine + 1} of ${ids.length}` : "You're not ranked yet"}</p>
+      </div>
+    );
+  };
+  return (
+    <Panel help="rankings" title={`The American 500, ${r.year}`}>
+      <div className="ranks">{col("Biggest by revenue", r.revenue)}{col("Best places to work", r.workplaces)}{col("Most admired", r.admired)}</div>
+    </Panel>
+  );
 }
