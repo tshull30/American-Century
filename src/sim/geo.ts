@@ -1,4 +1,5 @@
 // Cities: local labor markets, policies, power grids and public opinion.
+import { localIncentiveBonus, stateDcBonus } from "./local";
 import { BUILDING_BY_ID, type BuildingTypeId } from "./data/buildings";
 import { CITY_POLITICS, CITY_SEEDS, POWER_PRICE, STATE_LIB } from "./data/cities";
 import { METRO_COUNTY, REGIONS } from "./data/regions";
@@ -188,7 +189,7 @@ export function cityIncentive(s: GameState, cityId: string, c: Company | undefin
   if (!city) return 0;
   if (type === "hq" || type === "rnd") return city.taxBreak * 0.5;
   const op = c ? opinionOf(s, cityId, c) : 0.5;
-  return clamp(city.taxBreak * (0.6 + op), 0, 0.35);
+  return clamp(city.taxBreak * (0.6 + op) + localIncentiveBonus(s, cityId, c), 0, 0.45);
 }
 
 /** Construction time multiplier: permitting speed and how much the locals want you. */
@@ -220,7 +221,7 @@ export function dcPowerCost(s: GameState, cityId: string): number {
   const city = s.cities[cityId];
   const idx = city?.powerIdx ?? 1;
   const strain = city ? Math.max(0, city.dcLoadMW / city.gridMW - 0.8) * 2.5 : 0;
-  const local = city ? (1 - city.dcTaxBreak) * (city.dcWaterRules ? 1.1 : 1) : 1;
+  const local = city ? (1 - city.dcTaxBreak - stateDcBonus(s, cityId)) * (city.dcWaterRules ? 1.1 : 1) : 1;
   return DC_MW_PER_LEVEL * 730 * 75 * idx * (1 + strain) * local;
 }
 
@@ -301,7 +302,7 @@ export function defaultCity(s: GameState, st: string, type: BuildingTypeId): str
 
 // ---------------------------------------------------------------- monthly city politics
 
-export function updateCities(s: GameState, log: (t: string, kind?: "info" | "bad" | "good", tag?: "city") => void) {
+export function updateCities(s: GameState, _log: (t: string, kind?: "info" | "bad" | "good", tag?: "city") => void) {
   // Data-center load.
   for (const c of Object.values(s.cities)) c.dcLoadMW = 0;
   for (const co of s.companies) if (co.alive) for (const b of co.buildings) if (b.type === "datacenter" && s.cities[b.city]) s.cities[b.city].dcLoadMW += b.level * DC_MW_PER_LEVEL;
@@ -337,9 +338,8 @@ export function updateCities(s: GameState, log: (t: string, kind?: "info" | "bad
       for (const co of s.companies) if (co.alive) city.opinion[co.id] = 0.6;
       continue;
     }
-    // Councils drift with the national mood but stay rooted in who lives there.
-    city.council = clamp(city.council + (city.lean + 0.6 * (national - 0.5) - city.council) * 0.03 + 0.004 * (rand(s) - 0.5), 0.1, 0.92);
-    applyPolicies(city);
+    // The council's makeup (local.ts) sets city.council; policies change by ordinance.
+    void national;
     const left = (city.council - 0.5) * 2;
     const libTilt = (city.lib - 0.45) * 2;
     const wf = Math.max(1, cityWorkforce(s, city.id));
@@ -360,35 +360,9 @@ export function updateCities(s: GameState, log: (t: string, kind?: "info" | "bad
       target += 0.12 * left * st.politics + 0.1 * left * (st.green - st.fossil) + 0.06 * -left * st.industry - 0.08 * libTilt * st.subsidies;
       city.opinion[co.id] = clamp(cur + (clamp(target, 0.02, 0.98) - cur) * 0.12, 0, 1);
     }
-    // Councils react: strained grids and unpopular data centers bring moratoriums; empty ones bring welcome mats.
     const strain = city.dcLoadMW / city.gridMW;
-    const mine = s.companies.some((co) => co.isPlayer && (co.hqSite.city === city.id || co.buildings.some((b) => b.city === city.id))) ? "city" as const : undefined;
-    const backlash = 0.08 + (city.council - 0.5) * 0.2 - (city.lib - 0.45) * 0.15 + (city.council < 0.4 && strain > 1.2 ? 0.05 : 0);
-    if (city.dcStance !== "moratorium" && strain > 1.0 && rand(s) < backlash) {
-      city.dcStance = "moratorium";
-      log(`${city.name} passed a moratorium on new data centers: the grid is at ${(strain * 100).toFixed(0)}% of capacity.`, "bad", mine);
-    } else if (city.dcStance === "moratorium" && strain < 0.85 && rand(s) < 0.04) {
-      city.dcStance = "neutral";
-      log(`${city.name} lifted its data-center moratorium.`, "info", mine);
-    } else if (city.dcStance === "neutral" && strain < 0.3 && city.dcTaxBreak > 0.1 && rand(s) < 0.01) {
-      city.dcStance = "welcome";
-      log(`${city.name} is offering incentives to data centers.`, "good");
-    }
     // Utilities slowly add capacity where demand is high.
     if (strain > 0.7) city.gridMW = Math.round(city.gridMW * (1 + 0.004 + (city.dcStance === "welcome" ? 0.004 : 0)));
-    // Councils drift with their politics.
-    if (rand(s) < 0.003) {
-      if (city.council > 0.62 && city.minWage < 3600 && !city.rest) {
-        city.minWage = Math.max(city.minWage, 2600) + 170;
-        log(`${city.name} raised its local minimum wage to $${(city.minWage / 173).toFixed(2)} an hour.`, "info");
-      } else if (city.council < 0.45) {
-        city.council = clamp(city.council - 0.03, 0.1, 0.92);
-        log(`${city.name} elected a business-friendly council majority.`, "good");
-      } else if (city.council > 0.55) {
-        city.council = clamp(city.council + 0.03, 0.1, 0.92);
-        log(`${city.name} elected a progressive council majority.`, "info");
-      }
-    }
   }
 }
 

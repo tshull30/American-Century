@@ -26,6 +26,8 @@ Deep and spreadsheet-y, but fast: daily ticks, five game speeds, and everything 
 
 **New in v0.11:** a new start screen styled as a prospectus, with a live stock-certificate preview for your startup, products grouped by industry, filterable company cards and a record of your past companies. Seven scenarios (business as usual, the chip war, hard landing, the green rush, the trust-busters, AI gold rush, tariff wall), three difficulty levels, five goals with a win or a miss, and a searchable archive of every front page.
 
+**New in v0.12:** deeper local politics. A States & cities tab with every state's governor, legislature and state policy (corporate tax, minimum wage, right-to-work, data-center tax exemptions, megaproject funds) and every city's mayor and council, drawn as a council chamber whose seats shade by how members are expected to vote. Councils propose and vote on ordinances (minimum wage, tax abatements, permitting reform, data-center moratoriums and incentives, water rules, oil and gas bans, labor-peace rules and a per-worker head tax on big employers) and hold staggered elections; states pass bills through their legislatures, subject to the governor's veto. Lobby any vote, ask a council for an incentive deal, meet officials, and fund their campaigns or their opponents'. Mayors, councils and governors are fictional.
+
 ## Play
 
 ```bash

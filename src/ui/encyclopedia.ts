@@ -85,6 +85,12 @@ export const TOPICS: Topic[] = [
     "Goals give the game a finish line, such as becoming a Titan or America's most valuable company by 2036. Win or miss, you can keep playing. The start screen keeps a record of the companies you've run.",
     "Every front page is kept in the archive on the Events tab.",
   ] },
+  { id: "local", title: "States and cities", group: "Politics", body: [
+    "Every city and region has a mayor (or commission chair) and a council of five to nine members, each with a party, beliefs, a temperament and an opinion of you. Councils propose ordinances and vote on them two months later; the mayor can veto unless two thirds of the council passed it. Ordinances are how local policy changes: minimum wages, tax abatements, permitting reform, data-center moratoriums and incentives, water rules, oil and gas bans, labor-peace rules and a per-worker head tax on big employers.",
+    "You can lobby any pending vote (dealmakers listen; ideologues mostly don't; populists hold it against you), ask a council for an incentive deal (an extra 12% abatement on your projects there), meet officials, and fund their campaigns or their opponents'. Half of each council stands for election every two years.",
+    "States have a governor and a legislature. Bills on right-to-work, the state minimum wage, corporate tax, data-center tax exemptions and megaproject funds pass or fail on the legislature's makeup and the governor's pen. State minimum wages set the floor in every city; your headquarters state's corporate tax applies to your profits.",
+    "Mayors, council members and governors are fictional. Members of Congress are real.",
+  ] },
   { id: "acquisitions", title: "Acquisitions", group: "Company", body: [
     "Click a company on the Rivals tab to make an offer. Its board wants a premium: more for startups, hot stocks and established companies, and more from a much bigger buyer. A dealmaker CEO or CFO shaves it.",
     "Regulators may open a second request, an in-depth review lasting months, and can sue to block. Big buyers, overlapping markets, strict antitrust law and a populist or progressive Congress all raise the odds. A blocked deal costs a 4% break fee.",

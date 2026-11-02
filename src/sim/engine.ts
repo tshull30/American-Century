@@ -8,6 +8,7 @@ import { STATES, STATE_BY_CODE } from "./data/states";
 import { activePartners, updatePeople } from "./people";
 import { checkMilestones } from "./milestones";
 import { updateFun } from "./fun";
+import { stateCorpTax, updateLocal } from "./local";
 import { applySetup, checkGoal, difficultyShade, type Setup } from "./setup";
 import { calibrateConsumers, driftPreferences, updateConsumers } from "./consumers";
 import { initMacro, updateMacro, updateWorldEvents } from "./macro";
@@ -34,7 +35,7 @@ import {
 } from "./util";
 import { runAI, autoPrice, maintainHQ } from "./ai";
 
-export const SAVE_VERSION = 11;
+export const SAVE_VERSION = 12;
 export const BASELINE_TECH_START = 10;
 const DT = 1 / DAYS_PER_MONTH;
 const DEPRECIATION = 0.006;
@@ -687,6 +688,7 @@ function monthly(s: GameState) {
   updateOthersPrices(s);
   for (const c of alive) updateBrand(s, c);
   updateCities(s, say);
+  updateLocal(s, (t, k, mine, extra) => { if (!warmup) log(s, t, k, mine ? s.playerId : undefined, mine ? "city" : undefined, extra); }, warmup);
   if (!warmup) rollStories(s, (c) => (t, k, extra) => log(s, t, k, c.id, c.isPlayer ? (extra?.headline && s.decisions?.some((d) => d.headline === extra.headline) ? "decision" : "news") : undefined, extra));
   {
     const me = alive.find((c) => c.isPlayer);
@@ -1028,7 +1030,7 @@ function closeMonth(s: GameState) {
     r.interest = (c.debt * interestRate(s, c)) / 12;
     const ebit = r.revenue - r.inputCosts - r.wages - r.rdCost - r.sgaCost - r.marketing - r.lobbying - r.depreciation;
     const pretax = ebit - r.interest;
-    const stateRate = (STATE_BY_CODE[c.hq]?.corpTax ?? 6) / 100;
+    const stateRate = stateCorpTax(s, c.hq) / 100;
     const fed = corpTax(s);
     r.taxes = Math.max(0, pretax) * (fed + stateRate * (1 - fed));
     r.netIncome = pretax - r.taxes;

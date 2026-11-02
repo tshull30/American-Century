@@ -518,4 +518,7 @@ export interface GameState {
   setup?: import("./setup").Setup;
   /** Every front page, for the archive. */
   archive?: { day: number; headline: string; deck?: string; kind: GameEvent["kind"]; mine?: boolean }[];
+  /** Local politics: city councils and statehouses. */
+  cityGov?: Record<string, import("./local").CityGov>;
+  stateGov?: Record<string, import("./local").StateGov>;
 }

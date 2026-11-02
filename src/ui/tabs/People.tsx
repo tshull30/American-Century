@@ -16,11 +16,11 @@ type Sel = { kind: "exec"; id: number } | { kind: "rival"; id: number } | { kind
 
 const initials = (n: string) => n.split(/\s+/).filter((w) => /^[A-Z]/.test(w)).slice(0, 2).map((w) => w[0]).join("");
 
-function Seal({ name, tone }: { name: string; tone?: string }) {
+export function Seal({ name, tone }: { name: string; tone?: string }) {
   return <span className="seal" style={tone ? { borderColor: tone, color: tone } : undefined} aria-hidden>{initials(name)}</span>;
 }
 
-function RegardChip({ r }: { r?: Regard }) {
+export function RegardChip({ r }: { r?: Regard }) {
   const v = Math.round(r?.score ?? 0);
   const word = v > 50 ? "Ally" : v > 15 ? "Warm" : v >= -15 ? "Neutral" : v >= -50 ? "Cool" : "Hostile";
   return <span className={`regard-chip ${v > 15 ? "pos" : v < -15 ? "neg" : ""}`} title={`Opinion of you: ${v > 0 ? "+" : ""}${v}`}>{word}</span>;
@@ -36,11 +36,11 @@ function Scale({ value, lo, hi, label }: { value: number; lo: string; hi: string
   );
 }
 
-function BeliefScales({ b }: { b: Beliefs }) {
+export function BeliefScales({ b }: { b: Beliefs }) {
   return <div className="scales">{AXES.map((a) => <Scale key={a.id} label={a.name} lo={a.lo} hi={a.hi} value={b[a.id]} />)}</div>;
 }
 
-function Ledger({ rows, total, totalLabel }: { rows: { label: string; v: number }[]; total?: number; totalLabel?: string }) {
+export function Ledger({ rows, total, totalLabel }: { rows: { label: string; v: number }[]; total?: number; totalLabel?: string }) {
   return (
     <table className="ledger">
       <tbody>
@@ -52,7 +52,7 @@ function Ledger({ rows, total, totalLabel }: { rows: { label: string; v: number 
   );
 }
 
-function OpinionMeter({ score }: { score: number }) {
+export function OpinionMeter({ score }: { score: number }) {
   return (
     <div className="opinion">
       <div className="scale-ends"><span>Hostile</span><span>Neutral</span><span>Ally</span></div>
