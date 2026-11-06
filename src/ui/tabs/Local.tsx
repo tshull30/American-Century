@@ -6,6 +6,7 @@ import {
   type CityGov, type LocalOfficial, type StateGov,
 } from "../../sim/local";
 import type { CityState } from "../../sim/types";
+import { bribe } from "../../sim/crime";
 import { dateLabel, fmtMoney, fmtNum, fmtPct } from "../../sim/util";
 import { Panel, Table, useGame, useSticky } from "../components";
 import { BeliefScales, Ledger, OpinionMeter, RegardChip, Seal } from "./People";
@@ -230,7 +231,7 @@ function Dais({ g, sel, onSel, forecast }: { g: CityGov; sel: number; onSel: (id
 }
 
 function OfficialCard({ o, city, act }: { o: LocalOfficial; city?: CityState; act: (r: { ok: boolean; message: string }) => void }) {
-  const { s } = useGame();
+  const { s, ask } = useGame();
   const why = Object.entries(o.regard.why).map(([k, v]) => ({ label: reasonLocal(k), v })).sort((a, b) => Math.abs(b.v) - Math.abs(a.v));
   return (
     <div className="dossier">
@@ -241,7 +242,7 @@ function OfficialCard({ o, city, act }: { o: LocalOfficial; city?: CityState; ac
           <div className="muted">{roleName(o, city)}{city ? `, ${city.name}` : ""}; in office since {dateLabel(Math.max(o.since, -120))}</div>
         </div>
       </header>
-      <p className="bio">{TEMPERAMENT[o.temperament]}.</p>
+      <p className="bio">{TEMPERAMENT[o.temperament]}.{o.bribed !== undefined && s.month - o.bribed < 24 ? <strong className="neg"> On your payroll.</strong> : null}</p>
       <RegardChip r={o.regard} />
       <h3>Where they stand</h3>
       <BeliefScales b={o.beliefs} />
@@ -252,6 +253,7 @@ function OfficialCard({ o, city, act }: { o: LocalOfficial; city?: CityState; ac
         <button onClick={() => act(meetOfficial(s, o))}>Request a meeting</button>
         <button onClick={() => act(backCampaign(s, o, false))}>Fund their campaign ({fmtMoney(o.role === "governor" ? 2e6 : 250e3)})</button>
         <button className="danger" onClick={() => act(backCampaign(s, o, true))}>Back their opponent</button>
+        <button className="danger" onClick={() => ask(`Offer ${o.name} a bribe? It's a federal crime, and they might say no.`, () => act(bribe(s, s.companies.find((c) => c.isPlayer)!, o)))}>Slip them an envelope</button>
       </div>
       <p className="muted small">Mayors, council members and governors are fictional.</p>
     </div>

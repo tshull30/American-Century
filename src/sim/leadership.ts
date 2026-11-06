@@ -7,6 +7,7 @@
 import { personName } from "./names";
 import { cultureFor } from "./names";
 import { notePoach } from "./people";
+import { crimeFx } from "./crime";
 import type { Company, GameState } from "./types";
 import { clamp, rand } from "./util";
 
@@ -204,7 +205,7 @@ export function hasTrait(c: Company, t: TraitId, roles?: ExecRole[]): boolean {
 export const leadEffects = {
   research: (c: Company) => (1 + 0.12 * roleFactor(c, "cto") + (hasTrait(c, "visionary") ? 0.1 : 0) + (hasTrait(c, "engineer") ? 0.15 : 0)) * (c.allyBoost ?? 1) * (c.perks?.includes("quantum") ? 1.3 : 1) * (c.perks?.includes("agi") ? 1.5 : 1),
   efficiency: (c: Company) => (1 + 0.03 * roleFactor(c, "coo") + (hasTrait(c, "operator") ? 0.02 : 0)) * (c.perks?.includes("agi") ? 1.05 : 1),
-  runningCost: (c: Company) => (hasTrait(c, "cost_cutter") ? 0.96 : 1) * (hasTrait(c, "union_friendly") ? 1.01 : 1) * (c.perks?.includes("fusion") ? 0.92 : 1) * (c.perks?.includes("humanoids") ? 0.9 : 1) * (c.costEdge ?? 1),
+  runningCost: (c: Company) => (hasTrait(c, "cost_cutter") ? 0.96 : 1) * (hasTrait(c, "union_friendly") ? 1.01 : 1) * (c.perks?.includes("fusion") ? 0.92 : 1) * (c.perks?.includes("humanoids") ? 0.9 : 1) * (c.costEdge ?? 1) * crimeFx.runningCost(c),
   marketing: (c: Company) => (1 + 0.12 * roleFactor(c, "cmo") + (hasTrait(c, "growth_hacker") ? 0.2 : 0) + (hasTrait(c, "celebrity") ? 0.15 : 0)) * (c.allyBoost ?? 1),
   interest: (c: Company) => -0.004 * roleFactor(c, "cfo") - (hasTrait(c, "penny_pincher") ? 0.004 : 0),
   credit: (c: Company) => 1 + 0.08 * roleFactor(c, "cfo"),
@@ -393,7 +394,7 @@ export function updateLeadership(s: GameState, c: Company, peerReturn: number, l
   b.confidence = clamp(b.confidence + (target - b.confidence) * 0.15, 0, 1);
 
   // Activists target laggards.
-  if (!b.activist && c.marketCap > 2e9 && rel < -0.15 && rand(s) < (c.isPlayer ? 0.05 : 0.015)) {
+  if (!b.activist && !(c.isPlayer && s.setup?.mode === "dynasty") && c.marketCap > 2e9 && rel < -0.15 && rand(s) < (c.isPlayer ? 0.05 : 0.015)) {
     const demands: ActivistDemand[] = ["buyback", "dividend", "cut_costs", "replace_ceo"];
     const demand = demands[Math.floor(rand(s) * demands.length)];
     b.activist = {
@@ -449,7 +450,7 @@ function annualMeeting(s: GameState, c: Company, log: LeadLog) {
   }
   // Proxy fight.
   const a = b.activist;
-  if (a && s.month - a.startMonth >= 3) {
+  if (a && s.month - a.startMonth >= 3 && !(c.isPlayer && s.setup?.mode === "dynasty")) {
     const seats = Math.max(0, Math.round(1 + 4 * (0.6 - b.confidence)));
     let won = 0;
     for (const d of b.members) {
@@ -470,7 +471,7 @@ function annualMeeting(s: GameState, c: Company, log: LeadLog) {
     }
   }
   // The board fires a CEO it has lost faith in.
-  if (b.confidence < 0.18 && L.execs.some((e) => e.role === "ceo")) {
+  if (b.confidence < 0.18 && L.execs.some((e) => e.role === "ceo") && !(c.isPlayer && s.setup?.mode === "dynasty")) {
     const ceo = L.execs.find((e) => e.role === "ceo")!;
     L.execs = L.execs.filter((e) => e !== ceo);
     L.execs.push(makeExec(s, c, "ceo", 0.2));

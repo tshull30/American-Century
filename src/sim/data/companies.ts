@@ -533,3 +533,7 @@ export const STARTUP_SUFFIX: Record<string, string[]> = {
   solar_panels: ["Solar", "Photovoltaics", "Sun"],
   household_goods: ["Brands", "Home", "Goods"],
 };
+
+// Parodies of real companies live in their own file.
+import { PARODY_SEEDS } from "./parodies";
+COMPANY_SEEDS.push(...PARODY_SEEDS);

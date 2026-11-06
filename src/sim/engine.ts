@@ -9,6 +9,7 @@ import { activePartners, updatePeople } from "./people";
 import { checkMilestones } from "./milestones";
 import { updateFun } from "./fun";
 import { earningsCall, ratingSpread, updateCorp } from "./corp";
+import { crimeFx, noteGain, updateCrime } from "./crime";
 import { stateCorpTax, updateLocal } from "./local";
 import { applySetup, checkGoal, difficultyShade, type Setup } from "./setup";
 import { calibrateConsumers, driftPreferences, updateConsumers } from "./consumers";
@@ -36,7 +37,7 @@ import {
 } from "./util";
 import { runAI, autoPrice, maintainHQ } from "./ai";
 
-export const SAVE_VERSION = 13;
+export const SAVE_VERSION = 14;
 export const BASELINE_TECH_START = 10;
 const DT = 1 / DAYS_PER_MONTH;
 const DEPRECIATION = 0.006;
@@ -696,6 +697,7 @@ function monthly(s: GameState) {
     updatePeople(s, (t, k, extra) => { if (!warmup && me) log(s, t, k, me.id, extra?.headline && s.decisions?.some((d) => d.headline === extra.headline) ? "decision" : "news", extra); }, warmup);
     const partners = activePartners(s);
     for (const c of alive) c.allyBoost = c.isPlayer ? 1 + 0.05 * partners.length : partners.includes(c.id) ? 1.05 : 1;
+    updateCrime(s, (c) => (t, k, extra) => { if (!warmup) log(s, t, k, c.id, c.isPlayer ? (extra?.headline && s.decisions?.some((d) => d.headline === extra.headline) ? "decision" : "news") : undefined, extra); }, warmup);
     updateCorp(s, (c) => (t, k, extra) => { if (!warmup) log(s, t, k, c.id, c.isPlayer ? (extra?.headline && s.decisions?.some((d) => d.headline === extra.headline) ? "decision" : "news") : undefined, extra); }, warmup);
     updateFun(s, (c) => (t, k, extra) => { if (!warmup) log(s, t, k, c.id, c.isPlayer ? (extra?.headline && s.decisions?.some((d) => d.headline === extra.headline) ? "decision" : "news") : undefined, extra); }, warmup);
     if (!warmup && me) checkGoal(s, me, (t, k, extra) => log(s, t, k, me.id, "decision", extra));
@@ -1032,7 +1034,10 @@ function closeMonth(s: GameState) {
     const pretax = ebit - r.interest;
     const stateRate = stateCorpTax(s, c.hq) / 100;
     const fed = corpTax(s);
-    r.taxes = Math.max(0, pretax) * (fed + stateRate * (1 - fed));
+    const fullTax = Math.max(0, pretax) * (fed + stateRate * (1 - fed));
+    r.taxes = fullTax * crimeFx.taxMult(c);
+    noteGain(c, "tax_shelter", fullTax - r.taxes);
+    noteGain(c, "wage_theft", r.wages * 0.05);
     r.netIncome = pretax - r.taxes;
     c.rndCum += r.rdCost;
     c.cash -= r.marketing + lobbyMonthly + r.interest + r.taxes;
@@ -1069,7 +1074,8 @@ function closeMonth(s: GameState) {
     r.debt = c.debt;
     c.history.push(r);
     if (c.history.length > 240) c.history.shift();
-    c.valuationTarget = Math.max(0.2 * (c.cash + c.ppe), fundamentalValue(s, c));
+    if (c.ventureFloor) c.ventureFloor *= 0.985;
+    c.valuationTarget = Math.max(0.2 * (c.cash + c.ppe), fundamentalValue(s, c), c.ventureFloor ?? 0);
     c.hypeAnchor += (1 - c.hypeAnchor) * 0.005;
     c.hype = Math.max(0.2, c.hype + (c.hypeAnchor - c.hype) * 0.02 + 0.01 * randNormal(s) * Math.sqrt(c.hype));
     // Even bubbles have limits: very rich valuations on real profits deflate.
@@ -1085,7 +1091,10 @@ function earnings(s: GameState, c: Company, r: MonthReport) {
   // The quarter just closed: this month plus the two before it.
   const qMonths = [...c.history.slice(-2), r];
   const sumOf = (hs: MonthReport[], k: "revenue" | "netIncome") => hs.reduce((a, h) => a + h[k], 0);
-  const q = sumOf(qMonths, "revenue"), qNI = sumOf(qMonths, "netIncome");
+  // Cooked books report more than was earned.
+  const inflate = crimeFx.reportInflate(c);
+  const qTrue = sumOf(qMonths, "revenue");
+  const q = qTrue * (1 + inflate), qNI = sumOf(qMonths, "netIncome") + qTrue * inflate;
   const days = (hs: MonthReport[]) => hs.reduce((a, h) => a + (dayOfMonthStart(h.month + 1) - dayOfMonthStart(h.month)), 0);
   // Analysts compare with the same quarter last year when they can (no calendar effects),
   // otherwise with the previous quarter adjusted for its length.

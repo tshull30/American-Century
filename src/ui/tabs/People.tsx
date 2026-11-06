@@ -9,6 +9,7 @@ import {
 } from "../../sim/people";
 import type { Company, Politician } from "../../sim/types";
 import { espionage } from "../../sim/fun";
+import { smear } from "../../sim/crime";
 import { dateLabel, fmtMoney } from "../../sim/util";
 import { Panel, useGame, useSticky } from "../components";
 
@@ -187,6 +188,7 @@ function ExecDossier({ e, c, own, act }: { e: Exec; c: Company; own?: boolean; a
             <button onClick={() => act(proposeTruce(s, c.id))} title="Ends a price war for a year, if they agree.">Propose a truce</button>
             <button onClick={() => act(proposePartnership(s, c.id))} title="Two years of +5% research and marketing for both. Needs a warm relationship.">Propose a partnership</button>
             <button className="danger" onClick={() => act(publicJab(s, c.id))} title="A showman CEO gets a stock bump. They will hold a grudge.">Take a public jab</button>
+            <button className="danger" onClick={() => act(smear(s, me, c.id))} title="Plant unflattering stories. Raises your heat.">Smear them</button>
             <button className="danger" onClick={() => act(espionage(s, me, c.id))} title="Steal research where they lead you. Works about half the time; getting caught is a scandal.">Steal their secrets</button>
           </div>
           <p className="muted small">A friendly CEO's board accepts a lower takeover premium; a hostile one demands more.</p>

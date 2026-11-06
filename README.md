@@ -30,6 +30,8 @@ Deep and spreadsheet-y, but fast: daily ticks, five game speeds, and everything 
 
 **New in v0.13:** credit ratings from AAA to C that set your borrowing costs (with front pages on upgrades, downgrades and falls to junk); a stock portfolio for stakes of up to 20% in rivals, with dividends and a toehold discount if you later buy them; Justice Department antitrust suits against dominant companies (settle under a price cap, fight a year-long trial, or sell a unit); a corporate foundation funding five causes with different political and local effects; the American 500 rankings every January (revenue, best places to work, most admired); hostile bids for your company (poison pill, white knight or sell and retire rich); patent licensing that turns a research lead into royalties; and pointed analyst questions on the earnings call.
 
+**New in v0.14:** the back room: cook the books, park profits offshore, fix prices with rivals, shave timecards, rig product tests, smear rivals and bribe (fictional) local officials, each with a payoff, a paper trail, a heat meter and investigations by the SEC, IRS, Justice Department, Labor Department, EPA or FBI that end in settlements, indictments or (if you shred the evidence and get caught) the end of the company. New ways to start: unicorn, turnaround and dynasty heir, with matching goals. And 45 parody companies (Wal-Smart, Costlo, J.P. Morgain, Birkshire Hathaway, Coca-Koala, Dizzney, Boing, SpaceY, Viza, Starbux, Nikey, Ubber and more).
+
 ## Play
 
 ```bash

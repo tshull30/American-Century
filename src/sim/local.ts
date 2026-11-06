@@ -31,6 +31,8 @@ export interface LocalOfficial {
   regard: Regard;
   since: number;
   seat?: number;
+  /** Month they took the player's money, if they did. */
+  bribed?: number;
   /** Player campaign money this cycle (+ for them, − for their opponent). */
   backing?: number;
 }
@@ -190,6 +192,12 @@ export function voteOdds(s: GameState, city: CityState, o: LocalOfficial, ord: O
   const size = Math.max(0.3, Math.sqrt((STATE_BY_CODE[city.state]?.population ?? 2e6) * city.share / 1e6));
   x += clamp(ord.lobby / (2e6 * size), -1, 1) * 0.3 * weight;
   x += (o.regard.score / 400) * Math.sign(ord.lobby);
+  // Bought and paid for.
+  if (o.bribed !== undefined && s.month - o.bribed < 24) {
+    const me = s.companies.find((c) => c.isPlayer);
+    if (ord.kind === "company_deal" && ord.companyId === me?.id) x += 0.5;
+    else if (ord.lobby !== 0) x += 0.45 * Math.sign(ord.lobby);
+  }
   return clamp(x, 0.03, 0.97);
 }
 

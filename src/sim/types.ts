@@ -241,6 +241,13 @@ export interface Company {
   lastBid?: number;
   foundation?: Partial<Record<import("./corp").CauseId, number>>;
   licenses?: Partial<Record<TechId, number>>;
+  /** Unicorn start: the last funding round's valuation, which fades. */
+  ventureFloor?: number;
+  /** The back room (crime.ts). */
+  schemes?: Partial<Record<import("./crime").SchemeId, import("./crime").SchemeState>>;
+  crimeHeat?: number;
+  probe?: import("./crime").Probe;
+  lastSmear?: number;
   /** Hard difficulty: rivals' running-cost multiplier. */
   costEdge?: number;
   /** Earnings guidance the CFO gave Wall Street. */
@@ -530,4 +537,5 @@ export interface GameState {
   cityGov?: Record<string, import("./local").CityGov>;
   stateGov?: Record<string, import("./local").StateGov>;
   rankings?: import("./corp").Rankings;
+  cartel?: { good: GoodId; members: number[]; since: number };
 }

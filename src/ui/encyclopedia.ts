@@ -107,6 +107,15 @@ export const TOPICS: Topic[] = [
   { id: "takeovers", title: "Hostile bids", group: "Company", body: [
     "When a company six times your size with deep pockets sees a bargain (especially when your board is unhappy), it may bid for you directly. A poison pill works if the board backs you. A white knight needs a partner or a rival CEO who likes you. Or sell: the game ends, and you go out rich.",
   ] },
+  { id: "backroom", title: "The back room", group: "Company", body: [
+    "Five ongoing schemes: cooking the books (reported results run 8% hot), parking profits offshore (taxes fall 60%), fixing prices with rivals in your biggest market (everyone charges 12% more), shaving timecards (running costs fall 5%) and rigging product tests (costs fall and products look better than they are). Plus one-offs: smearing a rival and bribing local officials from their file under States and cities.",
+    "Each scheme builds a paper trail; together they make your heat. The more heat, the likelier an investigation: the SEC, the IRS, the Justice Department, the Labor Department, the EPA or the FBI. Unhappy executives leak; a politically connected CEO keeps things quiet. Stopped schemes fade slowly.",
+    "When an investigation ends you choose: cooperate (a fine, and for fraud or price-fixing your CEO goes), fight (it may go away; if not, a bigger fine and an indicted CEO) or shred the evidence (usually works; when it doesn't, it's obstruction, and a grave enough case ends the company). Fines are set to outweigh what the scheme earned.",
+    "Rivals get caught too. Their probes are listed on the rap sheet.",
+  ] },
+  { id: "modes", title: "Ways to start", group: "Basics", body: [
+    "Found a company bootstrapped ($80 million) or as a unicorn ($1 billion of venture money, a $5 billion valuation that fades unless you grow into it, and impatient investors). Take over a company as it is, as a turnaround (almost no cash, heavy debt, a furious board, an activist and a battered brand) or as a dynasty heir (your family's board can't fire you and activists can't win, but the family wants at least 30% of profits in dividends).",
+  ] },
   { id: "acquisitions", title: "Acquisitions", group: "Company", body: [
     "Click a company on the Rivals tab to make an offer. Its board wants a premium: more for startups, hot stocks and established companies, and more from a much bigger buyer. A dealmaker CEO or CFO shaves it.",
     "Regulators may open a second request, an in-depth review lasting months, and can sue to block. Big buyers, overlapping markets, strict antitrust law and a populist or progressive Congress all raise the odds. A blocked deal costs a 4% break fee.",

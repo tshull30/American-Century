@@ -5,7 +5,7 @@ import { GOODS, GOOD_BY_ID, type GoodId } from "../sim/data/goods";
 import { STATES, STATE_BY_CODE } from "../sim/data/states";
 import { CITY_SEEDS } from "../sim/data/cities";
 import { newGame, type PlayerChoice } from "../sim/engine";
-import { DIFFICULTIES, GOALS, SCENARIOS, type DifficultyId, type GoalId, type ScenarioId } from "../sim/setup";
+import { DIFFICULTIES, GOALS, MODES, SCENARIOS, type DifficultyId, type GoalId, type ModeId, type ScenarioId } from "../sim/setup";
 import { tierOf } from "../sim/tiers";
 import type { GameState } from "../sim/types";
 import { fmtMoney, lowerName } from "../sim/util";
@@ -66,7 +66,7 @@ function Rosette({ size = 160, petals = 18, seed = 0 }: { size?: number; petals?
   );
 }
 
-function Certificate({ name, ticker, good, city }: { name: string; ticker: string; good: GoodId; city: string }) {
+function Certificate({ name, ticker, good, city, unicorn }: { name: string; ticker: string; good: GoodId; city: string; unicorn?: boolean }) {
   const seed = CITY_SEEDS.find((c) => c.id === city);
   const state = STATE_BY_CODE[seed?.state ?? "TX"]?.name ?? "Texas";
   return (
@@ -78,7 +78,7 @@ function Certificate({ name, ticker, good, city }: { name: string; ticker: strin
         <div className="cert-name">{name.trim() || "Your Company"}, Inc.</div>
         <div className="cert-meta">Incorporated in the State of {state}, headquartered in {seed?.name ?? "Austin"}</div>
         <div className="cert-meta">In the business of {lowerName(GOOD_BY_ID[good].name)}, traded as <strong>{(ticker || "NEW").toUpperCase()}</strong></div>
-        <div className="cert-capital">Founded with $80,000,000 of venture capital</div>
+        <div className="cert-capital">Founded with {unicorn ? "$1,000,000,000" : "$80,000,000"} of venture capital</div>
         <div className="cert-sigs">
           <div><span className="sig">The Founder</span><span>Founder and chief executive</span></div>
           <div><span className="sig">Sand Hill</span><span>Lead investor</span></div>
@@ -103,6 +103,9 @@ export function NewGame({ onStart }: { onStart: (s: GameState) => void }) {
   const [scenario, setScenario] = useState<ScenarioId>("standard");
   const [difficulty, setDifficulty] = useState<DifficultyId>("normal");
   const [goal, setGoal] = useState<GoalId>("sandbox");
+  const [playMode, setPlayMode] = useState<ModeId>("standard");
+  const pickMode = (m: ModeId) => { setPlayMode(m); setGoal(m === "turnaround" ? "turnaround" : m === "dynasty" ? "double" : m === "unicorn" ? "decacorn" : "sandbox"); };
+  const modes = (Object.keys(MODES) as ModeId[]).filter((m) => MODES[m].for === "both" || MODES[m].for === (mode === "found" ? "found" : "takeover"));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const runs = useMemo(() => loadRuns(), []);
@@ -122,7 +125,8 @@ export function NewGame({ onStart }: { onStart: (s: GameState) => void }) {
       ? { kind: "startup", name: name.trim(), ticker: (ticker.trim() || "NEW").toUpperCase().slice(0, 5), good, hq, city }
       : { kind: "incumbent", key: chosen!.key };
     // Let the button repaint before the warm-up year runs.
-    window.setTimeout(() => onStart(newGame(choice, roster.seed, roster.companies, { scenario, difficulty, goal })), 30);
+    const m = modes.includes(playMode) ? playMode : "standard";
+    window.setTimeout(() => onStart(newGame(choice, roster.seed, roster.companies, { scenario, difficulty, goal, mode: m })), 30);
   };
 
   const cities = CITY_SEEDS.filter((c) => c.state === hq);
@@ -161,6 +165,15 @@ export function NewGame({ onStart }: { onStart: (s: GameState) => void }) {
           </button>
         </div>
 
+        <div className="ng-modes">
+          <span className="muted">How you start:</span>
+          {modes.map((m) => (
+            <button key={m} className={(modes.includes(playMode) ? playMode : "standard") === m ? "on" : ""} onClick={() => pickMode(m)} title={MODES[m].blurb}>
+              {m === "standard" ? (mode === "found" ? "Bootstrapped" : "As it is") : MODES[m].name}
+            </button>
+          ))}
+          <span className="muted small">{MODES[modes.includes(playMode) ? playMode : "standard"].blurb === "The company as you find it." ? (mode === "found" ? "$80 million of venture money and a modest valuation." : "The company as you find it.") : MODES[playMode].blurb}</span>
+        </div>
         {mode === "found" ? (
           <div className="ng-found">
             <div className="ng-form">
@@ -195,7 +208,7 @@ export function NewGame({ onStart }: { onStart: (s: GameState) => void }) {
               </div>
               <p className="ng-blurb">{blurbOf(good)}</p>
             </div>
-            <Certificate name={name} ticker={ticker} good={good} city={city} />
+            <Certificate name={name} ticker={ticker} good={good} city={city} unicorn={playMode === "unicorn"} />
           </div>
         ) : (
           <div className="ng-takeover">

@@ -8,6 +8,7 @@ import { hasTrait } from "./leadership";
 import { applyPeopleDecision, noteUnion } from "./people";
 import { applyFunDecision } from "./fun";
 import { applyCorpDecision } from "./corp";
+import { resolveProbe } from "./crime";
 import type { Building, Company, GameEvent, GameState } from "./types";
 import { clamp, fmtMoney, lowerName, rand } from "./util";
 
@@ -24,7 +25,7 @@ export interface Decision {
 }
 export interface Scheduled { day: number; kind: "recall_leak" | "breach_fine" | "spill_fine"; companyId: number; data: Record<string, string | number> }
 
-export type StoryKind = "recall" | "breach" | "union" | "strike" | "lawsuit" | "spill" | "whistleblower" | "ransomware" | "stadium" | "water_protest" | "exec_raise" | "partner_offer" | "hearing" | "superbowl" | "hq2_pick" | "antitrust" | "hostile_bid" | "earnings_call";
+export type StoryKind = "recall" | "breach" | "union" | "strike" | "lawsuit" | "spill" | "whistleblower" | "ransomware" | "stadium" | "water_protest" | "exec_raise" | "partner_offer" | "hearing" | "superbowl" | "hq2_pick" | "antitrust" | "hostile_bid" | "earnings_call" | "probe";
 
 type Log = (text: string, kind: GameEvent["kind"], extra?: Pick<GameEvent, "headline" | "deck">) => void;
 
@@ -296,6 +297,8 @@ function apply(s: GameState, c: Company, d: Decision, opt: string, log: (c: Comp
     }
     case "exec_raise": case "partner_offer": case "hearing":
       return applyPeopleDecision(s, c, d.kind, opt, d.data, L);
+    case "probe":
+      return resolveProbe(s, c, opt as "cooperate" | "fight" | "shred", L);
     case "antitrust": case "hostile_bid": case "earnings_call":
       return applyCorpDecision(s, c, d.kind, opt, d.data, L);
     case "superbowl": case "hq2_pick":

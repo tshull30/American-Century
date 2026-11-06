@@ -310,8 +310,10 @@ function mergeInto(s: GameState, buyer: Company, target: Company) {
 }
 
 export function setDividend(s: GameState, cid: number, pct: number): Result {
-  company(s, cid).dividendPct = Math.min(1, Math.max(0, pct));
-  return ok("Dividend policy updated.");
+  const c = company(s, cid);
+  const floor = c.isPlayer && s.setup?.mode === "dynasty" ? 0.3 : 0;
+  c.dividendPct = Math.min(1, Math.max(floor, pct));
+  return ok(pct < floor ? "The family won't accept less than 30% of profits." : "Dividend policy updated.");
 }
 
 /** Set (or clear, with monthly = 0) a standing lobbying campaign on a law. */

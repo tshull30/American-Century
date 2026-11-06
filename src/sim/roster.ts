@@ -1,5 +1,6 @@
 // Every game gets a different cast: a random subset of the hand-written companies plus
 // dozens of procedurally generated ones across every industry.
+import { PARODY_SEEDS } from "./data/parodies";
 import { BUILDING_BY_ID, producerOf } from "./data/buildings";
 import { COMPANY_SEEDS, type CompanySeed } from "./data/companies";
 import { GOODS, GOOD_BY_ID, type GoodId, type TechId } from "./data/goods";
@@ -19,6 +20,7 @@ function mulberry(seed: number) {
 }
 
 /** Hand-written companies that almost always appear (the household names). */
+const PARODY_KEYS = new Set(PARODY_SEEDS.map((p) => p.key));
 const ANCHORS = new Set(["orchard", "windward", "verdant", "kestrel", "summit", "atlas", "lumiverse", "gulfstar", "cascade", "motorcity", "redbrick"]);
 
 const PREFIX = [
@@ -228,10 +230,10 @@ function makeCompany(r: () => number, i: number, used: Set<string>, tickers: Set
 export function rollRoster(seed = Math.floor(Math.random() * 1e9), count?: number): Roster {
   const r = mulberry(seed);
   const companies: CompanySeed[] = [];
-  for (const c of COMPANY_SEEDS) if (r() < (ANCHORS.has(c.key) ? 0.9 : 0.55)) companies.push(c);
+  for (const c of COMPANY_SEEDS) if (r() < (ANCHORS.has(c.key) ? 0.9 : PARODY_KEYS.has(c.key) ? 0.7 : 0.55)) companies.push(c);
   const used = new Set(COMPANY_SEEDS.map((c) => c.name));
   const tickers = new Set(COMPANY_SEEDS.map((c) => c.ticker));
-  const n = count ?? 60 + Math.floor(r() * 16);
+  const n = count ?? 45 + Math.floor(r() * 16);
   for (let i = 0; i < n; i++) {
     const c = makeCompany(r, i, used, tickers);
     if (c) companies.push(c);

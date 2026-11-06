@@ -7,7 +7,8 @@ import { tierOf } from "./tiers";
 
 export type ScenarioId = "standard" | "chip_war" | "hard_landing" | "green_rush" | "trust_busters" | "ai_gold_rush" | "tariff_wall";
 export type DifficultyId = "easy" | "normal" | "hard";
-export type GoalId = "sandbox" | "titan" | "top_dog" | "employer" | "unicorn" | "profit";
+export type GoalId = "sandbox" | "titan" | "top_dog" | "employer" | "unicorn" | "profit" | "turnaround" | "double" | "decacorn";
+export type ModeId = "standard" | "turnaround" | "dynasty" | "unicorn";
 
 export interface ScenarioDef { id: ScenarioId; name: string; dateline: string; blurb: string }
 export const SCENARIOS: ScenarioDef[] = [
@@ -44,16 +45,30 @@ export const GOALS: GoalDef[] = [
     test: (s, c) => s.companies.every((o) => !o.alive || o === c || o.marketCap < c.marketCap),
     progress: (s, c) => `#${s.companies.filter((o) => o.alive).sort((a, b) => b.marketCap - a.marketCap).findIndex((o) => o === c) + 1} by market value` },
   { id: "employer", name: "America's employer", detail: "Employ 1,000,000 people by January 2040", deadline: 168, test: (_s, c) => emp(c) >= 1e6, progress: (_s, c) => `${Math.round(emp(c)).toLocaleString("en-US")} of 1,000,000` },
+  { id: "turnaround", name: "Turn it around", detail: "Get back to an investment-grade credit rating with a profitable year by January 2030", deadline: 48,
+    test: (_s, c) => !!c.rating && ["AAA", "AA", "A", "BBB"].includes(c.rating) && ttmNI(c) > 0, progress: (_s, c) => `Rated ${c.rating ?? "unrated"}; ${fmtMoney(ttmNI(c))} profit over 12 months` },
+  { id: "double", name: "Double the fortune", detail: "Double the company's market value by January 2036", deadline: 120,
+    test: (s, c) => c.marketCap >= (s.setup?.startCap ?? Infinity) * 2, progress: (s, c) => `${fmtMoney(c.marketCap)} of ${fmtMoney((s.setup?.startCap ?? 0) * 2)}` },
+  { id: "decacorn", name: "Hundred-billion unicorn", detail: "Reach a $100 billion market value by January 2034", deadline: 96, test: (_s, c) => c.marketCap >= 100e9, progress: (_s, c) => `${fmtMoney(c.marketCap)} of $100.0B` },
   { id: "profit", name: "Money machine", detail: "Earn $200 billion in a year by January 2036", deadline: 120, test: (_s, c) => ttmNI(c) >= 200e9, progress: (_s, c) => `${fmtMoney(ttmNI(c))} over the last 12 months` },
 ];
 export const GOAL_BY_ID = Object.fromEntries(GOALS.map((x) => [x.id, x])) as Record<GoalId, GoalDef>;
 
-export interface Setup { scenario: ScenarioId; difficulty: DifficultyId; goal: GoalId; result?: "won" | "lost"; resultMonth?: number }
+export interface Setup { scenario: ScenarioId; difficulty: DifficultyId; goal: GoalId; mode?: ModeId; startCap?: number; result?: "won" | "lost"; resultMonth?: number }
+
+export const MODES: Record<ModeId, { name: string; blurb: string; for: "found" | "takeover" | "both" }> = {
+  standard: { name: "As it is", blurb: "The company as you find it.", for: "both" },
+  turnaround: { name: "Turnaround", blurb: "The company is in trouble: almost no cash, heavy debt and a junk rating, an angry board, an activist fund and a battered reputation. Save it.", for: "takeover" },
+  dynasty: { name: "Dynasty heir", blurb: "Your family controls the board. Nobody can fire you and activists can't win, but the family expects at least 30% of profits as dividends.", for: "takeover" },
+  unicorn: { name: "Unicorn", blurb: "A billion dollars of venture money and a $5 billion valuation before you've sold a thing. The investors on your board are not patient.", for: "found" },
+};
 
 /** Applied right after the warm-up year, before the player's first day. */
 export function applySetup(s: GameState, setup: Setup) {
   s.setup = { ...setup };
   const me = s.companies.find((c) => c.isPlayer)!;
+  applyMode(s, me, setup.mode ?? "standard");
+  s.setup.startCap = me.marketCap;
   // Difficulty.
   if (setup.difficulty === "easy") {
     me.cash *= me.kind === "startup" ? 2 : 1.25;
@@ -103,3 +118,30 @@ export function checkGoal(s: GameState, c: Company, log: (text: string, kind: Ga
     log(`Goal missed: ${g.detail}.`, "bad", { headline: `${c.name} falls short`, deck: `The deadline passed. ${g.progress?.(s, c) ?? ""}. You can keep playing.` });
   }
 }
+
+function applyMode(s: GameState, me: Company, mode: ModeId) {
+  const b = me.leadership?.board;
+  if (mode === "turnaround") {
+    me.hype *= 0.55; me.marketCap *= 0.55;
+    me.cash *= 0.12;
+    const e = me.history.slice(-12).reduce((a, h) => a + h.revenue - h.inputCosts - h.wages - h.rdCost - h.sgaCost - h.marketing, 0);
+    // Leveraged to about 3.2 times earnings: junk, but survivable with work.
+    me.debt = Math.max(me.debt, Math.max(0, e) * 3.2 + me.cash);
+    me.dividendPct = 0;
+    me.image = 0.35;
+    for (const g of Object.keys(me.brand)) me.brand[g as keyof typeof me.brand] = (me.brand[g as keyof typeof me.brand] ?? 0) * 0.7;
+    if (b) {
+      b.confidence = 0.35;
+      b.activist = { fund: "Third Rail Capital", stake: 0.07, demand: "cut_costs", startMonth: s.month, startCeo: me.leadership!.execs.find((e) => e.role === "ceo")?.id ?? 0, buybackTarget: me.marketCap * 0.05, boughtBack: 0 };
+    }
+  } else if (mode === "dynasty") {
+    if (b) { for (const d of b.members) { d.kind = d.kind === "independent" ? "founder" : d.kind; d.loyalty = 0.95; } b.confidence = 0.85; }
+    me.dividendPct = Math.max(me.dividendPct, 0.3);
+  } else if (mode === "unicorn" && me.kind === "startup") {
+    me.cash = 1e9;
+    me.marketCap = 5e9; me.valuationTarget = 5e9; me.ventureFloor = 5e9;
+    if (b) { for (const d of b.members) d.loyalty = Math.min(d.loyalty, 0.35); b.confidence = 0.55; }
+  }
+}
+
+export const isDynasty = (s: GameState, c: Company) => c.isPlayer && s.setup?.mode === "dynasty";
