@@ -5,6 +5,7 @@ import { DISTRICTS_2024, NATIONAL_PRES_2024, STATE_PRES_2024 } from "./data/dist
 import { candidateName } from "./names";
 import { POLITICIAN_POOL } from "./data/politicianPool";
 import { SENATE_CONTENDERS_2026 } from "./data/contenders2026";
+import { HOUSE_D_2026, LATE_RETIREMENTS_2026, SENATE_2026, SENATE_EVENTS_2026 } from "./data/results2026";
 import type { PartyId } from "./data/laws";
 import type { Candidate, GameState, Politician, Race } from "./types";
 import { clamp, dateOfDay, rand, randNormal, START_YEAR } from "./util";
@@ -60,7 +61,15 @@ export function initElectionData(s: GameState) {
       if (m) m.retiring = true;
     }
   }
-  for (const key of RETIRING_2026_SENATE) {
+  const real = followsHistory(s);
+  if (real) {
+    // House members who were their party's real Senate nominee gave up their seats.
+    for (const [st, race] of Object.entries(SENATE_2026)) for (const n of [race.D, race.R]) {
+      const m = n && s.politicians.find((p) => p.chamber === "house" && p.state === st && sameName(p.name, n));
+      if (m) m.retiring = true;
+    }
+  }
+  for (const key of real ? [...RETIRING_2026_SENATE, ...LATE_RETIREMENTS_2026] : RETIRING_2026_SENATE) {
     const [st, last] = key.split("-");
     const m = s.politicians.find((p) => p.chamber === "senate" && p.state === st && lastName(p.name) === last.toUpperCase());
     if (m) m.retiring = true;
@@ -68,6 +77,57 @@ export function initElectionData(s: GameState) {
   // About 6% of House members retire or run for something else each cycle.
   for (const p of s.politicians) if (p.chamber === "house" && rand(s) < 0.06) p.retiring = true;
   s.races = buildRaces(s, START_YEAR);
+}
+
+/** Whether this game follows what really happened in 2026 (the default) or simulates it. */
+export function followsHistory(s: GameState): boolean {
+  return s.setup?.history !== "sim";
+}
+
+function sameName(a: string, b: string) {
+  const clean = (x: string) => x.toUpperCase().replace(/,? (JR|SR|II|III|IV)\.?$/, "").trim();
+  return clean(a) === clean(b);
+}
+
+/** The real 2026 Senate race for this race, if the game follows history. */
+function realSenate(s: GameState, r: Race) {
+  if (r.chamber !== "senate" || !followsHistory(s) || cycleYearOf(s) !== 2026) return undefined;
+  return SENATE_2026[r.state];
+}
+
+/** Put the real nominee on the ballot in place of whoever the simulation would have picked. */
+function seatRealNominee(s: GameState, r: Race, party: "D" | "R", name: string, log: (t: string) => void) {
+  const cur = r.nominees[party];
+  if (cur && (sameName(cur.name, name) || lastName(cur.name) === lastName(name))) return;
+  const known = s.politicians.find((p) => p.state === r.state && p.party === party && sameName(p.name, name));
+  const data = SENATE_2026[r.state];
+  const faction = known?.faction ?? (party === "D" ? data?.dFaction : data?.rFaction) ?? pickFaction(s, party, r.lean);
+  r.nominees[party] = { name, faction, personal: 0, incumbent: false };
+  (s.politicsUsedNames ??= []).push(name.toUpperCase());
+  if (cur?.incumbent) {
+    r.open = true;
+    log(`${cur.name} won't be on the ${r.state} Senate ballot in November: ${name} is the ${party === "D" ? "Democratic" : "Republican"} nominee.`);
+  }
+}
+
+/** Real things that happened before election day 2026 (only in games that follow history). */
+export function realEvents(s: GameState, log: (t: string, extra?: { headline: string; deck: string }) => void) {
+  if (!followsHistory(s)) return;
+  const d = dateOfDay(s.day);
+  for (const e of SENATE_EVENTS_2026) {
+    if (d.getUTCFullYear() !== 2026 || d.getUTCMonth() + 1 !== e.month || d.getUTCDate() !== e.day) continue;
+    const old = s.politicians.find((p) => p.chamber === "senate" && p.state === e.state && sameName(p.name, e.out));
+    if (!old) continue;
+    const np: Politician = { ...old, id: `real-${e.state}-${lastName(e.in.name)}-${s.day}`, name: e.in.name, party: e.in.party, label: e.in.party,
+      faction: e.in.faction, sinceYear: 2026, friends: {}, pacFor: 0, pacAgainst: 0, personal: 0, retiring: false, real: true };
+    s.politicians = s.politicians.map((p) => (p === old ? np : p));
+    for (const r of s.races) if (r.incumbentId === old.id) {
+      r.incumbentId = np.id;
+      const n = r.nominees[e.in.party];
+      if (n && sameName(n.name, e.out)) r.nominees[e.in.party] = { name: np.name, faction: np.faction, personal: 0, politicianId: np.id, incumbent: true };
+    }
+    log(`${e.headline}. ${e.deck}`, { headline: e.headline, deck: e.deck });
+  }
 }
 
 export function senateClassUp(year: number): number {
@@ -176,7 +236,10 @@ export function runPrimaries(s: GameState, log: (t: string) => void) {
   for (const r of s.races) {
     if (r.primaryDone || s.day < r.primaryDay) continue;
     r.primaryDone = true;
+    const real = realSenate(s, r);
     for (const party of ["D", "R"] as const) {
+      const realName = real?.[party];
+      if (realName) { seatRealNominee(s, r, party, realName, log); continue; }
       const cur = r.nominees[party];
       if (cur?.incumbent) {
         // Centrists in safe seats are vulnerable; money spent against them in the other column helps the challenger.
@@ -225,7 +288,14 @@ export function winProb(proj: number): number {
   return 1 / (1 + Math.exp(-1.7 * z));
 }
 
+export interface SenateResult {
+  state: string; special: boolean; D?: string; R?: string; winner: "D" | "R"; dShare: number; flip: boolean; incumbent?: string;
+  /** Decided by the real result rather than the simulation. */
+  real: boolean; note?: string;
+}
+
 export interface GeneralResult {
+  senate: SenateResult[]; history: boolean;
   houseD: number; houseR: number; senateD: number; senateR: number; flips: string[]; ecD?: number; ecR?: number; presidentParty?: PartyId;
 }
 
@@ -238,13 +308,31 @@ export function holdGeneral(s: GameState, year: number, presidential: boolean): 
   const added: Politician[] = [];
   for (const r of s.races) if (!r.primaryDone) r.primaryDay = Math.min(r.primaryDay, s.day);
   runPrimaries(s, () => {});
+  const history = year === 2026 && followsHistory(s);
+  const shares = new Map<Race, number>();
+  for (const r of s.races) shares.set(r, clamp(r.proj + national + 0.03 * randNormal(s), 0.01, 0.99));
+  if (history) {
+    // Shift every House seat by the same amount so Democrats win the real number of seats; which seats
+    // they are still comes from the simulation (and your PAC money).
+    const house = s.races.filter((r) => r.chamber === "house").map((r) => shares.get(r)!).sort((a, b) => b - a);
+    const n = Math.min(house.length - 1, HOUSE_D_2026);
+    const cut = (house[n - 1] + house[n]) / 2;
+    for (const r of s.races) if (r.chamber === "house") shares.set(r, clamp(shares.get(r)! + 0.5 - cut, 0.01, 0.99));
+  }
+  const senateLog: SenateResult[] = [];
   for (const r of s.races) {
-    const dShare = clamp(r.proj + national + 0.03 * randNormal(s), 0.01, 0.99);
+    let dShare = shares.get(r)!;
+    const real = history && r.chamber === "senate" ? SENATE_2026[r.state] : undefined;
+    if (real?.winner) dShare = real.dShare ?? (real.winner === "D" ? Math.max(dShare, 0.505) : Math.min(dShare, 0.495));
     const winner: "D" | "R" = dShare >= 0.5 ? "D" : "R";
     r.result = { dShare, winner };
     const nom = r.nominees[winner] ?? { name: freshName(s, r.state, winner, r), faction: pickFaction(s, winner, r.lean), personal: 0, incumbent: false };
     const inc = r.incumbentId ? byId.get(r.incumbentId) : undefined;
     if (inc && inc.party !== winner && flips.length < 14) flips.push(r.id);
+    if (r.chamber === "senate") senateLog.push({
+      state: r.state, special: !!r.special, D: r.nominees.D?.name, R: r.nominees.R?.name, winner, dShare,
+      flip: !!inc && inc.party !== winner, incumbent: inc?.name, real: !!real?.winner, note: real?.note,
+    });
     if (nom.incumbent && nom.politicianId && inc) {
       inc.pacFor = 0; inc.pacAgainst = 0; inc.retiring = false;
       for (const [cid, v] of Object.entries(r.pac)) inc.friends[Number(cid)] = (inc.friends[Number(cid)] ?? 0) + v[winner];
@@ -255,6 +343,7 @@ export function holdGeneral(s: GameState, year: number, presidential: boolean): 
       district: r.district, cls: r.cls, lean: r.lean, real: false, sinceYear: year + 1, friends: {}, pacFor: 0, pacAgainst: 0,
       personal: clamp(0.01 * randNormal(s), -0.03, 0.03),
     };
+    if (history && r.chamber === "senate" && SENATE_2026[r.state]?.winner) p.real = true;
     for (const [cid, v] of Object.entries(r.pac)) if (v[winner]) p.friends[Number(cid)] = v[winner];
     if (inc) replace.set(inc.id, p);
     else added.push(p);
@@ -278,7 +367,7 @@ export function holdGeneral(s: GameState, year: number, presidential: boolean): 
   }
   let hD = 0, hR = 0, sD = 0, sR = 0;
   for (const p of s.politicians) p.chamber === "house" ? (p.party === "D" ? hD++ : hR++) : (p.party === "D" ? sD++ : sR++);
-  const res: GeneralResult = { houseD: hD, houseR: hR, senateD: sD, senateR: sR, flips };
+  const res: GeneralResult = { houseD: hD, houseR: hR, senateD: sD, senateR: sR, flips, senate: senateLog, history };
   if (presidential) {
     let ecD = 0;
     for (const [st, n] of Object.entries(APPORTIONMENT)) if (seatLeanState(st) + swing + 0.02 * randNormal(s) >= 0.5) ecD += n + 2;

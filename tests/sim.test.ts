@@ -140,3 +140,17 @@ describe("congress", () => {
     expect(me.pac!.funds).toBe(15e6);
   });
 });
+
+describe("2026 midterms following history", () => {
+  it("produces the real Senate results and House total", () => {
+    const s = newGame({ kind: "incumbent", key: "orchard" }, 5, undefined, { scenario: "standard", difficulty: "normal", goal: "sandbox", history: "real" });
+    while (!s.politics.lastResult) tick(s);
+    const r = s.politics.lastResult!;
+    expect(r.houseD).toBe(259);
+    expect(r.senateD).toBeGreaterThanOrEqual(55);
+    const tx = r.senateRaces!.find((x) => x.state === "TX")!;
+    expect(tx.winner).toBe("D");
+    expect(tx.D).toBe("James Talarico");
+    expect(s.politicians.some((p) => p.chamber === "senate" && p.name === "Annie Andrews")).toBe(true);
+  }, 120000);
+});

@@ -54,7 +54,7 @@ export const GOALS: GoalDef[] = [
 ];
 export const GOAL_BY_ID = Object.fromEntries(GOALS.map((x) => [x.id, x])) as Record<GoalId, GoalDef>;
 
-export interface Setup { scenario: ScenarioId; difficulty: DifficultyId; goal: GoalId; mode?: ModeId; startCap?: number; result?: "won" | "lost"; resultMonth?: number }
+export interface Setup { scenario: ScenarioId; difficulty: DifficultyId; goal: GoalId; mode?: ModeId; history?: "real" | "sim"; startCap?: number; result?: "won" | "lost"; resultMonth?: number }
 
 export const MODES: Record<ModeId, { name: string; blurb: string; for: "found" | "takeover" | "both" }> = {
   standard: { name: "As it is", blurb: "The company as you find it.", for: "both" },

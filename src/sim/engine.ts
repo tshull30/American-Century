@@ -22,7 +22,7 @@ import { generatePops } from "./pops";
 import { assignHomes, cityIncentive, cityLabel, computeStateWages, initCities, defaultCity, spreadInState, distributeWorkforce, dcPowerCost, permitMult, setHqOpinionHook, updateCities } from "./geo";
 import { hqAdminMult, hqCityOpinion, hqHireRateMult, hqHiringMult, hqImageBonus, hqReputationMult, hqResearchMult, hqUpkeep, HQ_FORMS } from "./hq";
 import { updateJobOpinion, updatePopulation } from "./population";
-import { initElectionData, runPrimaries, updateProjections } from "./elections";
+import { initElectionData, realEvents, runPrimaries, updateProjections } from "./elections";
 import { homeCostShare, initWorld, updateWorld } from "./intl";
 import { rollStories } from "./stories";
 import { headlineFor } from "./headlines";
@@ -37,7 +37,7 @@ import {
 } from "./util";
 import { runAI, autoPrice, maintainHQ } from "./ai";
 
-export const SAVE_VERSION = 14;
+export const SAVE_VERSION = 15;
 export const BASELINE_TECH_START = 10;
 const DT = 1 / DAYS_PER_MONTH;
 const DEPRECIATION = 0.006;
@@ -660,7 +660,8 @@ export function tick(s: GameState) {
   for (const t of TECHS) s.baselineTech[t.id] = (s.baselineTech[t.id] ?? BASELINE_TECH_START) + DT / 12;
   if (!warmup) {
     runPrimaries(s, (t) => log(s, t, "politics"));
-    maybeHoldElection(s, (t, k) => log(s, t, k ?? "politics", undefined, "election"));
+    realEvents(s, (t, extra) => log(s, t, "politics", undefined, "election", extra));
+    maybeHoldElection(s, (t, k, extra) => log(s, t, k ?? "politics", undefined, "election", extra));
     processDeals(s);
   }
 }

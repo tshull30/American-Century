@@ -463,6 +463,7 @@ export interface Politics {
   lastResult?: {
     day: number; presidential: boolean; commonwealth: number; president: PartyId; congress: PartyId; senate: PartyId;
     houseD: number; houseR: number; senateD: number; senateR: number; ecD?: number; ecR?: number; presidentName?: string;
+    senateRaces?: import("./elections").SenateResult[]; history?: boolean;
   };
 }
 

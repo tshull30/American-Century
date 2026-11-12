@@ -166,6 +166,7 @@ export const TOPICS: Topic[] = [
   { id: "elections", title: "Elections", group: "Politics", body: [
     "Every House seat starts from its district's real 2024 presidential result (2024 lines; the 2025–26 redistricting isn't modeled), plus the incumbent's personal vote. Senate seats use the state result. Ratings move with the national mood and PAC money.",
     "Primaries follow each state's calendar. Incumbents rarely lose, but moderates in deep-red or deep-blue seats are vulnerable. On election night each race lands near its projection, plus a shared national polling miss.",
+    "The 2026 midterms can follow real history (the default) or run on their own. Following history, every Senate primary produces the real nominee, Lindsey Graham's death in July and his sister Darline's appointment happen on schedule, and on November 3 each Senate race goes the way it really went: Democrats flipped North Carolina, Texas, Maine, Ohio, Kansas, South Carolina, Iowa and Mississippi. Alaska was still being counted when this was written, so the simulation decides it. Democrats win 259 House seats (254 were called by November 9, with a few more expected); which seats is up to the simulation and your PAC. From 2028 on, everything is simulated.",
   ] },
   { id: "congress", title: "Congress and bills", group: "Politics", body: [
     "The House majority brings up bills from its platform, plus any bill with enough lobbying behind it. Members vote their faction's position; the mildly opposed can be moved by lobbying, and members your PAC backed lean your way.",

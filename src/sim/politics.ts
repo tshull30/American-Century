@@ -8,7 +8,7 @@ import { LAWS, LAW_BY_ID, PARTIES, type LawId, type PartyId } from "./data/laws"
 import type { Company, GameState, Politics } from "./types";
 import { clamp, dateOfDay, dayLabel, fmtMoney, rand, randNormal, START_YEAR } from "./util";
 import { decayFriendship, initCongress, pickPresident, recordVote, refreshMajorities, whip } from "./congress";
-import { holdGeneral } from "./elections";
+import { followsHistory, holdGeneral } from "./elections";
 
 // ---------------------------------------------------------------- law effects
 
@@ -257,7 +257,7 @@ export function updatePolitics(s: GameState, log: (text: string, kind?: "politic
   }
 }
 
-export function maybeHoldElection(s: GameState, log: (text: string, kind?: "politics") => void) {
+export function maybeHoldElection(s: GameState, log: (text: string, kind?: "politics", extra?: { headline: string; deck: string }) => void) {
   const p = s.politics;
   if (s.day < p.nextElectionDay) return;
   const year = dateOfDay(s.day).getUTCFullYear();
@@ -265,6 +265,8 @@ export function maybeHoldElection(s: GameState, log: (text: string, kind?: "poli
   let share = p.poll + 0.012 * randNormal(s);
   if (!presidential) share += p.president === "commonwealth" ? -0.01 : 0.01; // midterm penalty
   share = clamp(share, 0.4, 0.6);
+  // A game following real history gets the Democratic wave that actually happened.
+  if (year === 2026 && followsHistory(s)) share = clamp(share, 0.53, 0.58);
   const oldPres = p.president, oldCong = p.congress, oldSen = p.senate;
   s.politics.poll = share;
   const r = holdGeneral(s, year, presidential);
@@ -281,6 +283,7 @@ export function maybeHoldElection(s: GameState, log: (text: string, kind?: "poli
   p.lastResult = {
     day: s.day, presidential, commonwealth: share, president: p.president, congress: p.congress, senate: p.senate,
     houseD: r.houseD, houseR: r.houseR, senateD: r.senateD, senateR: r.senateR, ecD: r.ecD, ecR: r.ecR, presidentName: presidential ? p.presidentName : undefined,
+    senateRaces: r.senate, history: r.history,
   };
   p.solAtLastElection = s.sol;
   p.nextElectionDay = electionDay(year + 2);
@@ -290,6 +293,14 @@ export function maybeHoldElection(s: GameState, log: (text: string, kind?: "poli
   }
   for (const c of s.companies) c.donations = {};
   const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
+  if (r.history) {
+    const fl = r.senate.filter((x) => x.flip).map((x) => `${x.winner === "D" ? x.D : x.R} in ${x.state}`);
+    const headline = `Democrats take the House and the Senate`;
+    const deck = `House ${r.houseD} D, ${r.houseR} R; Senate ${r.senateD} D, ${r.senateR} R (independents counted with Democrats). ` +
+      (fl.length ? `Senate seats flipped: ${fl.join(", ")}. ` : "") + `Hakeem Jeffries is in line to be Speaker and Chuck Schumer majority leader. See the Elections tab for every race.`;
+    log(`Midterms (${dayLabel(s.day)}): ${headline}. ${deck}`, "politics", { headline, deck });
+    return;
+  }
   log(
     `${presidential ? "General election" : "Midterms"} (${dayLabel(s.day)}): Democrats ${pct(share)}, Republicans ${pct(1 - share)} nationally. ${presLine}` +
     `House ${r.houseD} D – ${r.houseR} R${p.congress !== oldCong ? " (flips)" : ""}; Senate ${r.senateD} D – ${r.senateR} R${p.senate !== oldSen ? " (flips)" : ""}.` +

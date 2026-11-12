@@ -102,6 +102,7 @@ export function NewGame({ onStart }: { onStart: (s: GameState) => void }) {
   const [q, setQ] = useState("");
   const [scenario, setScenario] = useState<ScenarioId>("standard");
   const [difficulty, setDifficulty] = useState<DifficultyId>("normal");
+  const [history, setHistory] = useState<"real" | "sim">("real");
   const [goal, setGoal] = useState<GoalId>("sandbox");
   const [playMode, setPlayMode] = useState<ModeId>("standard");
   const pickMode = (m: ModeId) => { setPlayMode(m); setGoal(m === "turnaround" ? "turnaround" : m === "dynasty" ? "double" : m === "unicorn" ? "decacorn" : "sandbox"); };
@@ -126,7 +127,7 @@ export function NewGame({ onStart }: { onStart: (s: GameState) => void }) {
       : { kind: "incumbent", key: chosen!.key };
     // Let the button repaint before the warm-up year runs.
     const m = modes.includes(playMode) ? playMode : "standard";
-    window.setTimeout(() => onStart(newGame(choice, roster.seed, roster.companies, { scenario, difficulty, goal, mode: m })), 30);
+    window.setTimeout(() => onStart(newGame(choice, roster.seed, roster.companies, { scenario, difficulty, goal, mode: m, history })), 30);
   };
 
   const cities = CITY_SEEDS.filter((c) => c.state === hq);
@@ -256,6 +257,11 @@ export function NewGame({ onStart }: { onStart: (s: GameState) => void }) {
               {DIFFICULTIES.map((x) => (
                 <button key={x.id} className={difficulty === x.id ? "on" : ""} onClick={() => setDifficulty(x.id)}><strong>{x.name}</strong><span>{x.blurb}</span></button>
               ))}
+            </div>
+            <h3 style={{ marginTop: 18 }}>The 2026 midterms</h3>
+            <div className="ng-options">
+              <button className={history === "real" ? "on" : ""} onClick={() => setHistory("real")}><strong>As they happened</strong><span>The real nominees and the real results of November 3: Democrats take both chambers. Your PAC can still move House seats and Alaska.</span></button>
+              <button className={history === "sim" ? "on" : ""} onClick={() => setHistory("sim")}><strong>Up for grabs</strong><span>The game runs its own primaries and its own election from January's polls.</span></button>
             </div>
             <h3 style={{ marginTop: 18 }}>Goal</h3>
             <div className="ng-options">

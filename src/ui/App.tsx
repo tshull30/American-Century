@@ -79,7 +79,7 @@ function Game({ initial, onQuit }: { initial: GameState; onQuit: () => void }) {
         const before = s.events.length;
         const lastEvent = s.events[before - 1];
         tick(s);
-        if (s.month !== m && autosaveDue(settingsRef.current.autosave, s.month)) saveLocal(s);
+        if (s.month !== m && autosaveDue(settingsRef.current.autosave, s.month)) void saveLocal(s);
         else if (s.month !== m && s.month % 6 === 0) recordRun(s);
         // Pause on anything the player asked to be stopped for.
         const start = lastEvent ? s.events.lastIndexOf(lastEvent) + 1 : 0;
@@ -171,7 +171,7 @@ function Game({ initial, onQuit }: { initial: GameState; onQuit: () => void }) {
               <button onClick={() => { tick(s); refresh(); }} disabled={speed > 0 || !!s.gameOver} title="Advance one day">+1 day</button>
             </div>
             <span className="date">{dayLabel(s.day)}</span>
-            <button onClick={() => showToast(saveLocal(s) ? "Game saved in this browser." : "Couldn't save in this browser; use Export.", false)}>Save</button>
+            <button onClick={() => { void saveLocal(s).then((ok) => showToast(ok ? "Game saved in this browser." : "Couldn't save in this browser; use Export.", false)); }}>Save</button>
             <button onClick={() => exportFile(s)} title="Download the save file">Export</button>
             <button onClick={() => setHelpTopic("basics")} title="Encyclopedia (F1)">Encyclopedia</button>
             <button onClick={() => setShowSettings(true)} title="Settings and keyboard shortcuts (?)">Settings</button>

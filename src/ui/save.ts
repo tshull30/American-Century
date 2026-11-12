@@ -3,10 +3,52 @@ import type { GameState } from "../sim/types";
 
 const KEY = "american-century-save";
 
-export function saveLocal(s: GameState): boolean {
+// Games are far bigger than localStorage allows (several megabytes), so they live in IndexedDB.
+// The save is read once at startup and kept here so the start screen can check it synchronously.
+let cache: GameState | null = null;
+let present = false;
+
+function db(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open("american-century", 1);
+    req.onupgradeneeded = () => req.result.createObjectStore("saves");
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/** Load the saved game, if any. Call once before the app renders. */
+export async function initSaves(): Promise<void> {
+  try {
+    const d = await db();
+    const s = await new Promise<GameState | undefined>((resolve, reject) => {
+      const req = d.transaction("saves").objectStore("saves").get(KEY);
+      req.onsuccess = () => resolve(req.result as GameState | undefined);
+      req.onerror = () => reject(req.error);
+    });
+    if (s) { present = true; cache = s.version === SAVE_VERSION ? s : null; return; }
+  } catch { /* fall through to the old store */ }
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) { present = true; const s = JSON.parse(raw) as GameState; cache = s.version === SAVE_VERSION ? s : null; }
+  } catch { /* nothing saved */ }
+}
+
+/** Save the game in this browser. Resolves false if the browser refused. */
+export async function saveLocal(s: GameState): Promise<boolean> {
   recordRun(s);
   try {
-    localStorage.setItem(KEY, JSON.stringify(s));
+    const d = await db();
+    await new Promise<void>((resolve, reject) => {
+      const tx = d.transaction("saves", "readwrite");
+      tx.objectStore("saves").put(s, KEY);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
+    try { localStorage.removeItem(KEY); } catch { /* fine */ }
+    present = true;
+    cache = s;
     return true;
   } catch {
     return false;
@@ -14,18 +56,11 @@ export function saveLocal(s: GameState): boolean {
 }
 
 export function loadLocal(): GameState | null {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return null;
-    const s = JSON.parse(raw) as GameState;
-    return s.version === SAVE_VERSION ? s : null;
-  } catch {
-    return null;
-  }
+  return cache;
 }
 
 export function hasLocal(): boolean {
-  try { return !!localStorage.getItem(KEY); } catch { return false; }
+  return present;
 }
 
 export function exportFile(s: GameState) {

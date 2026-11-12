@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { pacRace } from "../../sim/actions";
 import { factionDef } from "../../sim/data/factions";
 import { STATE_BY_CODE } from "../../sim/data/states";
-import { cycleYear, raceLabel, rating, winProb } from "../../sim/elections";
+import { cycleYear, followsHistory, raceLabel, rating, winProb, type SenateResult } from "../../sim/elections";
+import { SENATE_2026 } from "../../sim/data/results2026";
 import type { Race } from "../../sim/types";
 import { dayLabel, fmtMoney, fmtPct } from "../../sim/util";
 import { Panel, Table, useGame } from "../components";
@@ -22,6 +23,59 @@ function RatingTag({ proj }: { proj: number }) {
   const r = rating(proj);
   const color = r.party === "D" ? "var(--dem)" : r.party === "R" ? "var(--rep)" : "var(--ink-2)";
   return <span style={{ color, fontWeight: r.label.startsWith("Safe") ? 400 : 600 }}>{r.label}</span>;
+}
+
+/** The Senate map after an election: flips first, then everything else by margin. */
+function ElectionNight({ races, history, year }: { races: SenateResult[]; history: boolean; year: number }) {
+  const [open, setOpen] = useState<string | null>(null);
+  const sorted = [...races].sort((a, b) => Number(b.flip) - Number(a.flip) || Math.abs(a.dShare - 0.5) - Math.abs(b.dShare - 0.5));
+  const flips = races.filter((r) => r.flip);
+  // Following history, the game only knows real vote shares for a couple of races; elsewhere it shows who won.
+  const shown = (r: SenateResult) => !history || !r.real || !!SENATE_2026[r.state]?.dShare;
+  const name = (r: SenateResult, side: "D" | "R") => {
+    const n = r[side];
+    if (!n) return <span className="muted">none</span>;
+    // In a game following history, opponents nobody reported on are the game's own inventions.
+    const known = !history || SENATE_2026[r.state]?.[side] || r.incumbent === n;
+    return known ? n : <span className="muted" title="Simulated nominee">{n}*</span>;
+  };
+  return (
+    <Panel help="elections" title={`Election night ${year}: the Senate`} right={`${flips.length} seat${flips.length === 1 ? "" : "s"} changed hands`}>
+      <div className="enight">
+        {sorted.map((r) => {
+          const id = `${r.state}${r.special ? "s" : ""}`;
+          const win = r.winner === "D" ? r.D : r.R;
+          const margin = Math.abs(r.dShare - 0.5) * 200;
+          return (
+            <button key={id} className={`enight-cell ${r.winner === "D" ? "d" : "r"}${r.flip ? " flip" : ""}${open === id ? " sel" : ""}`} onClick={() => setOpen(open === id ? null : id)}
+              aria-expanded={open === id} title={`${STATE_BY_CODE[r.state]?.name}: ${win}`}>
+              <strong>{r.state}</strong>
+              <span>{shown(r) ? (margin < 1 ? "<1" : margin.toFixed(0)) : r.flip ? "flip" : r.winner === "D" ? "hold" : "hold"}</span>
+              {!r.real && history && <i title="Simulated">sim</i>}
+            </button>
+          );
+        })}
+      </div>
+      {open && (() => {
+        const r = sorted.find((x) => `${x.state}${x.special ? "s" : ""}` === open)!;
+        return (
+          <div className="enight-detail">
+            <h4>{STATE_BY_CODE[r.state]?.name}{r.special ? " (special)" : ""}: {r.winner === "D" ? r.D : r.R} wins{r.flip ? `, a ${r.winner === "D" ? "Democratic" : "Republican"} flip` : ""}</h4>
+            {shown(r)
+              ? <p><span className="member-d">{name(r, "D")}</span> {fmtPct(r.dShare, 1)}, <span className="member-r">{name(r, "R")}</span> {fmtPct(1 - r.dShare, 1)} of the two-party vote{r.incumbent ? `. Incumbent: ${r.incumbent}` : ""}.</p>
+              : <p>Democrat <span className="member-d">{name(r, "D")}</span>, Republican <span className="member-r">{name(r, "R")}</span>{r.incumbent ? `. Incumbent: ${r.incumbent}` : ""}.</p>}
+            {r.note && <p className="muted">{r.note}</p>}
+            {history && !r.real && <p className="muted">This race wasn't called in the real world when the game was made, so the simulation decided it.</p>}
+          </div>
+        );
+      })()}
+      <p className="muted small" style={{ marginTop: 10 }}>
+        {history
+          ? "Each square is a state, shaded by the winner; flipped seats have a heavy outline. Click one for the race. Results follow the AP's calls as of November 12, 2026, with margins shown only where the game has the real count. Names with an asterisk are simulated."
+          : "Each square is a state, shaded by the winner, with the margin in points. Flipped seats have a heavy outline. Click one for the race."}
+      </p>
+    </Panel>
+  );
 }
 
 export function Elections() {
@@ -67,6 +121,10 @@ export function Elections() {
           {me.pac ? <p className="muted">{me.pac.name}: {fmtMoney(me.pac.funds)} on hand; {fmtMoney(unit)} per click.</p> : <p className="empty">No PAC yet. Register one on the Politics tab.</p>}
         </Panel>
       </div>
+      {p.lastResult?.senateRaces?.length ? <><div style={{ height: 16 }} /><ElectionNight races={p.lastResult.senateRaces} history={!!p.lastResult.history} year={new Date(Date.UTC(2026, 0, 1 + p.lastResult.day)).getUTCFullYear()} /></> : null}
+      {!p.lastResult && followsHistory(s) && year === 2026 && (
+        <p className="hint" style={{ marginTop: 12 }}>This game follows the real 2026 midterms. The polls and ratings below are the game's, from January's mood; on November 3 the Senate races will go the way they really went, and Democrats will win the real number of House seats. Which House seats, and Alaska, are still up to the simulation and your PAC.</p>
+      )}
       <div style={{ height: 16 }} />
       <Panel title="Races" right={
         <span className="row">
