@@ -172,7 +172,7 @@ function Game({ initial, onQuit }: { initial: GameState; onQuit: () => void }) {
             </div>
             <span className="date">{dayLabel(s.day)}</span>
             <button onClick={() => { void saveLocal(s).then((ok) => showToast(ok ? "Game saved in this browser." : "Couldn't save in this browser; use Export.", false)); }}>Save</button>
-            <button onClick={() => exportFile(s)} title="Download the save file">Export</button>
+            <button onClick={() => { exportFile(s).catch(() => showToast("The save file wasn't downloaded.", false)); }} title="Download the save file">Export</button>
             <button onClick={() => setHelpTopic("basics")} title="Encyclopedia (F1)">Encyclopedia</button>
             <button onClick={() => setShowSettings(true)} title="Settings and keyboard shortcuts (?)">Settings</button>
             <button onClick={() => ask("Quit to the main menu? Progress since your last save is lost.", () => { recordRun(s); onQuit(); })}>Menu</button>

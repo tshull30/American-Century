@@ -63,11 +63,20 @@ export function hasLocal(): boolean {
   return present;
 }
 
-export function exportFile(s: GameState) {
-  const blob = new Blob([JSON.stringify(s)], { type: "application/json" });
+/** Hand the player a save file: through the artifact viewer when the page runs there, otherwise a plain download. */
+export async function exportFile(s: GameState): Promise<void> {
+  const filename = `american-century-${s.month}.json`;
+  const data = JSON.stringify(s);
+  type Downloads = { save: (f: { filename: string; data: string }) => Promise<unknown> };
+  const host = (window as unknown as { claude?: { use?: (n: string) => Promise<Downloads | null> } }).claude;
+  if (host?.use) {
+    const downloads = await host.use("downloads").catch(() => null);
+    if (downloads) { await downloads.save({ filename, data }); return; }
+  }
+  const blob = new Blob([data], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = `american-century-${s.month}.json`;
+  a.download = filename;
   a.click();
   URL.revokeObjectURL(a.href);
 }
